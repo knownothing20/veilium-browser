@@ -20,6 +20,8 @@
 - [x] Metadata-only credential selection and in-use protection.
 - [x] Authenticated HTTP, HTTPS, and SOCKS5 loopback proxy bridge.
 - [x] Per-profile bridge health and lifecycle cleanup.
+- [x] On-demand proxy connectivity, latency, and exit-IP measurement.
+- [x] DNS-route analysis and WebRTC-policy risk reporting.
 
 ## Runtime follow-up
 
@@ -28,13 +30,15 @@
 - [ ] Optional explicit crash-restart policy with bounded retries.
 - [ ] Approved real Chromium test-kernel matrix on Windows, Linux and macOS.
 - [ ] Native suspended-process creation on Windows if the remaining pre-assignment micro-window becomes material.
+- [ ] Live browser WebRTC/STUN and delegated-domain DNS leak tests.
 
 ## Proxy platform follow-up
 
 - [ ] Xray and sing-box adapters with checksums and pinned provenance.
-- [ ] Health, latency, exit-IP, DNS and WebRTC leak checks.
 - [ ] Optional local-client authentication for the ephemeral loopback bridge.
 - [ ] Proxy import, tagging, batch testing and rotation policies.
+- [ ] Configurable or self-hosted diagnostic probe endpoints.
+- [ ] Historical health reports and scheduled retesting with explicit retention controls.
 
 ## Automation and hardening
 

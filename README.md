@@ -12,6 +12,7 @@ Veilium is an open-source, multi-profile privacy browser workspace focused on is
 - verified local kernel registry with managed copies and SHA-256 integrity records;
 - operating-system credential vault with no plaintext password fallback;
 - per-profile loopback authentication bridges for HTTP, HTTPS, and SOCKS5 upstream proxies;
+- one-click proxy connectivity, latency, exit-IP, DNS-route, and WebRTC-policy diagnostics;
 - supervised local browser start, stop and runtime-session monitoring;
 - Chromium-assigned CDP ports discovered through `DevToolsActivePort`, removing the preselected-port race;
 - loopback-only `/json/version` and debugger WebSocket validation;
@@ -42,7 +43,7 @@ wails dev
 make check
 ```
 
-See [`docs/AUTHENTICATED_PROXY_BRIDGE.md`](docs/AUTHENTICATED_PROXY_BRIDGE.md), [`docs/CREDENTIAL_VAULT.md`](docs/CREDENTIAL_VAULT.md), [`docs/RUNTIME_SUPERVISOR.md`](docs/RUNTIME_SUPERVISOR.md), [`docs/KERNEL_REGISTRY.md`](docs/KERNEL_REGISTRY.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md).
+See [`docs/PROXY_DIAGNOSTICS.md`](docs/PROXY_DIAGNOSTICS.md), [`docs/AUTHENTICATED_PROXY_BRIDGE.md`](docs/AUTHENTICATED_PROXY_BRIDGE.md), [`docs/CREDENTIAL_VAULT.md`](docs/CREDENTIAL_VAULT.md), [`docs/RUNTIME_SUPERVISOR.md`](docs/RUNTIME_SUPERVISOR.md), [`docs/KERNEL_REGISTRY.md`](docs/KERNEL_REGISTRY.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Safety and intended use
 

@@ -5,6 +5,7 @@ import './styles.css'
 import './kernel.css'
 import './runtime.css'
 import './credential.css'
+import './diagnostics.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

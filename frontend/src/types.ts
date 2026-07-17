@@ -59,6 +59,33 @@ export interface RuntimeSession {
   logPath: string
 }
 
+export type DiagnosticStatus = 'healthy' | 'degraded' | 'failed'
+export type DiagnosticCheckStatus = 'pass' | 'warn' | 'fail' | 'skipped'
+
+export interface ProxyDiagnosticCheck {
+  id: string
+  label: string
+  status: DiagnosticCheckStatus
+  detail: string
+  latencyMs?: number
+}
+
+export interface ProxyDiagnosticReport {
+  profileId: string
+  profileName: string
+  status: DiagnosticStatus
+  proxyDisplay: string
+  routeKind: string
+  bridgeKind?: string
+  exitIp?: string
+  firstByteLatencyMs?: number
+  totalLatencyMs?: number
+  startedAt: string
+  completedAt: string
+  checks: ProxyDiagnosticCheck[]
+  limitations: string[]
+}
+
 export interface FingerprintConfig {
   seed?: string
   platform: 'windows' | 'linux' | 'macos'
