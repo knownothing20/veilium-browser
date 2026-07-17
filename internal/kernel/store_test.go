@@ -18,6 +18,7 @@ func TestImportVerifyTamperAndDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	record, err := store.Import(ImportRequest{Name: "Test Chromium", Provider: "patched-chromium", Version: "148.0.0", SourcePath: source})
 	if err != nil {
 		t.Fatal(err)
@@ -28,6 +29,7 @@ func TestImportVerifyTamperAndDelete(t *testing.T) {
 	if len(store.List()) != 1 {
 		t.Fatal("expected one registered kernel")
 	}
+
 	verified, err := store.Verify(record.ID)
 	if err != nil || verified.Status != StatusVerified {
 		t.Fatalf("verification failed: %#v %v", verified, err)
@@ -39,6 +41,7 @@ func TestImportVerifyTamperAndDelete(t *testing.T) {
 	if err != nil || modified.Status != StatusModified {
 		t.Fatalf("expected modified status: %#v %v", modified, err)
 	}
+
 	if _, err := store.Delete(record.ID); err != nil {
 		t.Fatal(err)
 	}

@@ -49,7 +49,6 @@ func TestCreateUpdateCloneLifecycle(t *testing.T) {
 		t.Fatalf("expected two profiles")
 	}
 }
-
 func TestCapabilitiesRejectUnknownProvider(t *testing.T) {
 	root := t.TempDir()
 	store, _ := profile.Open(filepath.Join(root, "profiles.json"))
@@ -58,7 +57,6 @@ func TestCapabilitiesRejectUnknownProvider(t *testing.T) {
 		t.Fatal("expected unknown provider error")
 	}
 }
-
 func TestKernelRegistryProtectsProfilesAndLaunchPlans(t *testing.T) {
 	root := t.TempDir()
 	source := filepath.Join(root, "chrome-test")
@@ -90,12 +88,6 @@ func TestKernelRegistryProtectsProfilesAndLaunchPlans(t *testing.T) {
 		t.Fatalf("expected integrity failure, got %v", err)
 	}
 }
-
 func validProfile() domain.Profile {
-	return domain.Profile{
-		Name: "Store A",
-		Kernel: domain.KernelRef{Provider: fingerprint.ProviderPatched, Version: "148.0.0", Executable: `C:\Browsers\Chromium\chrome.exe`},
-		Fingerprint: domain.FingerprintConfig{Platform: "windows", Brand: "Chrome", Language: "en-US", Timezone: "America/Los_Angeles", ScreenWidth: 1920, ScreenHeight: 1080, HardwareConcurrency: 8, WebRTCPolicy: "proxy-only", CanvasMode: "seeded", AudioMode: "seeded", FontMode: "seeded", ClientRectsMode: "seeded", GPUProfile: "auto"},
-		Proxy: domain.ProxyConfig{URL: "direct://"},
-	}
+	return domain.Profile{Name: "Store A", Kernel: domain.KernelRef{Provider: fingerprint.ProviderPatched, Version: "148.0.0", Executable: `C:\Browsers\Chromium\chrome.exe`}, Fingerprint: domain.FingerprintConfig{Platform: "windows", Brand: "Chrome", Language: "en-US", Timezone: "America/Los_Angeles", ScreenWidth: 1920, ScreenHeight: 1080, HardwareConcurrency: 8, WebRTCPolicy: "proxy-only", CanvasMode: "seeded", AudioMode: "seeded", FontMode: "seeded", ClientRectsMode: "seeded", GPUProfile: "auto"}, Proxy: domain.ProxyConfig{URL: "direct://"}}
 }
