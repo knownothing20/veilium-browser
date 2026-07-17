@@ -14,6 +14,7 @@ Veilium is an open-source, multi-profile privacy browser workspace focused on is
 - per-profile loopback authentication bridges for HTTP, HTTPS, and SOCKS5 upstream proxies;
 - one-click proxy connectivity, latency, exit-IP, DNS-route, and WebRTC-policy diagnostics;
 - managed Xray and sing-box adapter registry with SHA-256, provenance, license, and profile-reference controls;
+- supervised Xray execution for constrained VLESS, VMess, Trojan, and Shadowsocks profiles through a private loopback SOCKS5 endpoint;
 - supervised local browser start, stop and runtime-session monitoring;
 - Chromium-assigned CDP ports discovered through `DevToolsActivePort`, removing the preselected-port race;
 - loopback-only `/json/version` and debugger WebSocket validation;
@@ -21,7 +22,7 @@ Veilium is an open-source, multi-profile privacy browser workspace focused on is
 - private per-start runtime logs and application-shutdown cleanup;
 - Linux and Windows desktop build and runtime tests.
 
-Actual browser execution requires a registered, integrity-verified kernel and a profile using its Veilium-managed user-data directory. Xray and sing-box binaries can be registered and bound to profiles, but advanced protocol configuration providers remain fail-closed until separately implemented and reviewed.
+Actual browser execution requires a registered, integrity-verified kernel and a profile using its Veilium-managed user-data directory. The reviewed Xray subset can run through a private per-session configuration and supervised loopback SOCKS5 endpoint. sing-box and unsupported Xray transports remain fail-closed.
 
 ## Development
 
@@ -44,7 +45,7 @@ wails dev
 make check
 ```
 
-See [`docs/PROXY_ADAPTER_RUNTIME.md`](docs/PROXY_ADAPTER_RUNTIME.md), [`docs/PROXY_DIAGNOSTICS.md`](docs/PROXY_DIAGNOSTICS.md), [`docs/AUTHENTICATED_PROXY_BRIDGE.md`](docs/AUTHENTICATED_PROXY_BRIDGE.md), [`docs/CREDENTIAL_VAULT.md`](docs/CREDENTIAL_VAULT.md), [`docs/RUNTIME_SUPERVISOR.md`](docs/RUNTIME_SUPERVISOR.md), [`docs/KERNEL_REGISTRY.md`](docs/KERNEL_REGISTRY.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md).
+See [`docs/XRAY_PROVIDER.md`](docs/XRAY_PROVIDER.md), [`docs/PROXY_ADAPTER_RUNTIME.md`](docs/PROXY_ADAPTER_RUNTIME.md), [`docs/PROXY_DIAGNOSTICS.md`](docs/PROXY_DIAGNOSTICS.md), [`docs/AUTHENTICATED_PROXY_BRIDGE.md`](docs/AUTHENTICATED_PROXY_BRIDGE.md), [`docs/CREDENTIAL_VAULT.md`](docs/CREDENTIAL_VAULT.md), [`docs/RUNTIME_SUPERVISOR.md`](docs/RUNTIME_SUPERVISOR.md), [`docs/KERNEL_REGISTRY.md`](docs/KERNEL_REGISTRY.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Safety and intended use
 

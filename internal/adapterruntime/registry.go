@@ -11,17 +11,23 @@ import (
 
 var ErrProviderUnavailable = errors.New("proxy adapter configuration provider is unavailable")
 
+const ConfigPathToken = "{veilium-config}"
+
 type Request struct {
-	Adapter       adapter.Record
-	Scheme        string
-	ProxyURL      string
-	CredentialRef string
-	ProfileID     string
+	Adapter            adapter.Record
+	Scheme             string
+	ProxyURL           string
+	CredentialRef      string
+	CredentialUsername string
+	CredentialSecret   string
+	ProfileID          string
+	LocalPort          int
 }
 
 type Plan struct {
 	Executable   string
 	Arguments    []string
+	Environment  map[string]string
 	Config       []byte
 	ConfigFormat string
 	LocalScheme  string

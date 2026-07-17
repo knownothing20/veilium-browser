@@ -11,13 +11,19 @@ import (
 
 type execRunner struct{}
 
+// StartManagedProcess launches a verified regular executable using the same
+// process-group / Job Object ownership used by Chromium sessions.
+func StartManagedProcess(plan domain.LaunchPlan, logPath string) (Process, error) {
+	return execRunner{}.Start(plan, logPath)
+}
+
 func (execRunner) Start(plan domain.LaunchPlan, logPath string) (Process, error) {
 	info, err := os.Lstat(plan.Executable)
 	if err != nil {
-		return nil, fmt.Errorf("inspect browser executable: %w", err)
+		return nil, fmt.Errorf("inspect managed executable: %w", err)
 	}
 	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return nil, fmt.Errorf("browser executable must be a regular managed file")
+		return nil, fmt.Errorf("managed executable must be a regular file")
 	}
 	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o600)
 	if err != nil {

@@ -10,8 +10,19 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/proxybridge"
 )
 
+type networkRuntimeInstance interface {
+	URL() string
+	Kind() string
+	Health(context.Context) error
+	Close() error
+}
+
+type runtimeDone interface {
+	Done() <-chan struct{}
+}
+
 type bridgeEntry struct {
-	instance proxybridge.Instance
+	instance networkRuntimeInstance
 	token    uint64
 }
 
@@ -46,7 +57,7 @@ func proxyBridgeFactory(service *Service) proxybridge.Factory {
 	return registry.factory
 }
 
-func registerProxyBridge(service *Service, profileID string, instance proxybridge.Instance) uint64 {
+func registerNetworkRuntime(service *Service, profileID string, instance networkRuntimeInstance) uint64 {
 	registry := registryFor(service)
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
@@ -59,15 +70,30 @@ func registerProxyBridge(service *Service, profileID string, instance proxybridg
 	return token
 }
 
-func watchProxyBridge(service *Service, profileID string, token uint64) {
+func watchNetworkRuntime(service *Service, profileID string, token uint64, instance networkRuntimeInstance) {
 	ticker := time.NewTicker(150 * time.Millisecond)
 	defer ticker.Stop()
-	for range ticker.C {
-		if service.supervisor.IsActive(profileID) {
-			continue
+	var done <-chan struct{}
+	if withDone, ok := instance.(runtimeDone); ok {
+		done = withDone.Done()
+	}
+	for {
+		select {
+		case <-done:
+			if service.supervisor.IsActive(profileID) {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				_, _ = service.supervisor.Stop(ctx, profileID)
+				cancel()
+			}
+			_ = releaseNetworkRuntime(service, profileID, token)
+			return
+		case <-ticker.C:
+			if service.supervisor.IsActive(profileID) {
+				continue
+			}
+			_ = releaseNetworkRuntime(service, profileID, token)
+			return
 		}
-		_ = releaseProxyBridge(service, profileID, token)
-		return
 	}
 }
 
@@ -85,7 +111,7 @@ func closeProfileProxyBridge(service *Service, profileID string) error {
 	return entry.instance.Close()
 }
 
-func releaseProxyBridge(service *Service, profileID string, token uint64) error {
+func releaseNetworkRuntime(service *Service, profileID string, token uint64) error {
 	registry := registryFor(service)
 	registry.mu.Lock()
 	entry, ok := registry.entries[profileID]
@@ -125,7 +151,7 @@ func shutdownRuntimeAndBridges(service *Service, ctx context.Context) error {
 	runtimeErr := service.supervisor.Shutdown(ctx)
 	bridgeErr := closeAllProxyBridges(service)
 	if runtimeErr != nil && bridgeErr != nil {
-		return fmt.Errorf("runtime shutdown failed: %v; proxy bridge shutdown failed: %w", runtimeErr, bridgeErr)
+		return fmt.Errorf("runtime shutdown failed: %v; network runtime shutdown failed: %w", runtimeErr, bridgeErr)
 	}
 	if runtimeErr != nil {
 		return runtimeErr

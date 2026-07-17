@@ -10,10 +10,26 @@ import { Sidebar, type ViewKey } from './components/Sidebar'
 import { backend } from './lib/backend'
 import { filterProfiles, groupsOf, profileHealth } from './lib/model'
 import { isRuntimeActive, sessionForProfile } from './lib/runtime'
-import type { AdapterImportRequest, AdapterRecord, Bootstrap, CredentialSaveRequest, KernelImportRequest, KernelRecord, LaunchPlan, Profile } from './types'
+import type {
+  AdapterImportRequest,
+  AdapterRecord,
+  Bootstrap,
+  CredentialSaveRequest,
+  KernelImportRequest,
+  KernelRecord,
+  LaunchPlan,
+  Profile,
+} from './types'
 
 const emptyBootstrap: Bootstrap = {
-  version: 'loading', profiles: [], providers: [], kernels: [], adapters: [], sessions: [], credentials: [], credentialProvider: 'Operating-system keyring',
+  version: 'loading',
+  profiles: [],
+  providers: [],
+  kernels: [],
+  adapters: [],
+  sessions: [],
+  credentials: [],
+  credentialProvider: 'Operating-system keyring',
 }
 
 export default function App() {
@@ -33,22 +49,34 @@ export default function App() {
   const [runtimeError, setRuntimeError] = useState('')
   const [kernelBusy, setKernelBusy] = useState(false)
   const [kernelError, setKernelError] = useState('')
-  const [kernelRequest, setKernelRequest] = useState<KernelImportRequest>({ name: '', provider: 'patched-chromium', version: '148.0.0', sourcePath: '' })
+  const [kernelRequest, setKernelRequest] = useState<KernelImportRequest>({
+    name: '',
+    provider: 'patched-chromium',
+    version: '148.0.0',
+    sourcePath: '',
+  })
   const [adapterBusy, setAdapterBusy] = useState(false)
   const [adapterError, setAdapterError] = useState('')
 
   async function refresh() {
     setLoading(true)
-    try { setData(await backend.bootstrap()); setError('') }
-    catch (reason) { setError(errorText(reason)) }
-    finally { setLoading(false) }
+    try {
+      setData(await backend.bootstrap())
+      setError('')
+    } catch (reason) {
+      setError(errorText(reason))
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function refreshSessions() {
     try {
       const sessions = await backend.listSessions()
       setData((current) => ({ ...current, sessions }))
-    } catch (reason) { setRuntimeError(errorText(reason)) }
+    } catch (reason) {
+      setRuntimeError(errorText(reason))
+    }
   }
 
   useEffect(() => { void refresh() }, [])
@@ -63,21 +91,21 @@ export default function App() {
   const readyCount = useMemo(() => data.profiles.filter((item) => profileHealth(item) === 'ready').length, [data.profiles])
   const runningCount = useMemo(() => data.sessions.filter(isRuntimeActive).length, [data.sessions])
 
-  async function saveProfile(profile: Profile) { if (profile.id) await backend.updateProfile(profile); else await backend.createProfile(profile); await refresh() }
-  async function cloneProfile(profile: Profile) { await backend.cloneProfile(profile.id, `${profile.name} Copy`); await refresh() }
-  async function deleteProfile(profile: Profile) { if (!window.confirm(`Delete “${profile.name}”? Browser data is not removed.`)) return; await backend.deleteProfile(profile.id); await refresh() }
+  async function saveProfile(item: Profile) { if (item.id) await backend.updateProfile(item); else await backend.createProfile(item); await refresh() }
+  async function cloneProfile(item: Profile) { await backend.cloneProfile(item.id, `${item.name} Copy`); await refresh() }
+  async function deleteProfile(item: Profile) { if (!window.confirm(`Delete “${item.name}”? Browser data is not removed.`)) return; await backend.deleteProfile(item.id); await refresh() }
   async function saveCredential(request: CredentialSaveRequest) { await backend.saveCredential(request); await refresh() }
   async function deleteCredential(id: string) { await backend.deleteCredential(id); await refresh() }
 
-  async function showPlan(profile: Profile) {
-    setPlanProfile(profile); setPlan(undefined); setPlanError('')
-    try { setPlan(await backend.buildLaunchPlan(profile.id)) }
+  async function showPlan(item: Profile) {
+    setPlanProfile(item); setPlan(undefined); setPlanError('')
+    try { setPlan(await backend.buildLaunchPlan(item.id)) }
     catch (reason) { setPlanError(errorText(reason)) }
   }
 
-  async function startProfile(profile: Profile) {
-    setRuntimeBusy(profile.id); setRuntimeError('')
-    try { await backend.startProfile(profile.id) }
+  async function startProfile(item: Profile) {
+    setRuntimeBusy(item.id); setRuntimeError('')
+    try { await backend.startProfile(item.id) }
     catch (reason) { setRuntimeError(errorText(reason)) }
     finally { await refreshSessions(); setRuntimeBusy('') }
   }
@@ -103,7 +131,6 @@ export default function App() {
     catch (reason) { setKernelError(errorText(reason)) }
     finally { setKernelBusy(false) }
   }
-
   async function verifyKernel(record: KernelRecord) { setKernelBusy(true); try { await backend.verifyKernel(record.id); await refresh() } catch (reason) { setKernelError(errorText(reason)) } finally { setKernelBusy(false) } }
   async function removeKernel(record: KernelRecord) { if (!window.confirm(`Remove “${record.name}”?`)) return; setKernelBusy(true); try { await backend.deleteKernel(record.id); await refresh() } catch (reason) { setKernelError(errorText(reason)) } finally { setKernelBusy(false) } }
 
@@ -113,18 +140,34 @@ export default function App() {
   async function removeAdapter(record: AdapterRecord) { if (!window.confirm(`Remove “${record.name}”?`)) return; setAdapterBusy(true); try { await backend.deleteAdapter(record.id); await refresh() } catch (reason) { setAdapterError(errorText(reason)) } finally { setAdapterBusy(false) } }
 
   const table = (profiles: Profile[]) => <ProfileTable
-    profiles={profiles} sessions={data.sessions} selectedID={selectedID} nativeMode={backend.isNative()} busyProfileID={runtimeBusy}
-    onSelect={(item) => setSelectedID(item.id)} onEdit={(item) => { setEditing(item); setEditorOpen(true) }}
-    onClone={(item) => void cloneProfile(item)} onPlan={(item) => void showPlan(item)} onStart={(item) => void startProfile(item)}
-    onStop={(item) => void stopProfile(item.id)} onDelete={(item) => void deleteProfile(item)}
+    profiles={profiles}
+    sessions={data.sessions}
+    selectedID={selectedID}
+    nativeMode={backend.isNative()}
+    busyProfileID={runtimeBusy}
+    onSelect={(item) => setSelectedID(item.id)}
+    onEdit={(item) => { setEditing(item); setEditorOpen(true) }}
+    onClone={(item) => void cloneProfile(item)}
+    onPlan={(item) => void showPlan(item)}
+    onStart={(item) => void startProfile(item)}
+    onStop={(item) => void stopProfile(item.id)}
+    onDelete={(item) => void deleteProfile(item)}
   />
 
   function dashboard() {
     return <>
       <Heading eyebrow="Local identity workspace" title="Browser environments, without the guesswork." description="Every profile uses explicit kernel, identity, network and managed dependency contracts." action={<button className="button primary" onClick={() => { setEditing(undefined); setEditorOpen(true) }}>＋ New profile</button>} />
-      <div className="metric-grid"><MetricCard label="Profiles" value={data.profiles.length} detail="Isolated local identities" /><MetricCard label="Ready" value={readyCount} detail="Passed visible checks" tone="good" /><MetricCard label="Running" value={runningCount} detail="Supervised sessions" tone={runningCount ? 'good' : 'neutral'} /><MetricCard label="Adapters" value={data.adapters.length} detail="Managed Xray and sing-box binaries" /></div>
+      <div className="metric-grid">
+        <MetricCard label="Profiles" value={data.profiles.length} detail="Isolated local identities" />
+        <MetricCard label="Ready" value={readyCount} detail="Passed visible checks" tone="good" />
+        <MetricCard label="Running" value={runningCount} detail="Supervised sessions" tone={runningCount ? 'good' : 'neutral'} />
+        <MetricCard label="Adapters" value={data.adapters.length} detail="Managed Xray and sing-box binaries" />
+      </div>
       {runtimeError && <div className="form-error runtime-global-error">{runtimeError}</div>}
-      <div className="dashboard-grid"><section className="panel wide"><div className="panel-heading"><div><h2>Recent profiles</h2><p>Start only after referenced binaries pass integrity checks.</p></div><button className="text-button" onClick={() => setView('profiles')}>View all →</button></div>{table(data.profiles.slice(0, 5))}</section><section className="panel rail-card"><div className="panel-heading"><div><h2>Safety posture</h2><p>Runtime boundaries that fail closed.</p></div></div><ul className="check-list"><li><span>✓</span><div><strong>Verified kernels</strong><p>Legacy executable paths remain dry-run only.</p></div></li><li><span>✓</span><div><strong>OS-backed secrets</strong><p>Passwords never enter profile metadata.</p></div></li><li><span>✓</span><div><strong>Authenticated loopback bridge</strong><p>HTTP and SOCKS credentials stay out of browser arguments.</p></div></li><li><span>✓</span><div><strong>Managed advanced adapters</strong><p>Xray and sing-box binaries are versioned and hash-verified.</p></div></li></ul></section></div>
+      <div className="dashboard-grid">
+        <section className="panel wide"><div className="panel-heading"><div><h2>Recent profiles</h2><p>Start only after referenced binaries pass integrity checks.</p></div><button className="text-button" onClick={() => setView('profiles')}>View all →</button></div>{table(data.profiles.slice(0, 5))}</section>
+        <section className="panel rail-card"><div className="panel-heading"><div><h2>Safety posture</h2><p>Runtime boundaries that cannot silently weaken.</p></div></div><ul className="check-list"><li><span>✓</span><div><strong>Verified browser kernels</strong><p>Legacy executable paths stay dry-run only.</p></div></li><li><span>✓</span><div><strong>OS-backed credentials</strong><p>Passwords never enter profile metadata.</p></div></li><li><span>✓</span><div><strong>Authenticated loopback bridge</strong><p>HTTP, HTTPS and SOCKS5 secrets stay out of Chromium arguments.</p></div></li><li><span>✓</span><div><strong>Supervised Xray runtime</strong><p>Reviewed advanced routes use private per-session configuration.</p></div></li></ul></section>
+      </div>
     </>
   }
 
@@ -133,7 +176,7 @@ export default function App() {
   }
 
   function runtime() {
-    return <><Heading eyebrow="Local process supervisor" title="Runtime sessions" description="Process state, loopback CDP readiness, logs and exits remain local." action={<button className="button secondary" onClick={() => void refreshSessions()}>Refresh sessions</button>} />{!backend.isNative() && <div className="info-banner"><strong>Desktop runtime required</strong><p>Browser preview mode cannot start local processes.</p></div>}{runtimeError && <div className="form-error">{runtimeError}</div>}<RuntimePanel sessions={data.sessions} nativeMode={backend.isNative()} busyProfileID={runtimeBusy} onStop={(id) => void stopProfile(id)} /></>
+    return <><Heading eyebrow="Local process supervisor" title="Runtime sessions" description="Process state, loopback CDP readiness, logs and exits remain local." action={<button className="button secondary" onClick={() => void refreshSessions()}>Refresh sessions</button>} />{!backend.isNative() && <div className="info-banner runtime-mode-note"><strong>Desktop runtime required</strong><p>Browser preview mode cannot start local processes.</p></div>}{runtimeError && <div className="form-error runtime-global-error">{runtimeError}</div>}<RuntimePanel sessions={data.sessions} nativeMode={backend.isNative()} busyProfileID={runtimeBusy} onStop={(profileID) => void stopProfile(profileID)} /></>
   }
 
   function kernels() {
@@ -141,15 +184,19 @@ export default function App() {
     return <><Heading eyebrow="Verified local binaries" title="Kernel registry" description="Import Chromium into private managed storage with an explicit provider contract." /><section className="panel kernel-import"><div className="panel-heading"><div><h2>Register local kernel</h2><p>Symbolic links, directories and empty files are rejected.</p></div></div><div className="kernel-import-grid"><label>Name<input value={kernelRequest.name} onChange={(event) => setKernelRequest((current) => ({ ...current, name: event.target.value }))} /></label><label>Provider<select value={kernelRequest.provider} onChange={(event) => { const next = data.providers.find((item) => item.id === event.target.value); setKernelRequest((current) => ({ ...current, provider: event.target.value, version: next?.versions[0] || '' })) }}>{data.providers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Version<select value={kernelRequest.version} onChange={(event) => setKernelRequest((current) => ({ ...current, version: event.target.value }))}>{provider?.versions.map((version) => <option key={version}>{version}</option>)}</select></label><label className="kernel-path">Executable path<div className="path-picker"><input readOnly value={kernelRequest.sourcePath} /><button type="button" className="button secondary" onClick={() => void pickKernel()} disabled={!backend.isNative()}>Browse</button></div></label><button className="button primary kernel-import-button" onClick={() => void importKernel()} disabled={kernelBusy || !backend.isNative() || !kernelRequest.name.trim() || !kernelRequest.sourcePath.trim()}>{kernelBusy ? 'Working…' : 'Import and hash'}</button></div>{kernelError && <div className="form-error">{kernelError}</div>}</section><div className="kernel-registry-list">{data.kernels.length === 0 ? <Empty icon="⬡" title="No registered kernels" detail="Import a Chromium executable to create the first managed record." /> : data.kernels.map((record) => <article className="kernel-record" key={record.id}><div className="kernel-record-head"><div className="kernel-symbol">⬡</div><div><h2>{record.name}</h2><code>{record.provider} · Chromium {record.version.split('.')[0]}</code></div><span className={`kernel-status ${record.status}`}>{record.status}</span></div><dl><div><dt>SHA-256</dt><dd>{record.sha256.slice(0, 16)}…{record.sha256.slice(-8)}</dd></div><div><dt>Size</dt><dd>{(record.sizeBytes / 1024 / 1024).toFixed(1)} MB</dd></div><div><dt>Managed path</dt><dd title={record.executable}>{record.executable}</dd></div></dl><div className="kernel-actions"><button className="button secondary" onClick={() => void verifyKernel(record)} disabled={kernelBusy}>Verify</button><button className="button secondary danger-text" onClick={() => void removeKernel(record)} disabled={kernelBusy}>Remove</button></div></article>)}</div></>
   }
 
-  const adapters = () => <><Heading eyebrow="Managed external runtimes" title="Proxy adapters" description="Register local Xray or sing-box binaries with version, source, license and integrity metadata. Automatic downloads are disabled." /><AdapterRegistry records={data.adapters} nativeMode={backend.isNative()} busy={adapterBusy} error={adapterError} onPick={pickAdapter} onImport={importAdapter} onVerify={verifyAdapter} onDelete={removeAdapter} /></>
+  const adapters = () => <><Heading eyebrow="Managed external runtimes" title="Proxy adapters" description="Register local Xray or sing-box binaries with version, source, license and integrity metadata. Xray profiles can run through a supervised loopback SOCKS5 runtime; automatic downloads remain disabled." /><AdapterRegistry records={data.adapters} nativeMode={backend.isNative()} busy={adapterBusy} error={adapterError} onPick={pickAdapter} onImport={importAdapter} onVerify={verifyAdapter} onDelete={removeAdapter} /></>
   const credentials = () => <><Heading eyebrow="Operating-system secret storage" title="Credential vault" description={`Passwords stay inside ${data.credentialProvider}.`} /><CredentialVault records={data.credentials} provider={data.credentialProvider} nativeMode={backend.isNative()} onSave={saveCredential} onDelete={deleteCredential} /></>
-  const settings = () => <><Heading eyebrow="Application controls" title="Settings" description="Advanced protocol execution remains gated behind reviewed configuration providers." /><section className="settings-grid"><article className="panel setting-card"><h2>Runtime</h2><dl><div><dt>Application version</dt><dd>{data.version}</dd></div><div><dt>Frontend mode</dt><dd>{backend.isNative() ? 'Wails desktop' : 'Browser preview'}</dd></div><div><dt>Active sessions</dt><dd>{runningCount}</dd></div></dl></article><article className="panel setting-card"><h2>Managed dependencies</h2><dl><div><dt>Kernels</dt><dd>{data.kernels.length}</dd></div><div><dt>Proxy adapters</dt><dd>{data.adapters.length}</dd></div><div><dt>Automatic downloads</dt><dd>Disabled</dd></div></dl></article><article className="panel setting-card"><h2>Deferred work</h2><ul className="plain-list"><li>Xray and sing-box configuration providers</li><li>Signed optional download manifests</li><li>Encrypted export/import</li></ul></article></section></>
+  const settings = () => <><Heading eyebrow="Application controls" title="Settings" description="Xray execution is enabled for the reviewed protocol subset; sing-box and unsupported transports remain gated." /><section className="settings-grid"><article className="panel setting-card"><h2>Runtime</h2><dl><div><dt>Application version</dt><dd>{data.version}</dd></div><div><dt>Frontend mode</dt><dd>{backend.isNative() ? 'Wails desktop' : 'Browser preview'}</dd></div><div><dt>Active sessions</dt><dd>{runningCount}</dd></div></dl></article><article className="panel setting-card"><h2>Managed dependencies</h2><dl><div><dt>Kernels</dt><dd>{data.kernels.length}</dd></div><div><dt>Proxy adapters</dt><dd>{data.adapters.length}</dd></div><div><dt>Automatic downloads</dt><dd>Disabled</dd></div></dl></article><article className="panel setting-card"><h2>Deferred work</h2><ul className="plain-list"><li>sing-box configuration provider</li><li>Broader Xray transport and share-link support</li><li>Signed optional download manifests</li><li>Encrypted export/import</li></ul></article></section></>
 
   const activeEditingSession = editing ? sessionForProfile(data.sessions, editing.id) : undefined
   return <div className="app-shell"><Sidebar active={view} onChange={setView} nativeMode={backend.isNative()} /><main className="main-content"><div className="topbar"><div className="window-context"><span className="context-dot" />Veilium workspace</div><div className="top-actions"><span className="version-chip">v{data.version}</span><button title="Refresh" onClick={() => void refresh()}>↻</button></div></div><div className="page-content">{loading && <div className="loading-screen">Loading isolated identities…</div>}{error && <div className="form-error">{error}</div>}{!loading && view === 'dashboard' && dashboard()}{!loading && view === 'profiles' && profiles()}{!loading && view === 'runtime' && runtime()}{!loading && view === 'kernels' && kernels()}{!loading && view === 'adapters' && adapters()}{!loading && view === 'credentials' && credentials()}{!loading && view === 'settings' && settings()}</div></main><ProfileEditor open={editorOpen && !isRuntimeActive(activeEditingSession)} profile={editing} providers={data.providers} kernels={data.kernels} adapters={data.adapters} credentials={data.credentials} onClose={() => setEditorOpen(false)} onSave={saveProfile} /><PlanDrawer profile={planProfile} plan={plan} error={planError} onClose={() => { setPlanProfile(undefined); setPlan(undefined) }} /></div>
 }
 
-function Heading({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: React.ReactNode }) { return <div className="page-heading compact"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>{action}</div> }
-function Empty({ icon, title, detail }: { icon: string; title: string; detail: string }) { return <section className="panel empty-state"><div className="empty-icon">{icon}</div><h3>{title}</h3><p>{detail}</p></section> }
+function Heading({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: React.ReactNode }) {
+  return <div className="page-heading compact"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>{action}</div>
+}
+function Empty({ icon, title, detail }: { icon: string; title: string; detail: string }) {
+  return <section className="panel empty-state"><div className="empty-icon">{icon}</div><h3>{title}</h3><p>{detail}</p></section>
+}
 function errorText(reason: unknown): string { return reason instanceof Error ? reason.message : String(reason) }
 function basename(path: string): string { return path.split(/[\\/]/).pop() || '' }
