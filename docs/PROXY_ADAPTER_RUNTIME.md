@@ -38,7 +38,7 @@ For known upstream projects, the UI offers editable defaults. Users remain respo
 
 ## Runtime provider boundary
 
-The trusted registry exposes a typed provider interface. Veilium now includes a constrained Xray provider; sing-box and unreviewed protocol or transport combinations still fail closed with an explicit provider-unavailable or unsupported-option error.
+The trusted registry exposes a typed provider interface. Veilium includes constrained Xray and sing-box providers. Unreviewed protocols, options, and transport combinations still fail closed with explicit errors.
 
 A provider must:
 
@@ -55,4 +55,4 @@ An adapter cannot be removed while any profile references its ID. Removal first 
 
 ## Executable providers
 
-The first runtime provider is documented in [`XRAY_PROVIDER.md`](XRAY_PROVIDER.md). Xray execution remains constrained to an explicitly reviewed protocol and transport subset; sing-box remains registry-only.
+Runtime providers are documented in [`XRAY_PROVIDER.md`](XRAY_PROVIDER.md) and [`SING_BOX_PROVIDER.md`](SING_BOX_PROVIDER.md). Both remain constrained to explicitly reviewed protocol and option subsets.

@@ -436,9 +436,9 @@ export function ProfileEditor({
                 ))}
               </select>
               <small>
-                HTTP, HTTPS and SOCKS5 credentials use the built-in loopback
-                bridge. For VLESS/VMess, store the UUID as the vault secret;
-                Trojan and Shadowsocks use the password.
+                HTTP, HTTPS and SOCKS5 use the built-in bridge. Xray UUIDs
+                and passwords remain in the vault. Hysteria2 and AnyTLS use a
+                password; TUIC uses strict JSON with uuid and password.
               </small>
             </label>
             {adapterKind && (
@@ -460,8 +460,8 @@ export function ProfileEditor({
                 </select>
                 <small>
                   The adapter binary is verified now and again before runtime.
-                  Xray routes run through a private per-session SOCKS5 endpoint;
-                  sing-box routes remain fail-closed.
+                  Xray and sing-box routes expose only a private per-session
+                  SOCKS5 endpoint to Chromium.
                 </small>
               </label>
             )}

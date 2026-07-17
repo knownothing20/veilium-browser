@@ -18,11 +18,12 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/launch"
 	"github.com/knownothing20/veilium-browser/internal/profile"
 	"github.com/knownothing20/veilium-browser/internal/proxy"
+	"github.com/knownothing20/veilium-browser/internal/singboxprovider"
 	"github.com/knownothing20/veilium-browser/internal/supervisor"
 	"github.com/knownothing20/veilium-browser/internal/xrayprovider"
 )
 
-const AppVersion = "0.9.0-dev"
+const AppVersion = "0.10.0-dev"
 
 type RuntimeSupervisor interface {
 	Start(context.Context, string, string, supervisor.PlanBuilder) (supervisor.Session, error)
@@ -108,6 +109,9 @@ func newServiceWithCredentials(store *profile.Store, dataRoot string, runtimeSup
 	providers := adapterruntime.NewRegistry()
 	if err := providers.Register(xrayprovider.New()); err != nil {
 		return nil, fmt.Errorf("register Xray adapter provider: %w", err)
+	}
+	if err := providers.Register(singboxprovider.New()); err != nil {
+		return nil, fmt.Errorf("register sing-box adapter provider: %w", err)
 	}
 	adapterManager, err := adapterruntime.NewManager(filepath.Join(dataRoot, "adapter-runtime"), providers)
 	if err != nil {
