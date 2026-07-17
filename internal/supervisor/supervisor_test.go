@@ -22,14 +22,9 @@ type fakeProcess struct {
 	killCount   int
 }
 
-func newFakeProcess(pid int) *fakeProcess {
-	return &fakeProcess{pid: pid, wait: make(chan error, 1)}
-}
-
-func (p *fakeProcess) PID() int { return p.pid }
-func (p *fakeProcess) Wait() error {
-	return <-p.wait
-}
+func newFakeProcess(pid int) *fakeProcess { return &fakeProcess{pid: pid, wait: make(chan error, 1)} }
+func (p *fakeProcess) PID() int           { return p.pid }
+func (p *fakeProcess) Wait() error        { return <-p.wait }
 func (p *fakeProcess) Signal(os.Signal) error {
 	p.mu.Lock()
 	p.signalCount++
@@ -84,14 +79,34 @@ func (p *fakeProber) Wait(ctx context.Context, _ int) (VersionInfo, error) {
 	return p.version, p.err
 }
 
-type fixedPorts struct{ port int }
+type fakeDiscovery struct {
+	port       int
+	err        error
+	prepared   string
+	wait       chan struct{}
+	prepareErr error
+}
 
-func (p fixedPorts) Allocate() (int, error) { return p.port, nil }
+func (d *fakeDiscovery) Prepare(userDataDir string) error {
+	d.prepared = userDataDir
+	return d.prepareErr
+}
+func (d *fakeDiscovery) Wait(ctx context.Context, _ string) (int, error) {
+	if d.wait != nil {
+		select {
+		case <-d.wait:
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		}
+	}
+	return d.port, d.err
+}
 
-func TestStartBecomesReadyAndUsesExactLoopbackPort(t *testing.T) {
+func TestStartBecomesReadyUsingChromiumDiscoveredLoopbackPort(t *testing.T) {
 	process := newFakeProcess(321)
 	runner := &fakeRunner{process: process}
-	supervisor := newTestSupervisor(t, runner, &fakeProber{version: VersionInfo{
+	discovery := &fakeDiscovery{port: 9222}
+	supervisor := newTestSupervisor(t, runner, discovery, &fakeProber{version: VersionInfo{
 		Browser:              "Chrome/148.0.0.0",
 		WebSocketDebuggerURL: "ws://127.0.0.1:9222/devtools/browser/test",
 	}})
@@ -104,8 +119,11 @@ func TestStartBecomesReadyAndUsesExactLoopbackPort(t *testing.T) {
 		t.Fatalf("unexpected session: %#v", session)
 	}
 	joined := strings.Join(runner.plan.Args, " ")
-	if !strings.Contains(joined, "--remote-debugging-address=127.0.0.1") || !strings.Contains(joined, "--remote-debugging-port=9222") {
+	if !strings.Contains(joined, "--remote-debugging-address=127.0.0.1") || !strings.Contains(joined, "--remote-debugging-port=0") {
 		t.Fatalf("unsafe launch plan: %s", joined)
+	}
+	if discovery.prepared != "/managed/profile" {
+		t.Fatalf("unexpected discovery directory %q", discovery.prepared)
 	}
 	if filepath.Dir(runner.logPath) != supervisor.logDir {
 		t.Fatalf("log path escaped runtime directory: %s", runner.logPath)
@@ -118,7 +136,7 @@ func TestConcurrentDuplicateStartIsBlocked(t *testing.T) {
 	process := newFakeProcess(322)
 	gate := make(chan struct{})
 	runner := &fakeRunner{process: process}
-	supervisor := newTestSupervisor(t, runner, &fakeProber{
+	supervisor := newTestSupervisor(t, runner, &fakeDiscovery{port: 9222}, &fakeProber{
 		version: VersionInfo{Browser: "Chrome/148", WebSocketDebuggerURL: "ws://127.0.0.1:9222/devtools/browser/test"},
 		wait:    gate,
 	})
@@ -145,7 +163,7 @@ func TestConcurrentDuplicateStartIsBlocked(t *testing.T) {
 func TestStopSignalsAndWaitsForExit(t *testing.T) {
 	process := newFakeProcess(323)
 	runner := &fakeRunner{process: process}
-	supervisor := newTestSupervisor(t, runner, &fakeProber{version: VersionInfo{
+	supervisor := newTestSupervisor(t, runner, &fakeDiscovery{port: 9222}, &fakeProber{version: VersionInfo{
 		Browser:              "Chrome/148",
 		WebSocketDebuggerURL: "ws://127.0.0.1:9222/devtools/browser/test",
 	}})
@@ -170,16 +188,16 @@ func TestStopSignalsAndWaitsForExit(t *testing.T) {
 	}
 }
 
-func TestProbeFailureKillsProcessAndPreservesFailure(t *testing.T) {
+func TestDiscoveryFailureKillsProcessAndPreservesFailure(t *testing.T) {
 	process := newFakeProcess(324)
 	runner := &fakeRunner{process: process}
-	supervisor := newTestSupervisor(t, runner, &fakeProber{err: errors.New("not ready")})
+	supervisor := newTestSupervisor(t, runner, &fakeDiscovery{err: errors.New("active port missing")}, &fakeProber{})
 
 	session, err := supervisor.Start(context.Background(), "profile-a", "Profile A", safePlan)
 	if err == nil || !strings.Contains(err.Error(), "readiness") {
 		t.Fatalf("expected readiness error, got %v", err)
 	}
-	if session.State != StateFailed || !strings.Contains(session.LastError, "not ready") {
+	if session.State != StateFailed || !strings.Contains(session.LastError, "active port missing") {
 		t.Fatalf("failure was not preserved: %#v", session)
 	}
 	waitForState(t, supervisor, "profile-a", StateFailed)
@@ -193,7 +211,8 @@ func TestProbeFailureKillsProcessAndPreservesFailure(t *testing.T) {
 func TestRejectsBridgeAndNonLoopbackCDPBeforeReady(t *testing.T) {
 	process := newFakeProcess(325)
 	runner := &fakeRunner{process: process}
-	supervisor := newTestSupervisor(t, runner, &fakeProber{})
+	discovery := &fakeDiscovery{port: 9222}
+	supervisor := newTestSupervisor(t, runner, discovery, &fakeProber{})
 	_, err := supervisor.Start(context.Background(), "profile-a", "Profile A", func(port int) (domain.LaunchPlan, error) {
 		plan, buildErr := safePlan(port)
 		plan.RequiresBridge = true
@@ -221,20 +240,24 @@ func TestRejectsBridgeAndNonLoopbackCDPBeforeReady(t *testing.T) {
 	}
 }
 
-func TestValidatePlanRejectsEnvironmentInjection(t *testing.T) {
-	plan, _ := safePlan(9222)
+func TestValidatePlanRejectsEnvironmentInjectionAndFixedRuntimePort(t *testing.T) {
+	plan, _ := safePlan(0)
 	plan.Environment = map[string]string{"BAD=KEY": "value"}
-	if err := validatePlan(plan, 9222); err == nil {
+	if _, err := validatePlan(plan); err == nil {
 		t.Fatal("expected invalid environment rejection")
+	}
+	plan, _ = safePlan(9222)
+	if _, err := validatePlan(plan); err == nil || !strings.Contains(err.Error(), "Chromium assign") {
+		t.Fatalf("expected fixed port rejection, got %v", err)
 	}
 }
 
-func newTestSupervisor(t *testing.T, runner Runner, prober Prober) *Supervisor {
+func newTestSupervisor(t *testing.T, runner Runner, discovery EndpointDiscovery, prober Prober) *Supervisor {
 	t.Helper()
 	supervisor, err := NewWithDependencies(t.TempDir(), Dependencies{
 		Runner:       runner,
 		Prober:       prober,
-		Ports:        fixedPorts{port: 9222},
+		Discovery:    discovery,
 		Now:          time.Now,
 		ReadyTimeout: 500 * time.Millisecond,
 		StopTimeout:  100 * time.Millisecond,
@@ -249,6 +272,7 @@ func safePlan(port int) (domain.LaunchPlan, error) {
 	return domain.LaunchPlan{
 		Executable: "/managed/chrome",
 		Args: []string{
+			"--user-data-dir=/managed/profile",
 			"--remote-debugging-address=127.0.0.1",
 			fmt.Sprintf("--remote-debugging-port=%d", port),
 		},

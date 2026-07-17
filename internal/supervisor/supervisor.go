@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -69,14 +68,10 @@ type Prober interface {
 	Wait(context.Context, int) (VersionInfo, error)
 }
 
-type PortAllocator interface {
-	Allocate() (int, error)
-}
-
 type Dependencies struct {
 	Runner       Runner
 	Prober       Prober
-	Ports        PortAllocator
+	Discovery    EndpointDiscovery
 	Now          func() time.Time
 	ReadyTimeout time.Duration
 	StopTimeout  time.Duration
@@ -94,7 +89,7 @@ type Supervisor struct {
 	starting     map[string]struct{}
 	runner       Runner
 	prober       Prober
-	ports        PortAllocator
+	discovery    EndpointDiscovery
 	now          func() time.Time
 	logDir       string
 	readyTimeout time.Duration
@@ -114,7 +109,7 @@ func New(logDir string) (*Supervisor, error) {
 	return NewWithDependencies(logDir, Dependencies{
 		Runner:       execRunner{},
 		Prober:       HTTPProber{Client: client, Interval: 150 * time.Millisecond},
-		Ports:        localPortAllocator{},
+		Discovery:    DevToolsActivePortDiscovery{Interval: 100 * time.Millisecond},
 		Now:          time.Now,
 		ReadyTimeout: 12 * time.Second,
 		StopTimeout:  3 * time.Second,
@@ -125,7 +120,7 @@ func NewWithDependencies(logDir string, dependencies Dependencies) (*Supervisor,
 	if strings.TrimSpace(logDir) == "" {
 		return nil, fmt.Errorf("runtime log directory is required")
 	}
-	if dependencies.Runner == nil || dependencies.Prober == nil || dependencies.Ports == nil {
+	if dependencies.Runner == nil || dependencies.Prober == nil || dependencies.Discovery == nil {
 		return nil, fmt.Errorf("runtime dependencies are required")
 	}
 	if dependencies.Now == nil {
@@ -142,7 +137,7 @@ func NewWithDependencies(logDir string, dependencies Dependencies) (*Supervisor,
 		starting:     make(map[string]struct{}),
 		runner:       dependencies.Runner,
 		prober:       dependencies.Prober,
-		ports:        dependencies.Ports,
+		discovery:    dependencies.Discovery,
 		now:          dependencies.Now,
 		logDir:       logDir,
 		readyTimeout: dependencies.ReadyTimeout,
@@ -176,16 +171,16 @@ func (s *Supervisor) Start(ctx context.Context, profileID, profileName string, b
 		}
 	}()
 
-	port, err := s.ports.Allocate()
-	if err != nil {
-		return Session{}, fmt.Errorf("allocate loopback CDP port: %w", err)
-	}
-	plan, err := build(port)
+	plan, err := build(0)
 	if err != nil {
 		return Session{}, fmt.Errorf("build browser launch plan: %w", err)
 	}
-	if err := validatePlan(plan, port); err != nil {
+	userDataDir, err := validatePlan(plan)
+	if err != nil {
 		return Session{}, err
+	}
+	if err := s.discovery.Prepare(userDataDir); err != nil {
+		return Session{}, fmt.Errorf("prepare dynamic CDP discovery: %w", err)
 	}
 	if err := os.MkdirAll(s.logDir, 0o700); err != nil {
 		return Session{}, fmt.Errorf("create runtime log directory: %w", err)
@@ -203,8 +198,6 @@ func (s *Supervisor) Start(ctx context.Context, profileID, profileName string, b
 			ProfileName: profileName,
 			State:       StateStarting,
 			PID:         process.PID(),
-			CDPPort:     port,
-			CDPURL:      fmt.Sprintf("http://127.0.0.1:%d", port),
 			StartedAt:   startedAt,
 			LogPath:     logPath,
 		},
@@ -222,8 +215,13 @@ func (s *Supervisor) Start(ctx context.Context, profileID, profileName string, b
 	defer cancel()
 	resultChannel := make(chan probeResult, 1)
 	go func() {
+		port, discoverErr := s.discovery.Wait(readyContext, userDataDir)
+		if discoverErr != nil {
+			resultChannel <- probeResult{err: discoverErr}
+			return
+		}
 		version, probeErr := s.prober.Wait(readyContext, port)
-		resultChannel <- probeResult{version: version, err: probeErr}
+		resultChannel <- probeResult{port: port, version: version, err: probeErr}
 	}()
 
 	select {
@@ -233,7 +231,7 @@ func (s *Supervisor) Start(ctx context.Context, profileID, profileName string, b
 			s.failStart(profileID, failure)
 			return s.snapshotWithError(profileID, failure)
 		}
-		if err := validateVersionInfo(result.version, port); err != nil {
+		if err := validateVersionInfo(result.version, result.port); err != nil {
 			s.failStart(profileID, err)
 			return s.snapshotWithError(profileID, err)
 		}
@@ -249,6 +247,8 @@ func (s *Supervisor) Start(ctx context.Context, profileID, profileName string, b
 			return snapshot, fmt.Errorf("browser exited or was stopped before CDP became ready")
 		}
 		current.snapshot.State = StateReady
+		current.snapshot.CDPPort = result.port
+		current.snapshot.CDPURL = fmt.Sprintf("http://127.0.0.1:%d", result.port)
 		current.snapshot.ReadyAt = &readyAt
 		current.snapshot.Browser = result.version.Browser
 		current.snapshot.WebSocketDebuggerURL = result.version.WebSocketDebuggerURL
@@ -355,6 +355,7 @@ func (s *Supervisor) IsActive(profileID string) bool {
 }
 
 type probeResult struct {
+	port    int
 	version VersionInfo
 	err     error
 }
@@ -427,38 +428,49 @@ func (s *Supervisor) wait(managed *managedSession) {
 	close(managed.done)
 }
 
-func validatePlan(plan domain.LaunchPlan, port int) error {
+func validatePlan(plan domain.LaunchPlan) (string, error) {
 	if strings.TrimSpace(plan.Executable) == "" {
-		return fmt.Errorf("launch plan executable is required")
+		return "", fmt.Errorf("launch plan executable is required")
 	}
 	if strings.ContainsRune(plan.Executable, '\x00') {
-		return fmt.Errorf("launch plan executable contains an invalid null byte")
+		return "", fmt.Errorf("launch plan executable contains an invalid null byte")
 	}
 	if plan.RequiresBridge {
-		return fmt.Errorf("proxy bridge %q is not available yet", plan.BridgeKind)
+		return "", fmt.Errorf("proxy bridge %q is not available yet", plan.BridgeKind)
 	}
-	requiredAddress := false
-	requiredPort := false
+	addressCount := 0
+	portCount := 0
+	userDataCount := 0
+	userDataDir := ""
 	for _, argument := range plan.Args {
 		if strings.ContainsRune(argument, '\x00') {
-			return fmt.Errorf("launch argument contains an invalid null byte")
+			return "", fmt.Errorf("launch argument contains an invalid null byte")
 		}
-		if strings.HasPrefix(argument, "--remote-debugging-address=") {
-			requiredAddress = argument == "--remote-debugging-address=127.0.0.1"
-		}
-		if strings.HasPrefix(argument, "--remote-debugging-port=") {
-			requiredPort = argument == "--remote-debugging-port="+strconv.Itoa(port)
+		switch {
+		case strings.HasPrefix(argument, "--remote-debugging-address="):
+			addressCount++
+			if argument != "--remote-debugging-address=127.0.0.1" {
+				return "", fmt.Errorf("launch plan must bind CDP to IPv4 loopback")
+			}
+		case strings.HasPrefix(argument, "--remote-debugging-port="):
+			portCount++
+			if argument != "--remote-debugging-port=0" {
+				return "", fmt.Errorf("runtime launch must let Chromium assign the CDP port")
+			}
+		case strings.HasPrefix(argument, "--user-data-dir="):
+			userDataCount++
+			userDataDir = strings.TrimSpace(strings.TrimPrefix(argument, "--user-data-dir="))
 		}
 	}
-	if !requiredAddress || !requiredPort {
-		return fmt.Errorf("launch plan must bind CDP to the allocated loopback port")
+	if addressCount != 1 || portCount != 1 || userDataCount != 1 || userDataDir == "" {
+		return "", fmt.Errorf("launch plan must contain one loopback CDP address, dynamic port, and user data directory")
 	}
 	for key, value := range plan.Environment {
 		if !environmentKeyPattern.MatchString(key) || strings.ContainsRune(value, '\x00') {
-			return fmt.Errorf("launch environment contains an invalid entry")
+			return "", fmt.Errorf("launch environment contains an invalid entry")
 		}
 	}
-	return nil
+	return userDataDir, nil
 }
 
 func validateVersionInfo(version VersionInfo, port int) error {
@@ -476,7 +488,7 @@ func validateVersionInfo(version VersionInfo, port int) error {
 	}
 	webSocketPort, err := strconv.Atoi(parsed.Port())
 	if err != nil || webSocketPort != port {
-		return fmt.Errorf("CDP websocket URL does not use the allocated port")
+		return fmt.Errorf("CDP websocket URL does not use the discovered port")
 	}
 	return nil
 }
@@ -499,74 +511,4 @@ func safeID(value string) string {
 		}
 		return '_'
 	}, value)
-}
-
-func processExitCode(err error) int {
-	if err == nil {
-		return 0
-	}
-	var exitError *exec.ExitError
-	if errors.As(err, &exitError) {
-		return exitError.ExitCode()
-	}
-	return -1
-}
-
-type execRunner struct{}
-
-type execProcess struct {
-	command *exec.Cmd
-	log     *os.File
-}
-
-func (execRunner) Start(plan domain.LaunchPlan, logPath string) (Process, error) {
-	info, err := os.Lstat(plan.Executable)
-	if err != nil {
-		return nil, fmt.Errorf("inspect browser executable: %w", err)
-	}
-	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return nil, fmt.Errorf("browser executable must be a regular managed file")
-	}
-	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o600)
-	if err != nil {
-		return nil, fmt.Errorf("open runtime log: %w", err)
-	}
-	command := exec.Command(plan.Executable, plan.Args...)
-	command.Stdin = nil
-	command.Stdout = logFile
-	command.Stderr = logFile
-	command.Env = os.Environ()
-	for key, value := range plan.Environment {
-		command.Env = append(command.Env, key+"="+value)
-	}
-	if err := command.Start(); err != nil {
-		_ = logFile.Close()
-		_ = os.Remove(logPath)
-		return nil, err
-	}
-	return &execProcess{command: command, log: logFile}, nil
-}
-
-func (p *execProcess) PID() int                      { return p.command.Process.Pid }
-func (p *execProcess) Signal(signal os.Signal) error { return p.command.Process.Signal(signal) }
-func (p *execProcess) Kill() error                   { return p.command.Process.Kill() }
-func (p *execProcess) Wait() error {
-	err := p.command.Wait()
-	_ = p.log.Close()
-	return err
-}
-
-type localPortAllocator struct{}
-
-func (localPortAllocator) Allocate() (int, error) {
-	listener, err := net.Listen("tcp4", "127.0.0.1:0")
-	if err != nil {
-		return 0, err
-	}
-	defer listener.Close()
-	address, ok := listener.Addr().(*net.TCPAddr)
-	if !ok || address.IP == nil || !address.IP.IsLoopback() {
-		return 0, fmt.Errorf("allocated CDP listener is not loopback-only")
-	}
-	return address.Port, nil
 }

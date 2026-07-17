@@ -9,7 +9,36 @@ import (
 )
 
 func TestBuildProducesStableSafeLaunchPlan(t *testing.T) {
-	item := domain.Profile{
+	item := testProfile()
+	plan, err := (Planner{}).Build(item, 9222)
+	if err != nil {
+		t.Fatal(err)
+	}
+	joined := strings.Join(plan.Args, " ")
+	for _, required := range []string{
+		"--remote-debugging-address=127.0.0.1",
+		"--remote-debugging-port=9222",
+		"--fingerprint=",
+		"--proxy-server=http://127.0.0.1:8080",
+	} {
+		if !strings.Contains(joined, required) {
+			t.Fatalf("missing %q in %s", required, joined)
+		}
+	}
+}
+
+func TestBuildSupportsChromiumAssignedDebuggingPort(t *testing.T) {
+	plan, err := (Planner{}).Build(testProfile(), 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(strings.Join(plan.Args, " "), "--remote-debugging-port=0") {
+		t.Fatalf("dynamic CDP port was not requested: %#v", plan.Args)
+	}
+}
+
+func testProfile() domain.Profile {
+	return domain.Profile{
 		ID:          "stable-profile-id",
 		Name:        "Stable profile",
 		UserDataDir: "/tmp/veilium/profile",
@@ -26,20 +55,5 @@ func TestBuildProducesStableSafeLaunchPlan(t *testing.T) {
 			ClientRectsMode: "seeded", GPUProfile: "auto",
 		},
 		Proxy: domain.ProxyConfig{URL: "http://127.0.0.1:8080"},
-	}
-	plan, err := (Planner{}).Build(item, 9222)
-	if err != nil {
-		t.Fatal(err)
-	}
-	joined := strings.Join(plan.Args, " ")
-	for _, required := range []string{
-		"--remote-debugging-address=127.0.0.1",
-		"--remote-debugging-port=9222",
-		"--fingerprint=",
-		"--proxy-server=http://127.0.0.1:8080",
-	} {
-		if !strings.Contains(joined, required) {
-			t.Fatalf("missing %q in %s", required, joined)
-		}
 	}
 }
