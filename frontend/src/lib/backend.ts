@@ -2,6 +2,8 @@ import { defaultProfile } from './model'
 import type {
   Bootstrap,
   Capabilities,
+  CredentialRecord,
+  CredentialSaveRequest,
   KernelImportRequest,
   KernelRecord,
   LaunchPlan,
@@ -14,11 +16,14 @@ type WailsDesktopApp = {
   Bootstrap: () => Promise<Bootstrap>
   ListProfiles: () => Promise<Profile[]>
   ListSessions: () => Promise<RuntimeSession[]>
+  ListCredentials: () => Promise<CredentialRecord[]>
   Capabilities: (provider: string, version: string) => Promise<Capabilities>
   CreateProfile: (profile: Profile) => Promise<Profile>
   UpdateProfile: (profile: Profile) => Promise<Profile>
   CloneProfile: (id: string, name: string) => Promise<Profile>
   DeleteProfile: (id: string) => Promise<void>
+  SaveCredential: (request: CredentialSaveRequest) => Promise<CredentialRecord>
+  DeleteCredential: (id: string) => Promise<void>
   BuildLaunchPlan: (request: { profileId: string; remoteDebuggingPort: number }) => Promise<LaunchPlan>
   StartProfile: (profileId: string) => Promise<RuntimeSession>
   StopProfile: (profileId: string) => Promise<RuntimeSession>
@@ -70,11 +75,13 @@ export const backend = {
     const api = native()
     if (api) return api.Bootstrap()
     return {
-      version: '0.4.0-browser-preview',
+      version: '0.5.0-browser-preview',
       profiles: clone(mockProfiles),
       providers: clone(providers),
       kernels: clone(mockKernels),
       sessions: clone(mockSessions),
+      credentials: [],
+      credentialProvider: 'Desktop operating-system keyring',
     }
   },
 
@@ -124,6 +131,18 @@ export const backend = {
     const api = native()
     if (api) return api.DeleteProfile(id)
     mockProfiles = mockProfiles.filter((item) => item.id !== id)
+  },
+
+  async saveCredential(request: CredentialSaveRequest): Promise<CredentialRecord> {
+    const api = native()
+    if (!api) throw new Error('The operating-system credential vault is available only in the Wails desktop application')
+    return api.SaveCredential(request)
+  },
+
+  async deleteCredential(id: string): Promise<void> {
+    const api = native()
+    if (!api) throw new Error('The operating-system credential vault is available only in the Wails desktop application')
+    return api.DeleteCredential(id)
   },
 
   async buildLaunchPlan(profileId: string, remoteDebuggingPort = 0): Promise<LaunchPlan> {

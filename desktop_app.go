@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/knownothing20/veilium-browser/internal/credential"
 	"github.com/knownothing20/veilium-browser/internal/desktop"
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/fingerprint"
@@ -23,6 +24,9 @@ func (a *DesktopApp) Bootstrap() desktop.Bootstrap       { return a.service.Boot
 func (a *DesktopApp) ListProfiles() []domain.Profile     { return a.service.ListProfiles() }
 func (a *DesktopApp) ListKernels() []kernel.Record       { return a.service.ListKernels() }
 func (a *DesktopApp) ListSessions() []supervisor.Session { return a.service.ListSessions() }
+func (a *DesktopApp) ListCredentials() []credential.Record {
+	return a.service.ListCredentials()
+}
 func (a *DesktopApp) Capabilities(provider, version string) (fingerprint.Capabilities, error) {
 	return a.service.Capabilities(provider, version)
 }
@@ -36,6 +40,10 @@ func (a *DesktopApp) CloneProfile(id, name string) (domain.Profile, error) {
 	return a.service.CloneProfile(id, name)
 }
 func (a *DesktopApp) DeleteProfile(id string) error { return a.service.DeleteProfile(id) }
+func (a *DesktopApp) SaveCredential(request credential.SaveRequest) (credential.Record, error) {
+	return a.service.SaveCredential(request)
+}
+func (a *DesktopApp) DeleteCredential(id string) error { return a.service.DeleteCredential(id) }
 func (a *DesktopApp) BuildLaunchPlan(request desktop.LaunchPlanRequest) (domain.LaunchPlan, error) {
 	return a.service.BuildLaunchPlan(request)
 }

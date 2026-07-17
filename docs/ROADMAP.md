@@ -16,6 +16,7 @@
 - [x] Unix process groups and Windows Job Object tree cleanup.
 - [x] Cross-platform supervised runtime handshake tests.
 - [x] In-memory runtime status, logs, exit details and UI controls.
+- [x] OS-backed credential vault with metadata-only references and no plaintext fallback.
 
 ## Runtime follow-up
 
@@ -27,7 +28,7 @@
 
 ## Proxy and credential platform
 
-- [ ] Secret storage through the operating-system credential vault.
+- [x] Secret storage through the operating-system credential vault.
 - [ ] Authenticated HTTP/SOCKS local bridge.
 - [ ] Xray and sing-box adapters with checksums and pinned provenance.
 - [ ] Health, latency, exit-IP, DNS and WebRTC leak checks.
