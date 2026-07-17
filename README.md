@@ -1,54 +1,65 @@
 # Veilium Browser
 
-**Open-source multi-profile privacy browser infrastructure.**
+Veilium is an open-source, multi-profile privacy browser workspace focused on isolated identities, explicit kernel capabilities and reviewable network routing.
 
-Veilium is a clean-room project inspired by the strongest architectural ideas in Donut Browser, Ant Browser, and VirtualBrowser. It focuses on isolated browser identities, version-aware fingerprint settings, proxy routing, and automation without coupling the application to one browser binary.
+> Clean-room project: architecture and product lessons are studied from existing open-source browsers, while Veilium implementation code is written independently.
 
-> Phase 1 is a tested core service and launch planner. The desktop UI and real browser-process runtime are intentionally developed in later reviewed phases.
+## Current status
 
-## Why Veilium
+### Phase 1 — Core foundation
 
-- One profile = one isolated user-data directory, fingerprint policy, proxy route, and kernel reference.
-- Browser-kernel providers expose versioned capability contracts, so the UI cannot silently send obsolete flags.
-- Inline proxy credentials are rejected; profiles store only an operating-system vault `credentialRef`, and authenticated proxies use a planned local bridge.
-- The local API binds to loopback by default and requires a strong bearer token.
-- No source code is copied from the reference projects; implementation is clean-room.
+- version-aware Chromium provider contracts;
+- fingerprint consistency validation;
+- proxy route classification without inline credentials;
+- deterministic launch-plan generation;
+- atomic local profile persistence;
+- loopback-only bearer-authenticated REST API;
+- Linux and Windows CI.
 
-## Current Phase 1 capabilities
+### Phase 2 — Desktop shell
 
-- JSON profile persistence with atomic replacement.
-- Native and patched Chromium provider contracts.
-- Fingerprint consistency validation.
-- Chromium launch-plan generation.
-- HTTP/HTTPS/SOCKS5 and advanced proxy route classification.
-- Local authenticated REST API.
-- Linux and Windows CI checks.
+- Wails v2 desktop application;
+- React + TypeScript + Vite interface;
+- dashboard and searchable profile registry;
+- create, edit, clone and delete profile workflows;
+- group and tag organization;
+- kernel capability registry;
+- launch-plan dry-run drawer;
+- browser-preview mode with temporary demo data;
+- Windows and Linux desktop build CI.
 
-## Run the local core
+Phase 2 intentionally creates and reviews launch plans but does not execute browser binaries yet.
+
+## Development
+
+### Headless service
 
 ```bash
 go run ./cmd/veilium
 ```
 
-The service listens on `127.0.0.1:51090`. If `VEILIUM_API_TOKEN` is not set, an ephemeral token is generated and printed once.
+The REST service listens on `127.0.0.1:51090` by default. Set `VEILIUM_API_TOKEN` to a strong local token or the command generates an ephemeral one.
+
+### Desktop application
 
 ```bash
-VEILIUM_API_TOKEN='replace-with-at-least-24-characters' go run ./cmd/veilium
+go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+wails dev
 ```
 
-## Validate
+### Checks
 
 ```bash
-gofmt -w .
-go vet ./...
-go test ./...
-go build ./...
+make check
 ```
 
-## Project status
+See:
 
-See [Architecture](docs/ARCHITECTURE.md), [reference-project analysis](docs/REFERENCE_ANALYSIS.md), and [roadmap](docs/ROADMAP.md).
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/REFERENCE_ANALYSIS.md`](docs/REFERENCE_ANALYSIS.md)
+- [`docs/PHASE2_DESKTOP.md`](docs/PHASE2_DESKTOP.md)
+- [`docs/ROADMAP.md`](docs/ROADMAP.md)
 
-## License
+## Safety and intended use
 
-Apache-2.0. Third-party browser kernels and proxy runtimes keep their own licenses and are not bundled until their redistribution terms have been reviewed.
+Veilium is intended for privacy, testing, QA, account separation and authorized automation. It must not be used to bypass platform rules, commit fraud, evade law enforcement or access systems without authorization.

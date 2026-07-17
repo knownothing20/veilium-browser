@@ -57,7 +57,7 @@ func (s *Store) Create(input domain.Profile) (domain.Profile, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if strings.TrimSpace(input.ID) == "" {
-		id, err := newID()
+		id, err := NewID()
 		if err != nil {
 			return domain.Profile{}, err
 		}
@@ -69,9 +69,28 @@ func (s *Store) Create(input domain.Profile) (domain.Profile, error) {
 	now := time.Now().UTC()
 	input.CreatedAt = now
 	input.UpdatedAt = now
+	input.Tags = normalizeTags(input.Tags)
 	s.profiles[input.ID] = input
 	if err := s.persistLocked(); err != nil {
 		delete(s.profiles, input.ID)
+		return domain.Profile{}, err
+	}
+	return input, nil
+}
+
+func (s *Store) Update(input domain.Profile) (domain.Profile, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	current, exists := s.profiles[input.ID]
+	if !exists {
+		return domain.Profile{}, ErrNotFound
+	}
+	input.CreatedAt = current.CreatedAt
+	input.UpdatedAt = time.Now().UTC()
+	input.Tags = normalizeTags(input.Tags)
+	s.profiles[input.ID] = input
+	if err := s.persistLocked(); err != nil {
+		s.profiles[input.ID] = current
 		return domain.Profile{}, err
 	}
 	return input, nil
@@ -150,10 +169,29 @@ func (s *Store) persistLocked() error {
 	return nil
 }
 
-func newID() (string, error) {
+func NewID() (string, error) {
 	buffer := make([]byte, 16)
 	if _, err := rand.Read(buffer); err != nil {
 		return "", fmt.Errorf("generate profile id: %w", err)
 	}
 	return hex.EncodeToString(buffer), nil
+}
+
+func normalizeTags(tags []string) []string {
+	seen := make(map[string]struct{}, len(tags))
+	result := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		tag = strings.TrimSpace(tag)
+		if tag == "" {
+			continue
+		}
+		key := strings.ToLower(tag)
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		result = append(result, tag)
+	}
+	sort.Slice(result, func(i, j int) bool { return strings.ToLower(result[i]) < strings.ToLower(result[j]) })
+	return result
 }

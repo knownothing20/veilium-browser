@@ -1,0 +1,82 @@
+export interface KernelRef {
+  provider: string
+  version: string
+  executable: string
+}
+
+export interface FingerprintConfig {
+  seed?: string
+  platform: 'windows' | 'linux' | 'macos'
+  brand: 'Chromium' | 'Chrome' | 'Edge' | 'Opera' | 'Vivaldi'
+  language: string
+  timezone: string
+  screenWidth: number
+  screenHeight: number
+  hardwareConcurrency?: number
+  deviceMemoryGb?: number
+  webrtcPolicy: 'default' | 'proxy-only' | 'disabled'
+  canvasMode: 'seeded' | 'native'
+  audioMode: 'seeded' | 'native'
+  fontMode: 'seeded' | 'native'
+  clientRectsMode: 'seeded' | 'native'
+  gpuProfile: 'auto' | 'native' | 'custom'
+  gpuVendor?: string
+  gpuRenderer?: string
+}
+
+export interface ProxyConfig {
+  url?: string
+  credentialRef?: string
+}
+
+export interface Profile {
+  id: string
+  name: string
+  group?: string
+  notes?: string
+  kernel: KernelRef
+  fingerprint: FingerprintConfig
+  proxy: ProxyConfig
+  userDataDir: string
+  tags?: string[]
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface Capabilities {
+  provider: string
+  majorVersion: number
+  canSetPlatform: boolean
+  canSetBrand: boolean
+  canSetTimezone: boolean
+  canSeedSurfaces: boolean
+  canDisableSurfaces: boolean
+  canSetHardwareThreads: boolean
+  canSetDeviceMemory: boolean
+  canSetCustomGpu: boolean
+  supportsProxyOnlyWebRtc: boolean
+}
+
+export interface ProviderDescriptor {
+  id: string
+  name: string
+  description: string
+  versions: string[]
+  samples: Capabilities[]
+}
+
+export interface Bootstrap {
+  version: string
+  profiles: Profile[]
+  providers: ProviderDescriptor[]
+}
+
+export interface LaunchPlan {
+  executable: string
+  args: string[]
+  environment?: Record<string, string>
+  proxyDisplay: string
+  requiresBridge: boolean
+  bridgeKind?: string
+  warnings?: string[]
+}
