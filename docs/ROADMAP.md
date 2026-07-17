@@ -22,6 +22,9 @@
 - [x] Per-profile bridge health and lifecycle cleanup.
 - [x] On-demand proxy connectivity, latency, and exit-IP measurement.
 - [x] DNS-route analysis and WebRTC-policy risk reporting.
+- [x] Managed Xray and sing-box executable imports.
+- [x] Adapter SHA-256, provenance, license, capability, and in-use controls.
+- [x] Profile-to-adapter binding with runtime integrity re-verification.
 
 ## Runtime follow-up
 
@@ -32,9 +35,17 @@
 - [ ] Native suspended-process creation on Windows if the remaining pre-assignment micro-window becomes material.
 - [ ] Live browser WebRTC/STUN and delegated-domain DNS leak tests.
 
+## Proxy adapter providers
+
+- [ ] Xray provider for VMess, VLESS, Trojan, Shadowsocks, and compatible transports.
+- [ ] sing-box provider for Hysteria2, TUIC, AnyTLS, and compatible transports.
+- [ ] Private per-session adapter configuration with vault material resolved only at runtime.
+- [ ] Loopback inbound readiness checks and adapter process-tree supervision.
+- [ ] Share-link parser schemas with explicit capability and unsupported-field reporting.
+- [ ] Pinned optional download manifests with signatures, checksums, notices, and disabled-by-default policy.
+
 ## Proxy platform follow-up
 
-- [ ] Xray and sing-box adapters with checksums and pinned provenance.
 - [ ] Optional local-client authentication for the ephemeral loopback bridge.
 - [ ] Proxy import, tagging, batch testing and rotation policies.
 - [ ] Configurable or self-hosted diagnostic probe endpoints.

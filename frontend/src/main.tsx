@@ -6,9 +6,6 @@ import './kernel.css'
 import './runtime.css'
 import './credential.css'
 import './diagnostics.css'
+import './adapter.css'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-)
+createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)
