@@ -18,7 +18,7 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/supervisor"
 )
 
-const AppVersion = "0.5.0-dev"
+const AppVersion = "0.6.0-dev"
 
 type RuntimeSupervisor interface {
 	Start(context.Context, string, string, supervisor.PlanBuilder) (supervisor.Session, error)
@@ -94,7 +94,7 @@ func newServiceWithCredentials(store *profile.Store, dataRoot string, runtimeSup
 	if err != nil {
 		return nil, err
 	}
-	return &Service{
+	service := &Service{
 		store:       store,
 		kernels:     kernels,
 		credentials: credentials,
@@ -102,7 +102,9 @@ func newServiceWithCredentials(store *profile.Store, dataRoot string, runtimeSup
 		supervisor:  runtimeSupervisor,
 		dataRoot:    dataRoot,
 		profilesDir: filepath.Join(dataRoot, "profiles"),
-	}, nil
+	}
+	_ = registryFor(service)
+	return service, nil
 }
 
 func (s *Service) Bootstrap() Bootstrap {
@@ -121,7 +123,7 @@ func (s *Service) ListProfiles() []domain.Profile        { return s.store.List()
 func (s *Service) ListKernels() []kernel.Record          { return s.kernels.List() }
 func (s *Service) ListSessions() []supervisor.Session    { return s.supervisor.List() }
 func (s *Service) ListCredentials() []credential.Record  { return s.credentials.List() }
-func (s *Service) Shutdown(ctx context.Context) error    { return s.supervisor.Shutdown(ctx) }
+func (s *Service) Shutdown(ctx context.Context) error    { return shutdownRuntimeAndBridges(s, ctx) }
 func (s *Service) IsProfileActive(profileID string) bool { return s.supervisor.IsActive(profileID) }
 func (s *Service) Capabilities(provider, version string) (fingerprint.Capabilities, error) {
 	return fingerprint.For(provider, version)
@@ -268,13 +270,57 @@ func (s *Service) StartProfile(ctx context.Context, profileID string) (superviso
 	if err := prepareManagedProfileDir(s.profilesDir, managedDir); err != nil {
 		return supervisor.Session{}, err
 	}
-	return s.supervisor.Start(ctx, item.ID, item.Name, func(port int) (domain.LaunchPlan, error) {
-		return s.planner.Build(item, port)
+	route, err := proxy.Resolve(item.Proxy.URL, item.Proxy.CredentialRef)
+	if err != nil {
+		return supervisor.Session{}, err
+	}
+	if !route.RequiresBridge {
+		return s.supervisor.Start(ctx, item.ID, item.Name, func(port int) (domain.LaunchPlan, error) {
+			return s.planner.Build(item, port)
+		})
+	}
+	if route.BridgeKind != "local-auth-bridge" {
+		return supervisor.Session{}, fmt.Errorf("proxy bridge %q is not available yet", route.BridgeKind)
+	}
+	material, err := s.credentials.Resolve(route.CredentialRef)
+	if err != nil {
+		return supervisor.Session{}, fmt.Errorf("resolve proxy credential: %w", err)
+	}
+	bridge, err := proxyBridgeFactory(s).Start(ctx, route.DisplayURL, material)
+	if err != nil {
+		return supervisor.Session{}, fmt.Errorf("start authenticated proxy bridge: %w", err)
+	}
+	bridgedProfile := item
+	bridgedProfile.Proxy.URL = bridge.URL()
+	bridgedProfile.Proxy.CredentialRef = ""
+	session, err := s.supervisor.Start(ctx, item.ID, item.Name, func(port int) (domain.LaunchPlan, error) {
+		plan, buildErr := s.planner.Build(bridgedProfile, port)
+		if buildErr != nil {
+			return domain.LaunchPlan{}, buildErr
+		}
+		plan.ProxyDisplay = route.DisplayURL
+		plan.Warnings = append(plan.Warnings, "authenticated upstream proxy is routed through a loopback-only Veilium bridge")
+		return plan, nil
 	})
+	if err != nil {
+		_ = bridge.Close()
+		return session, err
+	}
+	token := registerProxyBridge(s, item.ID, bridge)
+	go watchProxyBridge(s, item.ID, token)
+	return session, nil
 }
 
 func (s *Service) StopProfile(ctx context.Context, profileID string) (supervisor.Session, error) {
-	return s.supervisor.Stop(ctx, profileID)
+	session, runtimeErr := s.supervisor.Stop(ctx, profileID)
+	bridgeErr := closeProfileProxyBridge(s, profileID)
+	if runtimeErr != nil && bridgeErr != nil {
+		return session, fmt.Errorf("stop browser: %v; stop proxy bridge: %w", runtimeErr, bridgeErr)
+	}
+	if runtimeErr != nil {
+		return session, runtimeErr
+	}
+	return session, bridgeErr
 }
 
 func (s *Service) resolveKernel(item *domain.Profile) error {
