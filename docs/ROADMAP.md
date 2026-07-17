@@ -16,7 +16,10 @@
 - [x] Unix process groups and Windows Job Object tree cleanup.
 - [x] Cross-platform supervised runtime handshake tests.
 - [x] In-memory runtime status, logs, exit details and UI controls.
-- [x] OS-backed credential vault with metadata-only references and no plaintext fallback.
+- [x] Operating-system credential vault with transactional metadata.
+- [x] Metadata-only credential selection and in-use protection.
+- [x] Authenticated HTTP, HTTPS, and SOCKS5 loopback proxy bridge.
+- [x] Per-profile bridge health and lifecycle cleanup.
 
 ## Runtime follow-up
 
@@ -26,12 +29,12 @@
 - [ ] Approved real Chromium test-kernel matrix on Windows, Linux and macOS.
 - [ ] Native suspended-process creation on Windows if the remaining pre-assignment micro-window becomes material.
 
-## Proxy and credential platform
+## Proxy platform follow-up
 
-- [x] Secret storage through the operating-system credential vault.
-- [ ] Authenticated HTTP/SOCKS local bridge.
 - [ ] Xray and sing-box adapters with checksums and pinned provenance.
 - [ ] Health, latency, exit-IP, DNS and WebRTC leak checks.
+- [ ] Optional local-client authentication for the ephemeral loopback bridge.
+- [ ] Proxy import, tagging, batch testing and rotation policies.
 
 ## Automation and hardening
 
