@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/knownothing20/veilium-browser/internal/adapter"
+	"github.com/knownothing20/veilium-browser/internal/adapterruntime"
 	"github.com/knownothing20/veilium-browser/internal/credential"
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/fingerprint"
@@ -18,7 +21,7 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/supervisor"
 )
 
-const AppVersion = "0.6.0-dev"
+const AppVersion = "0.8.0-dev"
 
 type RuntimeSupervisor interface {
 	Start(context.Context, string, string, supervisor.PlanBuilder) (supervisor.Session, error)
@@ -29,13 +32,15 @@ type RuntimeSupervisor interface {
 }
 
 type Service struct {
-	store       *profile.Store
-	kernels     *kernel.Store
-	credentials *credential.Manager
-	planner     launch.Planner
-	supervisor  RuntimeSupervisor
-	dataRoot    string
-	profilesDir string
+	store            *profile.Store
+	kernels          *kernel.Store
+	adapters         *adapter.Store
+	adapterProviders *adapterruntime.Registry
+	credentials      *credential.Manager
+	planner          launch.Planner
+	supervisor       RuntimeSupervisor
+	dataRoot         string
+	profilesDir      string
 }
 
 type Bootstrap struct {
@@ -43,6 +48,7 @@ type Bootstrap struct {
 	Profiles           []domain.Profile     `json:"profiles"`
 	Providers          []ProviderDescriptor `json:"providers"`
 	Kernels            []kernel.Record      `json:"kernels"`
+	Adapters           []adapter.Record     `json:"adapters"`
 	Sessions           []supervisor.Session `json:"sessions"`
 	Credentials        []credential.Record  `json:"credentials"`
 	CredentialProvider string               `json:"credentialProvider"`
@@ -94,14 +100,20 @@ func newServiceWithCredentials(store *profile.Store, dataRoot string, runtimeSup
 	if err != nil {
 		return nil, err
 	}
+	adapters, err := adapter.Open(filepath.Join(dataRoot, "adapters.json"), filepath.Join(dataRoot, "adapters"))
+	if err != nil {
+		return nil, err
+	}
 	service := &Service{
-		store:       store,
-		kernels:     kernels,
-		credentials: credentials,
-		planner:     launch.Planner{},
-		supervisor:  runtimeSupervisor,
-		dataRoot:    dataRoot,
-		profilesDir: filepath.Join(dataRoot, "profiles"),
+		store:            store,
+		kernels:          kernels,
+		adapters:         adapters,
+		adapterProviders: adapterruntime.NewRegistry(),
+		credentials:      credentials,
+		planner:          launch.Planner{},
+		supervisor:       runtimeSupervisor,
+		dataRoot:         dataRoot,
+		profilesDir:      filepath.Join(dataRoot, "profiles"),
 	}
 	_ = registryFor(service)
 	return service, nil
@@ -113,6 +125,7 @@ func (s *Service) Bootstrap() Bootstrap {
 		Profiles:           s.store.List(),
 		Providers:          providerCatalog(),
 		Kernels:            s.kernels.List(),
+		Adapters:           s.adapters.List(),
 		Sessions:           s.supervisor.List(),
 		Credentials:        s.credentials.List(),
 		CredentialProvider: credential.ProviderName(),
@@ -121,6 +134,7 @@ func (s *Service) Bootstrap() Bootstrap {
 
 func (s *Service) ListProfiles() []domain.Profile        { return s.store.List() }
 func (s *Service) ListKernels() []kernel.Record          { return s.kernels.List() }
+func (s *Service) ListAdapters() []adapter.Record        { return s.adapters.List() }
 func (s *Service) ListSessions() []supervisor.Session    { return s.supervisor.List() }
 func (s *Service) ListCredentials() []credential.Record  { return s.credentials.List() }
 func (s *Service) Shutdown(ctx context.Context) error    { return shutdownRuntimeAndBridges(s, ctx) }
@@ -155,6 +169,25 @@ func (s *Service) DeleteKernel(id string) error {
 		}
 	}
 	_, err := s.kernels.Delete(id)
+	return err
+}
+
+func (s *Service) ImportAdapter(request adapter.ImportRequest) (adapter.Record, error) {
+	return s.adapters.Import(request)
+}
+
+func (s *Service) VerifyAdapter(id string) (adapter.Record, error) {
+	return s.adapters.Verify(id)
+}
+
+func (s *Service) DeleteAdapter(id string) error {
+	id = strings.TrimSpace(id)
+	for _, item := range s.store.List() {
+		if strings.TrimSpace(item.Proxy.AdapterRef) == id {
+			return fmt.Errorf("proxy adapter is used by profile %q", item.Name)
+		}
+	}
+	_, err := s.adapters.Delete(id)
 	return err
 }
 
@@ -280,7 +313,19 @@ func (s *Service) StartProfile(ctx context.Context, profileID string) (superviso
 		})
 	}
 	if route.BridgeKind != "local-auth-bridge" {
-		return supervisor.Session{}, fmt.Errorf("proxy bridge %q is not available yet", route.BridgeKind)
+		record, recordErr := s.resolveAdapter(item)
+		if recordErr != nil {
+			return supervisor.Session{}, recordErr
+		}
+		parsed, _ := url.Parse(item.Proxy.URL)
+		_, prepareErr := s.adapterProviders.Prepare(ctx, adapterruntime.Request{
+			Adapter: record, Scheme: strings.ToLower(parsed.Scheme), ProxyURL: item.Proxy.URL,
+			CredentialRef: item.Proxy.CredentialRef, ProfileID: item.ID,
+		})
+		if prepareErr != nil {
+			return supervisor.Session{}, fmt.Errorf("prepare %s adapter runtime: %w", record.Kind, prepareErr)
+		}
+		return supervisor.Session{}, fmt.Errorf("adapter runtime provider returned no browser bridge")
 	}
 	material, err := s.credentials.Resolve(route.CredentialRef)
 	if err != nil {
@@ -293,6 +338,7 @@ func (s *Service) StartProfile(ctx context.Context, profileID string) (superviso
 	bridgedProfile := item
 	bridgedProfile.Proxy.URL = bridge.URL()
 	bridgedProfile.Proxy.CredentialRef = ""
+	bridgedProfile.Proxy.AdapterRef = ""
 	session, err := s.supervisor.Start(ctx, item.ID, item.Name, func(port int) (domain.LaunchPlan, error) {
 		plan, buildErr := s.planner.Build(bridgedProfile, port)
 		if buildErr != nil {
@@ -340,12 +386,41 @@ func (s *Service) resolveKernel(item *domain.Profile) error {
 	return nil
 }
 
+func (s *Service) resolveAdapter(item domain.Profile) (adapter.Record, error) {
+	adapterID := strings.TrimSpace(item.Proxy.AdapterRef)
+	if adapterID == "" {
+		return adapter.Record{}, fmt.Errorf("advanced proxy route requires a managed adapter")
+	}
+	record, err := s.adapters.Verify(adapterID)
+	if err != nil {
+		if errors.Is(err, adapter.ErrNotFound) {
+			return adapter.Record{}, fmt.Errorf("proxy adapter reference %q is not registered", adapterID)
+		}
+		return adapter.Record{}, err
+	}
+	if record.Status != adapter.StatusVerified {
+		return adapter.Record{}, fmt.Errorf("proxy adapter %q failed integrity verification: %s", record.Name, record.Status)
+	}
+	parsed, err := url.Parse(item.Proxy.URL)
+	if err != nil {
+		return adapter.Record{}, fmt.Errorf("parse proxy scheme: %w", err)
+	}
+	if !adapter.SupportsScheme(record.Kind, parsed.Scheme) {
+		return adapter.Record{}, fmt.Errorf("proxy adapter %q (%s) does not support scheme %q", record.Name, record.Kind, parsed.Scheme)
+	}
+	return record, nil
+}
+
 func (s *Service) validateProxy(item domain.Profile) error {
 	route, err := proxy.Resolve(item.Proxy.URL, item.Proxy.CredentialRef)
 	if err != nil {
 		return err
 	}
+	adapterRef := strings.TrimSpace(item.Proxy.AdapterRef)
 	if strings.TrimSpace(route.CredentialRef) == "" {
+		if adapterRef != "" {
+			return fmt.Errorf("direct and native proxy routes cannot use a managed adapter")
+		}
 		return nil
 	}
 	if _, err := s.credentials.Get(route.CredentialRef); err != nil {
@@ -354,7 +429,14 @@ func (s *Service) validateProxy(item domain.Profile) error {
 		}
 		return err
 	}
-	return nil
+	if route.BridgeKind == "local-auth-bridge" {
+		if adapterRef != "" {
+			return fmt.Errorf("HTTP and SOCKS5 authentication routes do not use an Xray or sing-box adapter")
+		}
+		return nil
+	}
+	_, err = s.resolveAdapter(item)
+	return err
 }
 
 func prepareManagedProfileDir(root, directory string) error {

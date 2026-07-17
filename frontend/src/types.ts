@@ -25,6 +25,31 @@ export interface KernelImportRequest {
   sourcePath: string
 }
 
+export interface AdapterRecord {
+  id: string
+  name: string
+  kind: 'xray' | 'sing-box'
+  version: string
+  executable: string
+  sha256: string
+  sizeBytes: number
+  licenseSpdx: string
+  sourceUrl: string
+  protocols: string[]
+  status: 'verified' | 'modified' | 'missing'
+  importedAt: string
+  verifiedAt: string
+}
+
+export interface AdapterImportRequest {
+  name: string
+  kind: 'xray' | 'sing-box'
+  version: string
+  sourcePath: string
+  licenseSpdx: string
+  sourceUrl: string
+}
+
 export interface CredentialRecord {
   id: string
   name: string
@@ -109,6 +134,7 @@ export interface FingerprintConfig {
 export interface ProxyConfig {
   url?: string
   credentialRef?: string
+  adapterRef?: string
 }
 
 export interface Profile {
@@ -152,6 +178,7 @@ export interface Bootstrap {
   profiles: Profile[]
   providers: ProviderDescriptor[]
   kernels: KernelRecord[]
+  adapters: AdapterRecord[]
   sessions: RuntimeSession[]
   credentials: CredentialRecord[]
   credentialProvider: string

@@ -46,6 +46,7 @@ type FingerprintConfig struct {
 type ProxyConfig struct {
 	URL           string `json:"url,omitempty"`
 	CredentialRef string `json:"credentialRef,omitempty"`
+	AdapterRef    string `json:"adapterRef,omitempty"`
 }
 
 type LaunchPlan struct {
