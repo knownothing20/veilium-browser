@@ -7,6 +7,8 @@ import "time"
 type Profile struct {
 	ID          string            `json:"id"`
 	Name        string            `json:"name"`
+	Group       string            `json:"group,omitempty"`
+	Notes       string            `json:"notes,omitempty"`
 	Kernel      KernelRef         `json:"kernel"`
 	Fingerprint FingerprintConfig `json:"fingerprint"`
 	Proxy       ProxyConfig       `json:"proxy"`
