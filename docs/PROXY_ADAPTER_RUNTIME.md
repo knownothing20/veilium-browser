@@ -38,11 +38,9 @@ For known upstream projects, the UI offers editable defaults. Users remain respo
 
 ## Runtime provider boundary
 
-This feature adds the trusted registry and a provider interface. It does not yet generate Xray or sing-box JSON configuration or start those processes.
+The trusted registry exposes a typed provider interface. Veilium now includes a constrained Xray provider; sing-box and unreviewed protocol or transport combinations still fail closed with an explicit provider-unavailable or unsupported-option error.
 
-When a verified adapter is bound to a profile but the corresponding configuration provider has not been installed, Veilium fails closed with an explicit provider-unavailable error. It does not start Chromium directly and does not claim that the advanced proxy is active.
-
-A later phase can implement providers on top of this contract. A provider must:
+A provider must:
 
 - accept only a verified managed adapter record;
 - generate private, per-session configuration files;
@@ -54,3 +52,7 @@ A later phase can implement providers on top of this contract. A provider must:
 ## Deletion safety
 
 An adapter cannot be removed while any profile references its ID. Removal first moves its managed directory to a private quarantine path, persists metadata deletion, and then deletes the quarantined files. Persistence failure attempts to restore the directory and record.
+
+## Executable providers
+
+The first runtime provider is documented in [`XRAY_PROVIDER.md`](XRAY_PROVIDER.md). Xray execution remains constrained to an explicitly reviewed protocol and transport subset; sing-box remains registry-only.

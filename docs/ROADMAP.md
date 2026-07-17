@@ -37,11 +37,13 @@
 
 ## Proxy adapter providers
 
-- [ ] Xray provider for VMess, VLESS, Trojan, Shadowsocks, and compatible transports.
+- [x] Supervised Xray provider for constrained VMess, VLESS, Trojan, and Shadowsocks profiles.
 - [ ] sing-box provider for Hysteria2, TUIC, AnyTLS, and compatible transports.
-- [ ] Private per-session adapter configuration with vault material resolved only at runtime.
-- [ ] Loopback inbound readiness checks and adapter process-tree supervision.
-- [ ] Share-link parser schemas with explicit capability and unsupported-field reporting.
+- [x] Private per-session Xray configuration with vault material resolved only at runtime.
+- [x] Loopback SOCKS5 readiness checks and Xray process-tree supervision.
+- [x] Constrained Xray URL schema with explicit unsupported-field reporting.
+- [ ] Broader share-link import, including legacy VMess payloads and ecosystem-specific aliases.
+- [ ] XHTTP, HTTPUpgrade, mKCP, Hysteria transport, and additional reviewed Xray options.
 - [ ] Pinned optional download manifests with signatures, checksums, notices, and disabled-by-default policy.
 
 ## Proxy platform follow-up

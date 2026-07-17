@@ -19,9 +19,10 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/profile"
 	"github.com/knownothing20/veilium-browser/internal/proxy"
 	"github.com/knownothing20/veilium-browser/internal/supervisor"
+	"github.com/knownothing20/veilium-browser/internal/xrayprovider"
 )
 
-const AppVersion = "0.8.0-dev"
+const AppVersion = "0.9.0-dev"
 
 type RuntimeSupervisor interface {
 	Start(context.Context, string, string, supervisor.PlanBuilder) (supervisor.Session, error)
@@ -32,15 +33,15 @@ type RuntimeSupervisor interface {
 }
 
 type Service struct {
-	store            *profile.Store
-	kernels          *kernel.Store
-	adapters         *adapter.Store
-	adapterProviders *adapterruntime.Registry
-	credentials      *credential.Manager
-	planner          launch.Planner
-	supervisor       RuntimeSupervisor
-	dataRoot         string
-	profilesDir      string
+	store          *profile.Store
+	kernels        *kernel.Store
+	adapters       *adapter.Store
+	adapterRuntime adapterruntime.Factory
+	credentials    *credential.Manager
+	planner        launch.Planner
+	supervisor     RuntimeSupervisor
+	dataRoot       string
+	profilesDir    string
 }
 
 type Bootstrap struct {
@@ -104,16 +105,24 @@ func newServiceWithCredentials(store *profile.Store, dataRoot string, runtimeSup
 	if err != nil {
 		return nil, err
 	}
+	providers := adapterruntime.NewRegistry()
+	if err := providers.Register(xrayprovider.New()); err != nil {
+		return nil, fmt.Errorf("register Xray adapter provider: %w", err)
+	}
+	adapterManager, err := adapterruntime.NewManager(filepath.Join(dataRoot, "adapter-runtime"), providers)
+	if err != nil {
+		return nil, err
+	}
 	service := &Service{
-		store:            store,
-		kernels:          kernels,
-		adapters:         adapters,
-		adapterProviders: adapterruntime.NewRegistry(),
-		credentials:      credentials,
-		planner:          launch.Planner{},
-		supervisor:       runtimeSupervisor,
-		dataRoot:         dataRoot,
-		profilesDir:      filepath.Join(dataRoot, "profiles"),
+		store:          store,
+		kernels:        kernels,
+		adapters:       adapters,
+		adapterRuntime: adapterManager,
+		credentials:    credentials,
+		planner:        launch.Planner{},
+		supervisor:     runtimeSupervisor,
+		dataRoot:       dataRoot,
+		profilesDir:    filepath.Join(dataRoot, "profiles"),
 	}
 	_ = registryFor(service)
 	return service, nil
@@ -317,15 +326,39 @@ func (s *Service) StartProfile(ctx context.Context, profileID string) (superviso
 		if recordErr != nil {
 			return supervisor.Session{}, recordErr
 		}
-		parsed, _ := url.Parse(item.Proxy.URL)
-		_, prepareErr := s.adapterProviders.Prepare(ctx, adapterruntime.Request{
-			Adapter: record, Scheme: strings.ToLower(parsed.Scheme), ProxyURL: item.Proxy.URL,
-			CredentialRef: item.Proxy.CredentialRef, ProfileID: item.ID,
-		})
-		if prepareErr != nil {
-			return supervisor.Session{}, fmt.Errorf("prepare %s adapter runtime: %w", record.Kind, prepareErr)
+		material, materialErr := s.credentials.Resolve(route.CredentialRef)
+		if materialErr != nil {
+			return supervisor.Session{}, fmt.Errorf("resolve advanced proxy credential: %w", materialErr)
 		}
-		return supervisor.Session{}, fmt.Errorf("adapter runtime provider returned no browser bridge")
+		parsed, _ := url.Parse(item.Proxy.URL)
+		instance, startErr := s.adapterRuntime.Start(ctx, adapterruntime.Request{
+			Adapter: record, Scheme: strings.ToLower(parsed.Scheme), ProxyURL: item.Proxy.URL,
+			CredentialRef: route.CredentialRef, CredentialUsername: material.Username, CredentialSecret: material.Secret,
+			ProfileID: item.ID,
+		})
+		if startErr != nil {
+			return supervisor.Session{}, fmt.Errorf("start %s adapter runtime: %w", record.Kind, startErr)
+		}
+		bridgedProfile := item
+		bridgedProfile.Proxy.URL = instance.URL()
+		bridgedProfile.Proxy.CredentialRef = ""
+		bridgedProfile.Proxy.AdapterRef = ""
+		session, browserErr := s.supervisor.Start(ctx, item.ID, item.Name, func(port int) (domain.LaunchPlan, error) {
+			plan, buildErr := s.planner.Build(bridgedProfile, port)
+			if buildErr != nil {
+				return domain.LaunchPlan{}, buildErr
+			}
+			plan.ProxyDisplay = route.DisplayURL
+			plan.Warnings = append(plan.Warnings, record.Kind+" routes are exposed to Chromium through a private loopback SOCKS5 runtime")
+			return plan, nil
+		})
+		if browserErr != nil {
+			_ = instance.Close()
+			return session, browserErr
+		}
+		token := registerNetworkRuntime(s, item.ID, instance)
+		go watchNetworkRuntime(s, item.ID, token, instance)
+		return session, nil
 	}
 	material, err := s.credentials.Resolve(route.CredentialRef)
 	if err != nil {
@@ -352,8 +385,8 @@ func (s *Service) StartProfile(ctx context.Context, profileID string) (superviso
 		_ = bridge.Close()
 		return session, err
 	}
-	token := registerProxyBridge(s, item.ID, bridge)
-	go watchProxyBridge(s, item.ID, token)
+	token := registerNetworkRuntime(s, item.ID, bridge)
+	go watchNetworkRuntime(s, item.ID, token, bridge)
 	return session, nil
 }
 
