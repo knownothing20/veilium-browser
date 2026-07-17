@@ -1,0 +1,28 @@
+.status-pill.running { color: #225a9f; background: #e9f2ff; }
+.runtime-error-inline { display: block; max-width: 170px; margin-top: 5px; overflow: hidden; color: var(--danger); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.row-actions button:disabled { cursor: not-allowed; opacity: .42; }
+.row-actions .stop-icon { color: #a23f49; border-color: #f0cbd0; background: #fff6f7; }
+.runtime-global-error { margin: 0 0 18px; }
+.runtime-mode-note { margin: 0 0 18px; }
+.runtime-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.runtime-card { padding: 20px; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 9px 32px rgba(25,31,47,.035); }
+.runtime-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.runtime-card-head h2 { margin: 5px 0 0; font-size: 16px; }
+.runtime-state { display: inline-flex; padding: 5px 9px; border-radius: 999px; font-size: 8px; font-weight: 800; text-transform: capitalize; }
+.runtime-state.ready { color: #177452; background: #e8f6f0; }
+.runtime-state.starting, .runtime-state.stopping { color: #225a9f; background: #e9f2ff; }
+.runtime-state.exited { color: #687184; background: #eef1f5; }
+.runtime-state.failed { color: #a0434d; background: #fae9eb; }
+.runtime-card dl { margin: 17px 0; }
+.runtime-card dl div { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-top: 1px solid #edf0f4; font-size: 9px; }
+.runtime-card dt { color: var(--muted); }
+.runtime-card dd { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.runtime-endpoint { padding: 11px 12px; border: 1px solid #dfe5ec; border-radius: 10px; background: #f8fafc; }
+.runtime-endpoint span { display: block; margin-bottom: 5px; color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.runtime-endpoint code { display: block; overflow: hidden; color: #364054; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.runtime-failure { margin-top: 12px; padding: 12px; border: 1px solid #efc9ce; border-radius: 10px; color: #9a3945; background: #fff3f4; }
+.runtime-failure strong { font-size: 10px; }
+.runtime-failure p { margin: 5px 0 0; font-size: 9px; line-height: 1.5; }
+.runtime-card-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 15px; }
+.runtime-card-actions > span { color: var(--muted); font-size: 9px; }
+@media (max-width: 1180px) { .runtime-grid { grid-template-columns: 1fr; } }

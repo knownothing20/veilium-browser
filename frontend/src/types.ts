@@ -25,6 +25,25 @@ export interface KernelImportRequest {
   sourcePath: string
 }
 
+export type RuntimeState = 'starting' | 'ready' | 'stopping' | 'exited' | 'failed'
+
+export interface RuntimeSession {
+  profileId: string
+  profileName: string
+  state: RuntimeState
+  pid: number
+  cdpPort: number
+  cdpUrl: string
+  webSocketDebuggerUrl?: string
+  browser?: string
+  startedAt: string
+  readyAt?: string
+  exitedAt?: string
+  exitCode?: number
+  lastError?: string
+  logPath: string
+}
+
 export interface FingerprintConfig {
   seed?: string
   platform: 'windows' | 'linux' | 'macos'
@@ -91,6 +110,7 @@ export interface Bootstrap {
   profiles: Profile[]
   providers: ProviderDescriptor[]
   kernels: KernelRecord[]
+  sessions: RuntimeSession[]
 }
 
 export interface LaunchPlan {

@@ -1,8 +1,10 @@
 package desktop
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -11,15 +13,26 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/kernel"
 	"github.com/knownothing20/veilium-browser/internal/launch"
 	"github.com/knownothing20/veilium-browser/internal/profile"
+	"github.com/knownothing20/veilium-browser/internal/supervisor"
 )
 
-const AppVersion = "0.3.0-dev"
+const AppVersion = "0.4.0-dev"
+
+type RuntimeSupervisor interface {
+	Start(context.Context, string, string, supervisor.PlanBuilder) (supervisor.Session, error)
+	Stop(context.Context, string) (supervisor.Session, error)
+	Shutdown(context.Context) error
+	List() []supervisor.Session
+	IsActive(string) bool
+}
 
 type Service struct {
-	store    *profile.Store
-	kernels  *kernel.Store
-	planner  launch.Planner
-	dataRoot string
+	store       *profile.Store
+	kernels     *kernel.Store
+	planner     launch.Planner
+	supervisor  RuntimeSupervisor
+	dataRoot    string
+	profilesDir string
 }
 
 type Bootstrap struct {
@@ -27,7 +40,9 @@ type Bootstrap struct {
 	Profiles  []domain.Profile     `json:"profiles"`
 	Providers []ProviderDescriptor `json:"providers"`
 	Kernels   []kernel.Record      `json:"kernels"`
+	Sessions  []supervisor.Session `json:"sessions"`
 }
+
 type ProviderDescriptor struct {
 	ID          string                     `json:"id"`
 	Name        string                     `json:"name"`
@@ -35,36 +50,69 @@ type ProviderDescriptor struct {
 	Versions    []string                   `json:"versions"`
 	Samples     []fingerprint.Capabilities `json:"samples"`
 }
+
 type LaunchPlanRequest struct {
 	ProfileID           string `json:"profileId"`
 	RemoteDebuggingPort int    `json:"remoteDebuggingPort"`
 }
 
 func NewService(store *profile.Store, dataRoot string) (*Service, error) {
+	runtimeSupervisor, err := supervisor.New(filepath.Join(dataRoot, "runtime-logs"))
+	if err != nil {
+		return nil, err
+	}
+	return newService(store, dataRoot, runtimeSupervisor)
+}
+
+func newService(store *profile.Store, dataRoot string, runtimeSupervisor RuntimeSupervisor) (*Service, error) {
 	if store == nil {
 		return nil, fmt.Errorf("profile store is required")
 	}
 	if strings.TrimSpace(dataRoot) == "" {
 		return nil, fmt.Errorf("data root is required")
 	}
+	if runtimeSupervisor == nil {
+		return nil, fmt.Errorf("runtime supervisor is required")
+	}
 	kernels, err := kernel.Open(filepath.Join(dataRoot, "kernels.json"), filepath.Join(dataRoot, "kernels"))
 	if err != nil {
 		return nil, err
 	}
-	return &Service{store: store, kernels: kernels, planner: launch.Planner{}, dataRoot: dataRoot}, nil
+	return &Service{
+		store:       store,
+		kernels:     kernels,
+		planner:     launch.Planner{},
+		supervisor:  runtimeSupervisor,
+		dataRoot:    dataRoot,
+		profilesDir: filepath.Join(dataRoot, "profiles"),
+	}, nil
 }
+
 func (s *Service) Bootstrap() Bootstrap {
-	return Bootstrap{Version: AppVersion, Profiles: s.store.List(), Providers: providerCatalog(), Kernels: s.kernels.List()}
+	return Bootstrap{
+		Version:   AppVersion,
+		Profiles:  s.store.List(),
+		Providers: providerCatalog(),
+		Kernels:   s.kernels.List(),
+		Sessions:  s.supervisor.List(),
+	}
 }
-func (s *Service) ListProfiles() []domain.Profile { return s.store.List() }
-func (s *Service) ListKernels() []kernel.Record   { return s.kernels.List() }
+
+func (s *Service) ListProfiles() []domain.Profile        { return s.store.List() }
+func (s *Service) ListKernels() []kernel.Record          { return s.kernels.List() }
+func (s *Service) ListSessions() []supervisor.Session    { return s.supervisor.List() }
+func (s *Service) Shutdown(ctx context.Context) error    { return s.supervisor.Shutdown(ctx) }
+func (s *Service) IsProfileActive(profileID string) bool { return s.supervisor.IsActive(profileID) }
 func (s *Service) Capabilities(provider, version string) (fingerprint.Capabilities, error) {
 	return fingerprint.For(provider, version)
 }
+
 func (s *Service) ImportKernel(request kernel.ImportRequest) (kernel.Record, error) {
 	return s.kernels.Import(request)
 }
+
 func (s *Service) VerifyKernel(id string) (kernel.Record, error) { return s.kernels.Verify(id) }
+
 func (s *Service) DeleteKernel(id string) error {
 	for _, item := range s.store.List() {
 		if item.Kernel.ID == id {
@@ -74,6 +122,7 @@ func (s *Service) DeleteKernel(id string) error {
 	_, err := s.kernels.Delete(id)
 	return err
 }
+
 func (s *Service) CreateProfile(input domain.Profile) (domain.Profile, error) {
 	if strings.TrimSpace(input.ID) == "" {
 		id, err := profile.NewID()
@@ -83,7 +132,7 @@ func (s *Service) CreateProfile(input domain.Profile) (domain.Profile, error) {
 		input.ID = id
 	}
 	if strings.TrimSpace(input.UserDataDir) == "" {
-		input.UserDataDir = filepath.Join(s.dataRoot, "profiles", input.ID)
+		input.UserDataDir = filepath.Join(s.profilesDir, input.ID)
 	}
 	if err := s.resolveKernel(&input); err != nil {
 		return domain.Profile{}, err
@@ -93,12 +142,16 @@ func (s *Service) CreateProfile(input domain.Profile) (domain.Profile, error) {
 	}
 	return s.store.Create(input)
 }
+
 func (s *Service) UpdateProfile(input domain.Profile) (domain.Profile, error) {
 	if strings.TrimSpace(input.ID) == "" {
 		return domain.Profile{}, fmt.Errorf("profile id is required")
 	}
+	if s.supervisor.IsActive(input.ID) {
+		return domain.Profile{}, fmt.Errorf("profile %q cannot be edited while its browser is running", input.Name)
+	}
 	if strings.TrimSpace(input.UserDataDir) == "" {
-		input.UserDataDir = filepath.Join(s.dataRoot, "profiles", input.ID)
+		input.UserDataDir = filepath.Join(s.profilesDir, input.ID)
 	}
 	if err := s.resolveKernel(&input); err != nil {
 		return domain.Profile{}, err
@@ -108,6 +161,7 @@ func (s *Service) UpdateProfile(input domain.Profile) (domain.Profile, error) {
 	}
 	return s.store.Update(input)
 }
+
 func (s *Service) CloneProfile(id, name string) (domain.Profile, error) {
 	source, err := s.store.Get(id)
 	if err != nil {
@@ -123,13 +177,20 @@ func (s *Service) CloneProfile(id, name string) (domain.Profile, error) {
 	if source.Name == "" {
 		source.Name = originalName + " Copy"
 	}
-	source.UserDataDir = filepath.Join(s.dataRoot, "profiles", newID)
+	source.UserDataDir = filepath.Join(s.profilesDir, newID)
 	source.Fingerprint.Seed = ""
 	source.CreatedAt = source.CreatedAt.UTC()
 	source.UpdatedAt = source.UpdatedAt.UTC()
 	return s.CreateProfile(source)
 }
-func (s *Service) DeleteProfile(id string) error { return s.store.Delete(id) }
+
+func (s *Service) DeleteProfile(id string) error {
+	if s.supervisor.IsActive(id) {
+		return fmt.Errorf("profile cannot be deleted while its browser is running")
+	}
+	return s.store.Delete(id)
+}
+
 func (s *Service) BuildLaunchPlan(request LaunchPlanRequest) (domain.LaunchPlan, error) {
 	item, err := s.store.Get(request.ProfileID)
 	if err != nil {
@@ -143,6 +204,34 @@ func (s *Service) BuildLaunchPlan(request LaunchPlanRequest) (domain.LaunchPlan,
 	}
 	return s.planner.Build(item, request.RemoteDebuggingPort)
 }
+
+func (s *Service) StartProfile(ctx context.Context, profileID string) (supervisor.Session, error) {
+	item, err := s.store.Get(profileID)
+	if err != nil {
+		return supervisor.Session{}, err
+	}
+	if strings.TrimSpace(item.Kernel.ID) == "" {
+		return supervisor.Session{}, fmt.Errorf("profile %q must use a registered kernel before it can start", item.Name)
+	}
+	if err := s.resolveKernel(&item); err != nil {
+		return supervisor.Session{}, err
+	}
+	managedDir := filepath.Join(s.profilesDir, item.ID)
+	if !sameCleanPath(item.UserDataDir, managedDir) {
+		return supervisor.Session{}, fmt.Errorf("profile %q uses an unmanaged user data directory", item.Name)
+	}
+	if err := prepareManagedProfileDir(s.profilesDir, managedDir); err != nil {
+		return supervisor.Session{}, err
+	}
+	return s.supervisor.Start(ctx, item.ID, item.Name, func(port int) (domain.LaunchPlan, error) {
+		return s.planner.Build(item, port)
+	})
+}
+
+func (s *Service) StopProfile(ctx context.Context, profileID string) (supervisor.Session, error) {
+	return s.supervisor.Stop(ctx, profileID)
+}
+
 func (s *Service) resolveKernel(item *domain.Profile) error {
 	if strings.TrimSpace(item.Kernel.ID) == "" {
 		return nil
@@ -159,14 +248,66 @@ func (s *Service) resolveKernel(item *domain.Profile) error {
 	item.Kernel.Executable = record.Executable
 	return nil
 }
+
+func prepareManagedProfileDir(root, directory string) error {
+	if !isPathWithin(root, directory) {
+		return fmt.Errorf("refusing profile directory outside the managed root")
+	}
+	if err := os.MkdirAll(root, 0o700); err != nil {
+		return fmt.Errorf("create managed profile root: %w", err)
+	}
+	rootInfo, err := os.Lstat(root)
+	if err != nil {
+		return fmt.Errorf("inspect managed profile root: %w", err)
+	}
+	if rootInfo.Mode()&os.ModeSymlink != 0 || !rootInfo.IsDir() {
+		return fmt.Errorf("managed profile root must be a real directory")
+	}
+	if info, err := os.Lstat(directory); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+			return fmt.Errorf("profile user data path must be a real directory")
+		}
+		return nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("inspect profile user data directory: %w", err)
+	}
+	if err := os.Mkdir(directory, 0o700); err != nil {
+		return fmt.Errorf("create profile user data directory: %w", err)
+	}
+	return nil
+}
+
+func sameCleanPath(left, right string) bool {
+	leftAbs, leftErr := filepath.Abs(left)
+	rightAbs, rightErr := filepath.Abs(right)
+	return leftErr == nil && rightErr == nil && filepath.Clean(leftAbs) == filepath.Clean(rightAbs)
+}
+
+func isPathWithin(root, candidate string) bool {
+	rootAbs, err := filepath.Abs(root)
+	if err != nil {
+		return false
+	}
+	candidateAbs, err := filepath.Abs(candidate)
+	if err != nil {
+		return false
+	}
+	rel, err := filepath.Rel(rootAbs, candidateAbs)
+	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
 func withValidationSeed(item domain.Profile) domain.Profile {
 	if item.Fingerprint.Seed == "" {
 		item.Fingerprint.Seed = "profile-default"
 	}
 	return item
 }
+
 func providerCatalog() []ProviderDescriptor {
-	definitions := []ProviderDescriptor{{ID: fingerprint.ProviderPatched, Name: "Patched Chromium", Description: "Version-aware fingerprint provider with verified command-line contracts.", Versions: []string{"148.0.0", "144.0.0", "142.0.0"}}, {ID: fingerprint.ProviderNative, Name: "Native Chromium", Description: "Standard Chromium isolation without synthetic fingerprint surfaces.", Versions: []string{"148.0.0", "144.0.0"}}}
+	definitions := []ProviderDescriptor{
+		{ID: fingerprint.ProviderPatched, Name: "Patched Chromium", Description: "Version-aware fingerprint provider with verified command-line contracts.", Versions: []string{"148.0.0", "144.0.0", "142.0.0"}},
+		{ID: fingerprint.ProviderNative, Name: "Native Chromium", Description: "Standard Chromium isolation without synthetic fingerprint surfaces.", Versions: []string{"148.0.0", "144.0.0"}},
+	}
 	for index := range definitions {
 		for _, version := range definitions[index].Versions {
 			capabilities, err := fingerprint.For(definitions[index].ID, version)

@@ -10,12 +10,13 @@ Veilium is an open-source, multi-profile privacy browser workspace focused on is
 - atomic local profile persistence and loopback-only authenticated REST API;
 - Wails + React desktop profile workspace;
 - verified local kernel registry with managed copies and SHA-256 integrity records;
-- symlink and non-regular-file rejection during kernel import;
-- profile references to registered kernels and in-use deletion protection;
-- kernel re-verification before launch-plan generation;
+- safe local browser start, stop and in-memory runtime session monitoring;
+- loopback-only CDP allocation, `/json/version` readiness checks and debugger URL validation;
+- managed profile data directories and private per-start runtime logs;
+- shutdown cleanup and protection against editing or deleting active profiles;
 - Linux and Windows desktop build CI.
 
-Veilium currently creates and reviews launch plans but does not execute browser binaries. Process supervision remains a separate reviewed feature.
+Actual browser execution requires a registered, integrity-verified kernel and a profile using its Veilium-managed user-data directory. Profiles requiring an unavailable proxy bridge remain blocked from starting.
 
 ## Development
 
@@ -38,7 +39,7 @@ wails dev
 make check
 ```
 
-See [`docs/KERNEL_REGISTRY.md`](docs/KERNEL_REGISTRY.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md).
+See [`docs/RUNTIME_SUPERVISOR.md`](docs/RUNTIME_SUPERVISOR.md), [`docs/KERNEL_REGISTRY.md`](docs/KERNEL_REGISTRY.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Safety and intended use
 

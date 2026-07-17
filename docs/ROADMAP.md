@@ -11,14 +11,16 @@
 - [x] Capability-driven fingerprint form.
 - [x] Verified local kernel registry and managed imports.
 - [x] SHA-256 re-verification and in-use deletion protection.
+- [x] Safe browser process lifecycle and shutdown cleanup.
+- [x] Loopback CDP port allocation and readiness checks.
+- [x] In-memory runtime status, logs, exit details and UI controls.
 
-## Runtime supervisor
+## Runtime follow-up
 
-- [ ] Safe browser process lifecycle and crash recovery.
-- [ ] Local CDP port allocation and readiness checks.
 - [ ] Real-window/fingerprint dimension consistency.
 - [ ] Extension and cookie management.
-- [ ] Browser runtime integration tests on Windows, Linux and macOS.
+- [ ] Optional explicit crash-restart policy with bounded retries.
+- [ ] Browser runtime integration tests using approved test kernels on Windows, Linux and macOS.
 
 ## Proxy and credential platform
 
