@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultProfile, filterProfiles, profileHealth } from './model'
+import { applyKernel, defaultProfile, filterProfiles, profileHealth } from './model'
 
 const profiles = [
   { ...defaultProfile(), id: 'a', name: 'Shop US', group: 'Commerce', tags: ['amazon'] },
@@ -20,5 +20,21 @@ describe('profile model', () => {
     const profile = defaultProfile()
     expect(profile.fingerprint.webrtcPolicy).toBe('proxy-only')
     expect(profile.proxy.url).toBe('direct://')
+  })
+
+  it('applies a verified registry record atomically', () => {
+    const profile = applyKernel(defaultProfile(), {
+      id: 'k1',
+      name: 'Chromium',
+      provider: 'patched-chromium',
+      version: '148.0.0',
+      executable: '/managed/chrome',
+      sha256: 'a'.repeat(64),
+      sizeBytes: 1,
+      status: 'verified',
+      importedAt: '',
+      verifiedAt: '',
+    })
+    expect(profile.kernel).toEqual({ id: 'k1', provider: 'patched-chromium', version: '148.0.0', executable: '/managed/chrome' })
   })
 })

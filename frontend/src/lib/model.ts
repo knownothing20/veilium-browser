@@ -1,4 +1,4 @@
-import type { Capabilities, Profile, ProviderDescriptor } from '../types'
+import type { Capabilities, KernelRecord, Profile, ProviderDescriptor } from '../types'
 
 export type ProfileHealth = 'ready' | 'warning' | 'incomplete'
 
@@ -10,11 +10,7 @@ export function defaultProfile(provider?: ProviderDescriptor): Profile {
     name: '',
     group: 'Default',
     notes: '',
-    kernel: {
-      provider: selectedProvider,
-      version,
-      executable: '',
-    },
+    kernel: { provider: selectedProvider, version, executable: '' },
     fingerprint: {
       platform: 'windows',
       brand: selectedProvider === 'native-chromium' ? 'Chromium' : 'Chrome',
@@ -36,23 +32,23 @@ export function defaultProfile(provider?: ProviderDescriptor): Profile {
   }
 }
 
+export function applyKernel(profile: Profile, record: KernelRecord): Profile {
+  return {
+    ...profile,
+    kernel: { id: record.id, provider: record.provider, version: record.version, executable: record.executable },
+  }
+}
+
 export function filterProfiles(profiles: Profile[], query: string, group: string): Profile[] {
   const normalized = query.trim().toLowerCase()
   return profiles.filter((profile) => {
     if (group && group !== 'all' && (profile.group || 'Default') !== group) return false
     if (!normalized) return true
-    const haystack = [
-      profile.name,
-      profile.group,
-      profile.kernel.provider,
-      profile.kernel.version,
-      profile.proxy.url,
-      ...(profile.tags || []),
-    ]
+    return [profile.name, profile.group, profile.kernel.provider, profile.kernel.version, profile.proxy.url, ...(profile.tags || [])]
       .filter(Boolean)
       .join(' ')
       .toLowerCase()
-    return haystack.includes(normalized)
+      .includes(normalized)
   })
 }
 
@@ -63,18 +59,12 @@ export function profileHealth(profile: Profile): ProfileHealth {
   return 'ready'
 }
 
-export function capabilityFor(
-  providers: ProviderDescriptor[],
-  providerID: string,
-  version: string,
-): Capabilities | undefined {
+export function capabilityFor(providers: ProviderDescriptor[], providerID: string, version: string): Capabilities | undefined {
   const provider = providers.find((item) => item.id === providerID)
   const major = Number.parseInt(version.split('.')[0] || '0', 10)
   return provider?.samples.find((sample) => sample.majorVersion === major) ?? provider?.samples[0]
 }
 
 export function groupsOf(profiles: Profile[]): string[] {
-  return Array.from(new Set(profiles.map((profile) => profile.group || 'Default'))).sort((a, b) =>
-    a.localeCompare(b),
-  )
+  return Array.from(new Set(profiles.map((profile) => profile.group || 'Default'))).sort((a, b) => a.localeCompare(b))
 }

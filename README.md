@@ -4,31 +4,18 @@ Veilium is an open-source, multi-profile privacy browser workspace focused on is
 
 > Clean-room project: architecture and product lessons are studied from existing open-source browsers, while Veilium implementation code is written independently.
 
-## Current status
+## Current capabilities
 
-### Phase 1 — Core foundation
+- version-aware Chromium provider contracts and fingerprint consistency validation;
+- atomic local profile persistence and loopback-only authenticated REST API;
+- Wails + React desktop profile workspace;
+- verified local kernel registry with managed copies and SHA-256 integrity records;
+- symlink and non-regular-file rejection during kernel import;
+- profile references to registered kernels and in-use deletion protection;
+- kernel re-verification before launch-plan generation;
+- Linux and Windows desktop build CI.
 
-- version-aware Chromium provider contracts;
-- fingerprint consistency validation;
-- proxy route classification without inline credentials;
-- deterministic launch-plan generation;
-- atomic local profile persistence;
-- loopback-only bearer-authenticated REST API;
-- Linux and Windows CI.
-
-### Phase 2 — Desktop shell
-
-- Wails v2 desktop application;
-- React + TypeScript + Vite interface;
-- dashboard and searchable profile registry;
-- create, edit, clone and delete profile workflows;
-- group and tag organization;
-- kernel capability registry;
-- launch-plan dry-run drawer;
-- browser-preview mode with temporary demo data;
-- Windows and Linux desktop build CI.
-
-Phase 2 intentionally creates and reviews launch plans but does not execute browser binaries yet.
+Veilium currently creates and reviews launch plans but does not execute browser binaries. Process supervision remains a separate reviewed feature.
 
 ## Development
 
@@ -37,8 +24,6 @@ Phase 2 intentionally creates and reviews launch plans but does not execute brow
 ```bash
 go run ./cmd/veilium
 ```
-
-The REST service listens on `127.0.0.1:51090` by default. Set `VEILIUM_API_TOKEN` to a strong local token or the command generates an ephemeral one.
 
 ### Desktop application
 
@@ -53,12 +38,7 @@ wails dev
 make check
 ```
 
-See:
-
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/REFERENCE_ANALYSIS.md`](docs/REFERENCE_ANALYSIS.md)
-- [`docs/PHASE2_DESKTOP.md`](docs/PHASE2_DESKTOP.md)
-- [`docs/ROADMAP.md`](docs/ROADMAP.md)
+See [`docs/KERNEL_REGISTRY.md`](docs/KERNEL_REGISTRY.md), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Safety and intended use
 
