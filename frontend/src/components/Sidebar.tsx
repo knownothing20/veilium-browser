@@ -1,10 +1,11 @@
-export type ViewKey = 'dashboard' | 'profiles' | 'runtime' | 'kernels' | 'settings'
+export type ViewKey = 'dashboard' | 'profiles' | 'runtime' | 'kernels' | 'credentials' | 'settings'
 
 const navigation: Array<{ key: ViewKey; label: string; icon: string }> = [
   { key: 'dashboard', label: 'Overview', icon: '◫' },
   { key: 'profiles', label: 'Browser profiles', icon: '◎' },
   { key: 'runtime', label: 'Runtime sessions', icon: '▶' },
   { key: 'kernels', label: 'Kernel registry', icon: '⬡' },
+  { key: 'credentials', label: 'Credential vault', icon: '◇' },
   { key: 'settings', label: 'Settings', icon: '⚙' },
 ]
 

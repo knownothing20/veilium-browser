@@ -25,6 +25,21 @@ export interface KernelImportRequest {
   sourcePath: string
 }
 
+export interface CredentialRecord {
+  id: string
+  name: string
+  username: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CredentialSaveRequest {
+  id?: string
+  name: string
+  username: string
+  secret?: string
+}
+
 export type RuntimeState = 'starting' | 'ready' | 'stopping' | 'exited' | 'failed'
 
 export interface RuntimeSession {
@@ -111,6 +126,8 @@ export interface Bootstrap {
   providers: ProviderDescriptor[]
   kernels: KernelRecord[]
   sessions: RuntimeSession[]
+  credentials: CredentialRecord[]
+  credentialProvider: string
 }
 
 export interface LaunchPlan {

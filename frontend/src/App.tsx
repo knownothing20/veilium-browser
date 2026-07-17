@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { CredentialVault } from './components/CredentialVault'
 import { MetricCard } from './components/MetricCard'
 import { PlanDrawer } from './components/PlanDrawer'
 import { ProfileEditor } from './components/ProfileEditor'
@@ -8,9 +9,17 @@ import { Sidebar, type ViewKey } from './components/Sidebar'
 import { backend } from './lib/backend'
 import { filterProfiles, groupsOf, profileHealth } from './lib/model'
 import { isRuntimeActive, sessionForProfile } from './lib/runtime'
-import type { Bootstrap, KernelImportRequest, KernelRecord, LaunchPlan, Profile } from './types'
+import type { Bootstrap, CredentialSaveRequest, KernelImportRequest, KernelRecord, LaunchPlan, Profile } from './types'
 
-const emptyBootstrap: Bootstrap = { version: 'loading', profiles: [], providers: [], kernels: [], sessions: [] }
+const emptyBootstrap: Bootstrap = {
+  version: 'loading',
+  profiles: [],
+  providers: [],
+  kernels: [],
+  sessions: [],
+  credentials: [],
+  credentialProvider: 'Operating-system keyring',
+}
 
 export default function App() {
   const [bootstrap, setBootstrap] = useState<Bootstrap>(emptyBootstrap)
@@ -85,6 +94,16 @@ export default function App() {
     await refresh()
   }
 
+  async function saveCredential(request: CredentialSaveRequest) {
+    await backend.saveCredential(request)
+    await refresh()
+  }
+
+  async function deleteCredential(id: string) {
+    await backend.deleteCredential(id)
+    await refresh()
+  }
+
   async function showPlan(item: Profile) {
     setPlanProfile(item)
     setPlan(undefined)
@@ -108,10 +127,6 @@ export default function App() {
     } finally {
       setRuntimeBusyProfileID('')
     }
-  }
-
-  async function stopProfile(item: Profile) {
-    await stopProfileByID(item.id)
   }
 
   async function stopProfileByID(profileID: string) {
@@ -196,7 +211,7 @@ export default function App() {
       onClone={(item) => void cloneProfile(item)}
       onPlan={(item) => void showPlan(item)}
       onStart={(item) => void startProfile(item)}
-      onStop={(item) => void stopProfile(item)}
+      onStop={(item) => void stopProfileByID(item.id)}
       onDelete={(item) => void deleteProfile(item)}
     />
   )
@@ -211,7 +226,7 @@ export default function App() {
         <MetricCard label="Profiles" value={metrics.total} detail="Isolated local identities" />
         <MetricCard label="Ready" value={metrics.ready} detail="Passed visible configuration checks" tone="good" />
         <MetricCard label="Running" value={metrics.running} detail="Supervised local browser sessions" tone={metrics.running ? 'good' : 'neutral'} />
-        <MetricCard label="Needs review" value={metrics.warnings} detail="Incomplete or warning states" tone={metrics.warnings ? 'warn' : 'good'} />
+        <MetricCard label="Vault items" value={bootstrap.credentials.length} detail={`References backed by ${bootstrap.credentialProvider}`} tone="good" />
       </div>
       {runtimeError && <div className="form-error runtime-global-error">{runtimeError}</div>}
       <div className="dashboard-grid">
@@ -224,8 +239,8 @@ export default function App() {
           <ul className="check-list">
             <li><span>✓</span><div><strong>Verified kernels only</strong><p>Legacy executable paths stay dry-run only.</p></div></li>
             <li><span>✓</span><div><strong>Loopback-only CDP</strong><p>Readiness and WebSocket endpoints must stay local.</p></div></li>
-            <li><span>✓</span><div><strong>Managed profile data</strong><p>Runtime rejects user-data paths outside Veilium storage.</p></div></li>
-            <li><span>✓</span><div><strong>Shutdown cleanup</strong><p>Wails shutdown attempts to stop active browsers.</p></div></li>
+            <li><span>✓</span><div><strong>OS-backed secrets</strong><p>Passwords are never written to profile or credential metadata.</p></div></li>
+            <li><span>○</span><div><strong>Authenticated proxy bridge</strong><p>Credential-backed routes remain launch-blocked until the next phase.</p></div></li>
           </ul>
         </section>
       </div>
@@ -291,12 +306,20 @@ export default function App() {
     </>
   }
 
+  function renderCredentials() {
+    return <>
+      <div className="page-heading compact"><div><span className="eyebrow">Operating-system secret storage</span><h1>Credential vault</h1><p>Veilium stores only names, usernames and reference IDs. Password values stay inside {bootstrap.credentialProvider}.</p></div></div>
+      <CredentialVault records={bootstrap.credentials} provider={bootstrap.credentialProvider} nativeMode={backend.isNative()} onSave={saveCredential} onDelete={deleteCredential} />
+    </>
+  }
+
   function renderSettings() {
     return <>
       <div className="page-heading compact"><div><span className="eyebrow">Application controls</span><h1>Settings</h1><p>Sensitive network bridges and automation capabilities remain gated.</p></div></div>
       <section className="settings-grid">
         <article className="panel setting-card"><h2>Runtime</h2><dl><div><dt>Application version</dt><dd>{bootstrap.version}</dd></div><div><dt>Frontend mode</dt><dd>{backend.isNative() ? 'Wails desktop' : 'Browser preview'}</dd></div><div><dt>Active sessions</dt><dd>{bootstrap.sessions.filter((item) => isRuntimeActive(item)).length}</dd></div><div><dt>Registered kernels</dt><dd>{bootstrap.kernels.length}</dd></div></dl></article>
-        <article className="panel setting-card"><h2>Deferred security work</h2><ul className="plain-list"><li>OS credential vault integration</li><li>Authenticated proxy bridge</li><li>Signed remote kernel manifests</li><li>Encrypted profile export/import</li></ul></article>
+        <article className="panel setting-card"><h2>Credential storage</h2><dl><div><dt>Provider</dt><dd>{bootstrap.credentialProvider}</dd></div><div><dt>Stored references</dt><dd>{bootstrap.credentials.length}</dd></div><div><dt>Plaintext fallback</dt><dd>Disabled</dd></div></dl></article>
+        <article className="panel setting-card"><h2>Deferred security work</h2><ul className="plain-list"><li>Authenticated proxy bridge</li><li>Signed remote kernel manifests</li><li>Encrypted profile export/import</li><li>Real Chromium runtime matrix</li></ul></article>
       </section>
     </>
   }
@@ -315,10 +338,11 @@ export default function App() {
           {!loading && view === 'profiles' && renderProfiles()}
           {!loading && view === 'runtime' && renderRuntime()}
           {!loading && view === 'kernels' && renderKernels()}
+          {!loading && view === 'credentials' && renderCredentials()}
           {!loading && view === 'settings' && renderSettings()}
         </div>
       </main>
-      <ProfileEditor open={editorOpen && !isRuntimeActive(activeEditingSession)} profile={editing} providers={bootstrap.providers} kernels={bootstrap.kernels} onClose={() => setEditorOpen(false)} onSave={saveProfile} />
+      <ProfileEditor open={editorOpen && !isRuntimeActive(activeEditingSession)} profile={editing} providers={bootstrap.providers} kernels={bootstrap.kernels} credentials={bootstrap.credentials} onClose={() => setEditorOpen(false)} onSave={saveProfile} />
       <PlanDrawer profile={planProfile} plan={plan} error={planError} onClose={() => { setPlanProfile(undefined); setPlan(undefined) }} />
     </div>
   )

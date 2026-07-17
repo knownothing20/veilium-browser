@@ -8,15 +8,17 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/knownothing20/veilium-browser/internal/credential"
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/fingerprint"
 	"github.com/knownothing20/veilium-browser/internal/kernel"
 	"github.com/knownothing20/veilium-browser/internal/launch"
 	"github.com/knownothing20/veilium-browser/internal/profile"
+	"github.com/knownothing20/veilium-browser/internal/proxy"
 	"github.com/knownothing20/veilium-browser/internal/supervisor"
 )
 
-const AppVersion = "0.4.0-dev"
+const AppVersion = "0.5.0-dev"
 
 type RuntimeSupervisor interface {
 	Start(context.Context, string, string, supervisor.PlanBuilder) (supervisor.Session, error)
@@ -29,6 +31,7 @@ type RuntimeSupervisor interface {
 type Service struct {
 	store       *profile.Store
 	kernels     *kernel.Store
+	credentials *credential.Manager
 	planner     launch.Planner
 	supervisor  RuntimeSupervisor
 	dataRoot    string
@@ -36,11 +39,13 @@ type Service struct {
 }
 
 type Bootstrap struct {
-	Version   string               `json:"version"`
-	Profiles  []domain.Profile     `json:"profiles"`
-	Providers []ProviderDescriptor `json:"providers"`
-	Kernels   []kernel.Record      `json:"kernels"`
-	Sessions  []supervisor.Session `json:"sessions"`
+	Version            string               `json:"version"`
+	Profiles           []domain.Profile     `json:"profiles"`
+	Providers          []ProviderDescriptor `json:"providers"`
+	Kernels            []kernel.Record      `json:"kernels"`
+	Sessions           []supervisor.Session `json:"sessions"`
+	Credentials        []credential.Record  `json:"credentials"`
+	CredentialProvider string               `json:"credentialProvider"`
 }
 
 type ProviderDescriptor struct {
@@ -65,6 +70,14 @@ func NewService(store *profile.Store, dataRoot string) (*Service, error) {
 }
 
 func newService(store *profile.Store, dataRoot string, runtimeSupervisor RuntimeSupervisor) (*Service, error) {
+	credentials, err := credential.Open(filepath.Join(dataRoot, "credentials.json"))
+	if err != nil {
+		return nil, err
+	}
+	return newServiceWithCredentials(store, dataRoot, runtimeSupervisor, credentials)
+}
+
+func newServiceWithCredentials(store *profile.Store, dataRoot string, runtimeSupervisor RuntimeSupervisor, credentials *credential.Manager) (*Service, error) {
 	if store == nil {
 		return nil, fmt.Errorf("profile store is required")
 	}
@@ -74,6 +87,9 @@ func newService(store *profile.Store, dataRoot string, runtimeSupervisor Runtime
 	if runtimeSupervisor == nil {
 		return nil, fmt.Errorf("runtime supervisor is required")
 	}
+	if credentials == nil {
+		return nil, fmt.Errorf("credential manager is required")
+	}
 	kernels, err := kernel.Open(filepath.Join(dataRoot, "kernels.json"), filepath.Join(dataRoot, "kernels"))
 	if err != nil {
 		return nil, err
@@ -81,6 +97,7 @@ func newService(store *profile.Store, dataRoot string, runtimeSupervisor Runtime
 	return &Service{
 		store:       store,
 		kernels:     kernels,
+		credentials: credentials,
 		planner:     launch.Planner{},
 		supervisor:  runtimeSupervisor,
 		dataRoot:    dataRoot,
@@ -90,21 +107,37 @@ func newService(store *profile.Store, dataRoot string, runtimeSupervisor Runtime
 
 func (s *Service) Bootstrap() Bootstrap {
 	return Bootstrap{
-		Version:   AppVersion,
-		Profiles:  s.store.List(),
-		Providers: providerCatalog(),
-		Kernels:   s.kernels.List(),
-		Sessions:  s.supervisor.List(),
+		Version:            AppVersion,
+		Profiles:           s.store.List(),
+		Providers:          providerCatalog(),
+		Kernels:            s.kernels.List(),
+		Sessions:           s.supervisor.List(),
+		Credentials:        s.credentials.List(),
+		CredentialProvider: credential.ProviderName(),
 	}
 }
 
 func (s *Service) ListProfiles() []domain.Profile        { return s.store.List() }
 func (s *Service) ListKernels() []kernel.Record          { return s.kernels.List() }
 func (s *Service) ListSessions() []supervisor.Session    { return s.supervisor.List() }
+func (s *Service) ListCredentials() []credential.Record  { return s.credentials.List() }
 func (s *Service) Shutdown(ctx context.Context) error    { return s.supervisor.Shutdown(ctx) }
 func (s *Service) IsProfileActive(profileID string) bool { return s.supervisor.IsActive(profileID) }
 func (s *Service) Capabilities(provider, version string) (fingerprint.Capabilities, error) {
 	return fingerprint.For(provider, version)
+}
+
+func (s *Service) SaveCredential(request credential.SaveRequest) (credential.Record, error) {
+	return s.credentials.Save(request)
+}
+
+func (s *Service) DeleteCredential(id string) error {
+	for _, item := range s.store.List() {
+		if strings.TrimSpace(item.Proxy.CredentialRef) == strings.TrimSpace(id) {
+			return fmt.Errorf("credential is used by profile %q", item.Name)
+		}
+	}
+	return s.credentials.Delete(id)
 }
 
 func (s *Service) ImportKernel(request kernel.ImportRequest) (kernel.Record, error) {
@@ -137,6 +170,9 @@ func (s *Service) CreateProfile(input domain.Profile) (domain.Profile, error) {
 	if err := s.resolveKernel(&input); err != nil {
 		return domain.Profile{}, err
 	}
+	if err := s.validateProxy(input); err != nil {
+		return domain.Profile{}, err
+	}
 	if _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {
 		return domain.Profile{}, err
 	}
@@ -154,6 +190,9 @@ func (s *Service) UpdateProfile(input domain.Profile) (domain.Profile, error) {
 		input.UserDataDir = filepath.Join(s.profilesDir, input.ID)
 	}
 	if err := s.resolveKernel(&input); err != nil {
+		return domain.Profile{}, err
+	}
+	if err := s.validateProxy(input); err != nil {
 		return domain.Profile{}, err
 	}
 	if _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {
@@ -202,6 +241,9 @@ func (s *Service) BuildLaunchPlan(request LaunchPlanRequest) (domain.LaunchPlan,
 	if err := s.resolveKernel(&item); err != nil {
 		return domain.LaunchPlan{}, err
 	}
+	if err := s.validateProxy(item); err != nil {
+		return domain.LaunchPlan{}, err
+	}
 	return s.planner.Build(item, request.RemoteDebuggingPort)
 }
 
@@ -214,6 +256,9 @@ func (s *Service) StartProfile(ctx context.Context, profileID string) (superviso
 		return supervisor.Session{}, fmt.Errorf("profile %q must use a registered kernel before it can start", item.Name)
 	}
 	if err := s.resolveKernel(&item); err != nil {
+		return supervisor.Session{}, err
+	}
+	if err := s.validateProxy(item); err != nil {
 		return supervisor.Session{}, err
 	}
 	managedDir := filepath.Join(s.profilesDir, item.ID)
@@ -246,6 +291,23 @@ func (s *Service) resolveKernel(item *domain.Profile) error {
 	item.Kernel.Provider = record.Provider
 	item.Kernel.Version = record.Version
 	item.Kernel.Executable = record.Executable
+	return nil
+}
+
+func (s *Service) validateProxy(item domain.Profile) error {
+	route, err := proxy.Resolve(item.Proxy.URL, item.Proxy.CredentialRef)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(route.CredentialRef) == "" {
+		return nil
+	}
+	if _, err := s.credentials.Get(route.CredentialRef); err != nil {
+		if errors.Is(err, credential.ErrNotFound) {
+			return fmt.Errorf("credential reference %q is not registered", route.CredentialRef)
+		}
+		return err
+	}
 	return nil
 }
 
