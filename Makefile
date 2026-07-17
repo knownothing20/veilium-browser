@@ -1,0 +1,19 @@
+.PHONY: fmt vet test build check
+
+fmt:
+	gofmt -w $$(find . -name '*.go' -not -path './vendor/*')
+
+vet:
+	go vet ./...
+
+test:
+	go test ./...
+
+build:
+	go build ./...
+
+check:
+	test -z "$$(gofmt -l .)"
+	go vet ./...
+	go test ./...
+	go build ./...
