@@ -1,21 +1,32 @@
 import { profileHealth } from '../lib/model'
-import type { Profile } from '../types'
+import { isRuntimeActive, runtimeStateLabel, sessionForProfile } from '../lib/runtime'
+import type { Profile, RuntimeSession } from '../types'
 
 export function ProfileTable({
   profiles,
+  sessions,
   selectedID,
+  nativeMode,
+  busyProfileID,
   onSelect,
   onEdit,
   onClone,
   onPlan,
+  onStart,
+  onStop,
   onDelete,
 }: {
   profiles: Profile[]
+  sessions: RuntimeSession[]
   selectedID?: string
+  nativeMode: boolean
+  busyProfileID?: string
   onSelect: (profile: Profile) => void
   onEdit: (profile: Profile) => void
   onClone: (profile: Profile) => void
   onPlan: (profile: Profile) => void
+  onStart: (profile: Profile) => void
+  onStop: (profile: Profile) => void
   onDelete: (profile: Profile) => void
 }) {
   if (profiles.length === 0) {
@@ -27,6 +38,7 @@ export function ProfileTable({
       </div>
     )
   }
+
   return (
     <div className="table-wrap">
       <table className="profile-table">
@@ -43,6 +55,8 @@ export function ProfileTable({
         <tbody>
           {profiles.map((profile) => {
             const health = profileHealth(profile)
+            const session = sessionForProfile(sessions, profile.id)
+            const active = isRuntimeActive(session)
             return (
               <tr className={selectedID === profile.id ? 'selected' : ''} key={profile.id} onClick={() => onSelect(profile)}>
                 <td>
@@ -56,7 +70,7 @@ export function ProfileTable({
                 </td>
                 <td>
                   <strong>{profile.kernel.provider === 'patched-chromium' ? 'Patched' : 'Native'}</strong>
-                  <span>Chromium {profile.kernel.version.split('.')[0]}</span>
+                  <span>Chromium {profile.kernel.version.split('.')[0]} · {profile.kernel.id ? 'registered' : 'legacy'}</span>
                 </td>
                 <td>
                   <strong>{profile.proxy.url === 'direct://' ? 'Direct' : 'Proxy'}</strong>
@@ -66,13 +80,19 @@ export function ProfileTable({
                   <strong>{profile.fingerprint.platform} · {profile.fingerprint.language}</strong>
                   <span>{profile.fingerprint.timezone}</span>
                 </td>
-                <td><span className={`status-pill ${health}`}>{health}</span></td>
+                <td>
+                  <span className={`status-pill ${active ? 'running' : health}`}>{active ? runtimeStateLabel(session?.state) : health}</span>
+                  {session?.state === 'failed' && <span className="runtime-error-inline" title={session.lastError}>{session.lastError || 'Runtime failed'}</span>}
+                </td>
                 <td>
                   <div className="row-actions" onClick={(event) => event.stopPropagation()}>
-                    <button title="Launch plan" onClick={() => onPlan(profile)}>▶</button>
-                    <button title="Edit" onClick={() => onEdit(profile)}>✎</button>
+                    {active
+                      ? <button className="stop-icon" title="Stop browser" disabled={busyProfileID === profile.id} onClick={() => onStop(profile)}>■</button>
+                      : <button title={nativeMode ? 'Start browser' : 'Desktop runtime required'} disabled={!nativeMode || !profile.kernel.id || busyProfileID === profile.id} onClick={() => onStart(profile)}>▶</button>}
+                    <button title="Review launch plan" onClick={() => onPlan(profile)}>≡</button>
+                    <button title={active ? 'Stop browser before editing' : 'Edit'} disabled={active} onClick={() => onEdit(profile)}>✎</button>
                     <button title="Clone" onClick={() => onClone(profile)}>⧉</button>
-                    <button className="danger-icon" title="Delete" onClick={() => onDelete(profile)}>×</button>
+                    <button className="danger-icon" title={active ? 'Stop browser before deleting' : 'Delete'} disabled={active} onClick={() => onDelete(profile)}>×</button>
                   </div>
                 </td>
               </tr>

@@ -1,8 +1,9 @@
-export type ViewKey = 'dashboard' | 'profiles' | 'kernels' | 'settings'
+export type ViewKey = 'dashboard' | 'profiles' | 'runtime' | 'kernels' | 'settings'
 
 const navigation: Array<{ key: ViewKey; label: string; icon: string }> = [
   { key: 'dashboard', label: 'Overview', icon: '◫' },
   { key: 'profiles', label: 'Browser profiles', icon: '◎' },
+  { key: 'runtime', label: 'Runtime sessions', icon: '▶' },
   { key: 'kernels', label: 'Kernel registry', icon: '⬡' },
   { key: 'settings', label: 'Settings', icon: '⚙' },
 ]
@@ -29,7 +30,7 @@ export function Sidebar({ active, onChange, nativeMode }: { active: ViewKey; onC
         <div className={nativeMode ? 'mode-dot online' : 'mode-dot'} />
         <div>
           <strong>{nativeMode ? 'Desktop runtime' : 'Browser preview'}</strong>
-          <span>{nativeMode ? 'Local data connected' : 'Using temporary demo data'}</span>
+          <span>{nativeMode ? 'Local process control enabled' : 'Process execution disabled'}</span>
         </div>
       </div>
     </aside>

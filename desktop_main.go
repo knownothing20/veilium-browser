@@ -33,29 +33,11 @@ func main() {
 		os.Exit(1)
 	}
 	app := NewDesktopApp(service)
-	if err := wails.Run(&options.App{
-		Title:             "Veilium Browser",
-		Width:             1440,
-		Height:            900,
-		MinWidth:          1120,
-		MinHeight:         720,
-		DisableResize:     false,
-		Fullscreen:        false,
-		Frameless:         false,
-		StartHidden:       false,
-		HideWindowOnClose: false,
-		AssetServer: &assetserver.Options{
-			Assets: assets,
-		},
-		BackgroundColour: &options.RGBA{R: 245, G: 247, B: 250, A: 1},
-		OnStartup:        app.startup,
-		Bind:             []interface{}{app},
-	}); err != nil {
+	if err := wails.Run(&options.App{Title: "Veilium Browser", Width: 1440, Height: 900, MinWidth: 1120, MinHeight: 720, AssetServer: &assetserver.Options{Assets: assets}, BackgroundColour: &options.RGBA{R: 245, G: 247, B: 250, A: 1}, OnStartup: app.startup, OnShutdown: app.shutdown, Bind: []interface{}{app}}); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
-
 func desktopDataRoot() (string, error) {
 	if override := os.Getenv("VEILIUM_DATA_DIR"); override != "" {
 		return filepath.Abs(override)
