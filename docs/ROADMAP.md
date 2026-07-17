@@ -12,7 +12,9 @@
 - [x] Verified local kernel registry and managed imports.
 - [x] SHA-256 re-verification and in-use deletion protection.
 - [x] Safe browser process lifecycle and shutdown cleanup.
-- [x] Loopback CDP port allocation and readiness checks.
+- [x] Chromium-assigned CDP port discovery and readiness checks.
+- [x] Unix process groups and Windows Job Object tree cleanup.
+- [x] Cross-platform supervised runtime handshake tests.
 - [x] In-memory runtime status, logs, exit details and UI controls.
 
 ## Runtime follow-up
@@ -20,12 +22,13 @@
 - [ ] Real-window/fingerprint dimension consistency.
 - [ ] Extension and cookie management.
 - [ ] Optional explicit crash-restart policy with bounded retries.
-- [ ] Browser runtime integration tests using approved test kernels on Windows, Linux and macOS.
+- [ ] Approved real Chromium test-kernel matrix on Windows, Linux and macOS.
+- [ ] Native suspended-process creation on Windows if the remaining pre-assignment micro-window becomes material.
 
 ## Proxy and credential platform
 
 - [ ] Secret storage through the operating-system credential vault.
-- [ ] Authenticated-proxy local bridge.
+- [ ] Authenticated HTTP/SOCKS local bridge.
 - [ ] Xray and sing-box adapters with checksums and pinned provenance.
 - [ ] Health, latency, exit-IP, DNS and WebRTC leak checks.
 

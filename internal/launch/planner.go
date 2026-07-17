@@ -41,12 +41,10 @@ func (Planner) Build(profile domain.Profile, remoteDebuggingPort int) (domain.La
 	args := []string{
 		"--user-data-dir=" + profile.UserDataDir,
 		"--remote-debugging-address=127.0.0.1",
+		"--remote-debugging-port=" + strconv.Itoa(remoteDebuggingPort),
 		"--no-first-run",
 		"--no-default-browser-check",
 		"--disable-session-crashed-bubble",
-	}
-	if remoteDebuggingPort > 0 {
-		args = append(args, "--remote-debugging-port="+strconv.Itoa(remoteDebuggingPort))
 	}
 	if route.BrowserURL == "direct://" {
 		args = append(args, "--no-proxy-server")

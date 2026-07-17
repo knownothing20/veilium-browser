@@ -10,11 +10,12 @@ Veilium is an open-source, multi-profile privacy browser workspace focused on is
 - atomic local profile persistence and loopback-only authenticated REST API;
 - Wails + React desktop profile workspace;
 - verified local kernel registry with managed copies and SHA-256 integrity records;
-- safe local browser start, stop and in-memory runtime session monitoring;
-- loopback-only CDP allocation, `/json/version` readiness checks and debugger URL validation;
-- managed profile data directories and private per-start runtime logs;
-- shutdown cleanup and protection against editing or deleting active profiles;
-- Linux and Windows desktop build CI.
+- supervised local browser start, stop and runtime-session monitoring;
+- Chromium-assigned CDP ports discovered through `DevToolsActivePort`, removing the preselected-port race;
+- loopback-only `/json/version` and debugger WebSocket validation;
+- Unix process-group ownership and Windows Job Object child-tree cleanup;
+- private per-start runtime logs and application-shutdown cleanup;
+- Linux and Windows desktop build and runtime tests.
 
 Actual browser execution requires a registered, integrity-verified kernel and a profile using its Veilium-managed user-data directory. Profiles requiring an unavailable proxy bridge remain blocked from starting.
 
