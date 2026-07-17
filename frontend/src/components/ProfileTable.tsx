@@ -1,6 +1,7 @@
 import { profileHealth } from '../lib/model'
 import { isRuntimeActive, runtimeStateLabel, sessionForProfile } from '../lib/runtime'
 import type { Profile, RuntimeSession } from '../types'
+import { ProxyDiagnosticAction } from './ProxyDiagnosticAction'
 
 export function ProfileTable({
   profiles,
@@ -68,18 +69,9 @@ export function ProfileTable({
                     </div>
                   </div>
                 </td>
-                <td>
-                  <strong>{profile.kernel.provider === 'patched-chromium' ? 'Patched' : 'Native'}</strong>
-                  <span>Chromium {profile.kernel.version.split('.')[0]} · {profile.kernel.id ? 'registered' : 'legacy'}</span>
-                </td>
-                <td>
-                  <strong>{profile.proxy.url === 'direct://' ? 'Direct' : 'Proxy'}</strong>
-                  <span>{profile.proxy.url || 'direct://'}</span>
-                </td>
-                <td>
-                  <strong>{profile.fingerprint.platform} · {profile.fingerprint.language}</strong>
-                  <span>{profile.fingerprint.timezone}</span>
-                </td>
+                <td><strong>{profile.kernel.provider === 'patched-chromium' ? 'Patched' : 'Native'}</strong><span>Chromium {profile.kernel.version.split('.')[0]} · {profile.kernel.id ? 'registered' : 'legacy'}</span></td>
+                <td><strong>{profile.proxy.url === 'direct://' ? 'Direct' : 'Proxy'}</strong><span>{profile.proxy.url || 'direct://'}</span></td>
+                <td><strong>{profile.fingerprint.platform} · {profile.fingerprint.language}</strong><span>{profile.fingerprint.timezone}</span></td>
                 <td>
                   <span className={`status-pill ${active ? 'running' : health}`}>{active ? runtimeStateLabel(session?.state) : health}</span>
                   {session?.state === 'failed' && <span className="runtime-error-inline" title={session.lastError}>{session.lastError || 'Runtime failed'}</span>}
@@ -89,6 +81,7 @@ export function ProfileTable({
                     {active
                       ? <button className="stop-icon" title="Stop browser" disabled={busyProfileID === profile.id} onClick={() => onStop(profile)}>■</button>
                       : <button title={nativeMode ? 'Start browser' : 'Desktop runtime required'} disabled={!nativeMode || !profile.kernel.id || busyProfileID === profile.id} onClick={() => onStart(profile)}>▶</button>}
+                    <ProxyDiagnosticAction profile={profile} nativeMode={nativeMode} />
                     <button title="Review launch plan" onClick={() => onPlan(profile)}>≡</button>
                     <button title={active ? 'Stop browser before editing' : 'Edit'} disabled={active} onClick={() => onEdit(profile)}>✎</button>
                     <button title="Clone" onClick={() => onClone(profile)}>⧉</button>
