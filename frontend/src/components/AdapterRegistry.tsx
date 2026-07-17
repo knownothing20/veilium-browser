@@ -74,8 +74,8 @@ export function AdapterRegistry({
             <h2>Register local adapter</h2>
             <p>
               Veilium copies the selected executable into private managed
-              storage and records its provenance. Registered Xray binaries can
-              run supported profiles; sing-box remains registry-only.
+              storage and records its provenance. Registered Xray and sing-box binaries can run their reviewed protocol
+              subsets through supervised per-session runtimes.
             </p>
           </div>
         </div>
@@ -245,6 +245,10 @@ export function AdapterRegistry({
                 <div>
                   <dt>Managed path</dt>
                   <dd title={record.executable}>{record.executable}</dd>
+                </div>
+                <div>
+                  <dt>Runtime</dt>
+                  <dd>{record.kind === "xray" ? "Reviewed Xray subset enabled" : "Hysteria2, TUIC and AnyTLS enabled"}</dd>
                 </div>
               </dl>
               <div className="kernel-actions">

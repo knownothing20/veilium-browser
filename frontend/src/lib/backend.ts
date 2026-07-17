@@ -110,7 +110,7 @@ export const backend = {
     return api
       ? api.Bootstrap()
       : {
-          version: "0.9.0-browser-preview",
+          version: "0.10.0-browser-preview",
           profiles: clone(mockProfiles),
           providers: clone(providers),
           kernels: clone(mockKernels),
