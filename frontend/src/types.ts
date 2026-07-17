@@ -1,7 +1,28 @@
 export interface KernelRef {
+  id?: string
   provider: string
   version: string
   executable: string
+}
+
+export interface KernelRecord {
+  id: string
+  name: string
+  provider: string
+  version: string
+  executable: string
+  sha256: string
+  sizeBytes: number
+  status: 'verified' | 'modified' | 'missing'
+  importedAt: string
+  verifiedAt: string
+}
+
+export interface KernelImportRequest {
+  name: string
+  provider: string
+  version: string
+  sourcePath: string
 }
 
 export interface FingerprintConfig {
@@ -69,6 +90,7 @@ export interface Bootstrap {
   version: string
   profiles: Profile[]
   providers: ProviderDescriptor[]
+  kernels: KernelRecord[]
 }
 
 export interface LaunchPlan {

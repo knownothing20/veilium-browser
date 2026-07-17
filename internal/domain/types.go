@@ -2,8 +2,6 @@ package domain
 
 import "time"
 
-// Profile is one isolated browser identity. Runtime state is intentionally kept
-// outside this structure so profile data can be migrated and synced safely.
 type Profile struct {
 	ID          string            `json:"id"`
 	Name        string            `json:"name"`
@@ -19,6 +17,7 @@ type Profile struct {
 }
 
 type KernelRef struct {
+	ID         string `json:"id,omitempty"`
 	Provider   string `json:"provider"`
 	Version    string `json:"version"`
 	Executable string `json:"executable"`
