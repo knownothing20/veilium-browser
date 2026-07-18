@@ -56,7 +56,7 @@ export default function App() {
   const [kernelError, setKernelError] = useState('')
   const [kernelRequest, setKernelRequest] = useState<KernelImportRequest>({
     name: '',
-    provider: 'patched-chromium',
+    provider: 'custom-chromium',
     version: '148.0.0',
     sourcePath: '',
   })
@@ -204,8 +204,10 @@ export default function App() {
 function Heading({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: React.ReactNode }) {
   return <div className="page-heading compact"><div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>{action}</div>
 }
+
 function Empty({ icon, title, detail }: { icon: string; title: string; detail: string }) {
   return <section className="panel empty-state"><div className="empty-icon">{icon}</div><h3>{title}</h3><p>{detail}</p></section>
 }
+
 function errorText(reason: unknown): string { return reason instanceof Error ? reason.message : String(reason) }
 function basename(path: string): string { return path.split(/[\\/]/).pop() || '' }
