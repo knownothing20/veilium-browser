@@ -38,7 +38,8 @@ jobs:
       - name: Package checked-out source
         shell: bash
         run: |
-          tar --exclude=.git --exclude=frontend/node_modules --exclude=frontend/dist -czf m4-evidence-source.tgz .
+          tar --exclude=.git --exclude=frontend/node_modules --exclude=frontend/dist -czf /tmp/m4-evidence-source.tgz .
+          cp /tmp/m4-evidence-source.tgz ./m4-evidence-source.tgz
       - name: Upload diagnostics
         uses: actions/upload-artifact@v4
         with:
