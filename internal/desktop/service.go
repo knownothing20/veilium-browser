@@ -27,7 +27,7 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/xrayprovider"
 )
 
-const AppVersion = "0.12.0-dev"
+const AppVersion = "0.13.0-dev"
 
 type RuntimeSupervisor interface {
 	Start(context.Context, string, string, supervisor.PlanBuilder) (supervisor.Session, error)
@@ -583,17 +583,22 @@ func officialAdapterPins() []adapterrelease.Pin {
 }
 
 func providerCatalog() []ProviderDescriptor {
-	definitions := []ProviderDescriptor{
-		{ID: fingerprint.ProviderPatched, Name: "Patched Chromium", Description: "Version-aware fingerprint provider with verified command-line contracts.", Versions: []string{"148.0.0", "144.0.0", "142.0.0"}},
-		{ID: fingerprint.ProviderNative, Name: "Native Chromium", Description: "Standard Chromium isolation without synthetic fingerprint surfaces.", Versions: []string{"148.0.0", "144.0.0"}},
-	}
-	for index := range definitions {
-		for _, version := range definitions[index].Versions {
-			capabilities, err := fingerprint.For(definitions[index].ID, version)
+	contracts := fingerprint.Definitions()
+	definitions := make([]ProviderDescriptor, 0, len(contracts))
+	for _, contract := range contracts {
+		descriptor := ProviderDescriptor{
+			ID:          contract.ID,
+			Name:        contract.Name,
+			Description: contract.Description,
+			Versions:    append([]string(nil), contract.Versions...),
+		}
+		for _, version := range descriptor.Versions {
+			capabilities, err := fingerprint.For(descriptor.ID, version)
 			if err == nil {
-				definitions[index].Samples = append(definitions[index].Samples, capabilities)
+				descriptor.Samples = append(descriptor.Samples, capabilities)
 			}
 		}
+		definitions = append(definitions, descriptor)
 	}
 	return definitions
 }
