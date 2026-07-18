@@ -18,22 +18,15 @@ const (
 )
 
 func EffectiveWindow(profile domain.Profile) (WindowSpec, error) {
-	fingerprintConfig := profile.Fingerprint
-	width := fingerprintConfig.WindowWidth
-	height := fingerprintConfig.WindowHeight
+	plan, err := domain.EffectiveWindowPlan(profile.Fingerprint)
+	if err != nil {
+		return WindowSpec{}, err
+	}
 	source := WindowExplicit
-	if width == 0 && height == 0 {
-		width = fingerprintConfig.ScreenWidth
-		height = fingerprintConfig.ScreenHeight
+	if plan.Source == domain.WindowSourceLegacyFallback {
 		source = WindowLegacyFallback
-	} else if width == 0 || height == 0 {
-		return WindowSpec{}, fmt.Errorf("window width and height must both be configured")
 	}
-	scale := fingerprintConfig.DeviceScaleFactor
-	if scale == 0 {
-		scale = 1
-	}
-	return WindowSpec{Width: width, Height: height, DeviceScaleFactor: scale, Source: source}, nil
+	return WindowSpec{Width: plan.Width, Height: plan.Height, DeviceScaleFactor: plan.DeviceScaleFactor, Source: source}, nil
 }
 
 func Preflight(profile domain.Profile, capabilities fingerprint.Capabilities, runtimeOS string) (WindowSpec, []Check, error) {
