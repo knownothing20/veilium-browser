@@ -8,6 +8,7 @@ import type {
   Capabilities,
   CredentialRecord,
   CredentialSaveRequest,
+  EvidenceRun,
   KernelImportRequest,
   KernelRecord,
   LaunchPlan,
@@ -37,6 +38,12 @@ type WailsDesktopApp = {
   StartProfile: (profileId: string) => Promise<RuntimeSession>;
   StopProfile: (profileId: string) => Promise<RuntimeSession>;
   RunProxyDiagnostics: (profileId: string) => Promise<ProxyDiagnosticReport>;
+  RunEvidence: (profileId: string) => Promise<EvidenceRun>;
+  CancelEvidence: (profileId: string) => Promise<void>;
+  ListEvidence: (profileId: string) => Promise<EvidenceRun[]>;
+  GetEvidence: (id: string) => Promise<EvidenceRun>;
+  DeleteEvidence: (id: string) => Promise<void>;
+  EvidenceActive: (profileId: string) => Promise<boolean>;
   PickKernelExecutable: () => Promise<string>;
   ImportKernel: (request: KernelImportRequest) => Promise<KernelRecord>;
   VerifyKernel: (id: string) => Promise<KernelRecord>;
@@ -186,7 +193,7 @@ export const backend = {
     return api
       ? api.Bootstrap()
       : {
-          version: "0.13.0-browser-preview",
+          version: "0.14.0-browser-preview",
           profiles: clone(mockProfiles),
           providers: clone(providers),
           kernels: clone(mockKernels),
@@ -331,6 +338,52 @@ export const backend = {
         "Proxy diagnostics are available only in the Wails desktop application",
       );
     return api.RunProxyDiagnostics(profileId);
+  },
+
+  async runEvidence(profileId: string): Promise<EvidenceRun> {
+    const api = native();
+    if (!api)
+      throw new Error(
+        "Real-browser evidence is available only in the Wails desktop application",
+      );
+    return api.RunEvidence(profileId);
+  },
+
+  async cancelEvidence(profileId: string): Promise<void> {
+    const api = native();
+    if (!api)
+      throw new Error(
+        "Real-browser evidence is available only in the Wails desktop application",
+      );
+    return api.CancelEvidence(profileId);
+  },
+
+  async listEvidence(profileId: string): Promise<EvidenceRun[]> {
+    const api = native();
+    return api ? api.ListEvidence(profileId) : [];
+  },
+
+  async getEvidence(id: string): Promise<EvidenceRun> {
+    const api = native();
+    if (!api)
+      throw new Error(
+        "Evidence reports are available only in the Wails desktop application",
+      );
+    return api.GetEvidence(id);
+  },
+
+  async deleteEvidence(id: string): Promise<void> {
+    const api = native();
+    if (!api)
+      throw new Error(
+        "Evidence reports are available only in the Wails desktop application",
+      );
+    return api.DeleteEvidence(id);
+  },
+
+  async evidenceActive(profileId: string): Promise<boolean> {
+    const api = native();
+    return api ? api.EvidenceActive(profileId) : false;
   },
 
   async pickKernelExecutable(): Promise<string> {
