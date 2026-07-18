@@ -1,7 +1,7 @@
 # Current Project Status
 
 Last updated: 2026-07-18
-Application version: 0.12.0-dev
+Application version: 0.13.0-dev
 Main baseline SHA: 863e88cbbbc1c904dfbcda967be028d36ccb9ece
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
@@ -49,7 +49,7 @@ The authoritative phase scope, milestones, non-goals, platform policy, validatio
 Current implementation issue: #17
 Current Draft PR: #19
 
-Implemented in the Draft branch so far:
+Implemented in the Draft branch:
 
 - provider contract schema version 2;
 - reviewed, custom, legacy, disabled, and invalid provider trust states;
@@ -57,18 +57,21 @@ Implemented in the Draft branch so far:
 - a generic `custom-chromium` contract;
 - compatibility definitions for legacy `native-chromium` and `patched-chromium` IDs;
 - fail-closed backend validation for advanced unverified claims;
-- frontend state types, generic defaults, capability labels, and disabled unsupported controls;
-- initial provider-policy and frontend tests.
+- Provider-derived desktop bootstrap data instead of a hard-coded UI provider list;
+- frontend trust and capability states, generic defaults, status labels, and disabled unsupported controls;
+- derived managed-kernel binary identity that keeps integrity and reviewed trust separate;
+- explicit predecessor and rollback policy for provider replacements;
+- provider, validation, kernel identity, rollback, and frontend tests;
+- updated kernel registry documentation;
+- temporary formatting diagnostics removed after the generated result was applied.
 
 Work still required before M4.1 can merge:
 
-1. expose the custom provider and trust metadata consistently through the desktop bootstrap;
-2. complete managed-kernel binary identity and legacy compatibility behavior;
-3. add service, launch, kernel-store, failure, and rollback tests;
-4. update provider and kernel module documentation;
-5. remove temporary diagnostic workflow files;
-6. make Governance, Go, frontend, Windows, Linux, desktop, and adapter checks pass;
-7. update this handoff with the exact next M4.1 or M4.2 task.
+1. use required CI failures to find any remaining legacy boolean assumptions or incompatible tests;
+2. add only the service, launch, or compatibility tests required by those failures;
+3. confirm no legacy record is silently upgraded and generic custom launch remains usable;
+4. make Governance, Go, frontend, Windows, Linux, desktop, and adapter checks pass;
+5. update the PR description and this handoff with the exact next M4.1 or M4.2 task.
 
 ## Active prohibitions
 
@@ -86,7 +89,7 @@ Do not:
 ## Known risks
 
 - no production provider is reviewed yet; M4.1 must not fabricate one;
-- existing `patched-chromium` profiles with advanced settings will remain readable but may be blocked until a reviewed replacement exists;
+- existing `patched-chromium` profiles with advanced settings remain readable but are blocked from claiming reviewed support until a reviewed replacement exists;
 - integrity status and provider trust are separate and must not be presented as the same check;
 - exact provider licensing, maintained artifacts, and real behavior remain future evidence work;
 - macOS remains unclaimed until a real validation path exists.
@@ -102,4 +105,4 @@ The PR must also pass the protected-branch Windows, Linux, desktop-build, fronte
 
 ## Handoff
 
-Continue only in Draft PR #19 and Issue #17. Use CI failures to find remaining legacy boolean assumptions, update only files required by M4.1, and keep `docs/STATUS.md` synchronized with the merged behavior and next task.
+Continue only in Draft PR #19 and Issue #17. Use CI failures to find remaining legacy assumptions, update only files required by M4.1, and keep `docs/STATUS.md` synchronized with merged behavior and the next task.
