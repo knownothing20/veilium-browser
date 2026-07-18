@@ -27,6 +27,18 @@ Veilium is an open-source, multi-profile privacy browser workspace focused on is
 
 Actual browser execution requires a registered, integrity-verified kernel and a profile using its Veilium-managed user-data directory. The reviewed Xray and sing-box subsets run through private per-session configurations and supervised loopback SOCKS5 endpoints. Unsupported options remain fail-closed.
 
+## Project direction and current work
+
+Veilium uses a small set of sources of truth so that different developers and AI sessions follow the same plan:
+
+1. [`docs/PRODUCT.md`](docs/PRODUCT.md) — product purpose, principles, and non-goals;
+2. [`docs/ROADMAP.md`](docs/ROADMAP.md) — six-phase sequence and phase status;
+3. [`docs/STATUS.md`](docs/STATUS.md) — the current milestone, task, blockers, and handoff;
+4. the active phase document named by `docs/STATUS.md`;
+5. [`docs/DEVELOPMENT_PROCESS.md`](docs/DEVELOPMENT_PROCESS.md) — issue, PR, validation, activation, and closure rules.
+
+Contributors and development agents must also follow [`AGENTS.md`](AGENTS.md). Product-code changes are blocked by governance CI while the active phase remains in planning, and product-code PRs must update `docs/STATUS.md`.
+
 ## Development
 
 ### Headless service
@@ -45,10 +57,23 @@ wails dev
 ### Checks
 
 ```bash
+python scripts/check_project_governance.py
 make check
 ```
 
-See [`docs/OFFICIAL_ADAPTER_INSTALLER.md`](docs/OFFICIAL_ADAPTER_INSTALLER.md), [`docs/OFFICIAL_ADAPTER_VALIDATION.md`](docs/OFFICIAL_ADAPTER_VALIDATION.md), [`docs/SING_BOX_PROVIDER.md`](docs/SING_BOX_PROVIDER.md), [`docs/XRAY_PROVIDER.md`](docs/XRAY_PROVIDER.md), [`docs/PROXY_ADAPTER_RUNTIME.md`](docs/PROXY_ADAPTER_RUNTIME.md), [`docs/PROXY_DIAGNOSTICS.md`](docs/PROXY_DIAGNOSTICS.md), [`docs/AUTHENTICATED_PROXY_BRIDGE.md`](docs/AUTHENTICATED_PROXY_BRIDGE.md), [`docs/CREDENTIAL_VAULT.md`](docs/CREDENTIAL_VAULT.md), [`docs/RUNTIME_SUPERVISOR.md`](docs/RUNTIME_SUPERVISOR.md), [`docs/KERNEL_REGISTRY.md`](docs/KERNEL_REGISTRY.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md).
+Architecture and implementation references:
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/OFFICIAL_ADAPTER_INSTALLER.md`](docs/OFFICIAL_ADAPTER_INSTALLER.md)
+- [`docs/OFFICIAL_ADAPTER_VALIDATION.md`](docs/OFFICIAL_ADAPTER_VALIDATION.md)
+- [`docs/SING_BOX_PROVIDER.md`](docs/SING_BOX_PROVIDER.md)
+- [`docs/XRAY_PROVIDER.md`](docs/XRAY_PROVIDER.md)
+- [`docs/PROXY_ADAPTER_RUNTIME.md`](docs/PROXY_ADAPTER_RUNTIME.md)
+- [`docs/PROXY_DIAGNOSTICS.md`](docs/PROXY_DIAGNOSTICS.md)
+- [`docs/AUTHENTICATED_PROXY_BRIDGE.md`](docs/AUTHENTICATED_PROXY_BRIDGE.md)
+- [`docs/CREDENTIAL_VAULT.md`](docs/CREDENTIAL_VAULT.md)
+- [`docs/RUNTIME_SUPERVISOR.md`](docs/RUNTIME_SUPERVISOR.md)
+- [`docs/KERNEL_REGISTRY.md`](docs/KERNEL_REGISTRY.md)
 
 ## Safety and intended use
 
