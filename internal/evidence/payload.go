@@ -3,6 +3,7 @@ package evidence
 import (
 	"encoding/hex"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 )
@@ -42,13 +43,13 @@ type ScreenSnapshot struct {
 }
 
 type WindowSnapshot struct {
-	OuterWidth      int     `json:"outerWidth"`
-	OuterHeight     int     `json:"outerHeight"`
-	InnerWidth      int     `json:"innerWidth"`
-	InnerHeight     int     `json:"innerHeight"`
-	ViewportWidth   float64 `json:"viewportWidth"`
-	ViewportHeight  float64 `json:"viewportHeight"`
-	ViewportScale   float64 `json:"viewportScale"`
+	OuterWidth       int     `json:"outerWidth"`
+	OuterHeight      int     `json:"outerHeight"`
+	InnerWidth       int     `json:"innerWidth"`
+	InnerHeight      int     `json:"innerHeight"`
+	ViewportWidth    float64 `json:"viewportWidth"`
+	ViewportHeight   float64 `json:"viewportHeight"`
+	ViewportScale    float64 `json:"viewportScale"`
 	DevicePixelRatio float64 `json:"devicePixelRatio"`
 }
 
@@ -179,7 +180,7 @@ func (w WindowSnapshot) Validate() error {
 		"viewport width": w.ViewportWidth, "viewport height": w.ViewportHeight,
 		"viewport scale": w.ViewportScale, "device pixel ratio": w.DevicePixelRatio,
 	} {
-		if value < 0 || value > 128 {
+		if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 || value > 128 {
 			return fmt.Errorf("%s is outside the evidence range", label)
 		}
 	}
@@ -216,10 +217,28 @@ func normalizeSubmission(submission BrowserSubmission) BrowserSubmission {
 			snapshot.WebRTC.CandidateTypes = sortedUnique(snapshot.WebRTC.CandidateTypes)
 			snapshot.WebRTC.Protocols = sortedUnique(snapshot.WebRTC.Protocols)
 		}
+		for name, digest := range snapshot.SurfaceDigests {
+			snapshot.SurfaceDigests[name] = strings.ToLower(strings.TrimSpace(digest))
+		}
 	}
 	submission.Limitations = sortedUnique(submission.Limitations)
-	sort.Slice(submission.Contexts, func(i, j int) bool { return submission.Contexts[i].Context < submission.Contexts[j].Context })
+	sort.Slice(submission.Contexts, func(i, j int) bool {
+		return browserContextRank(submission.Contexts[i].Context) < browserContextRank(submission.Contexts[j].Context)
+	})
 	return submission
+}
+
+func browserContextRank(context BrowserContext) int {
+	switch context {
+	case ContextTopLevel:
+		return 0
+	case ContextIframe:
+		return 1
+	case ContextWorker:
+		return 2
+	default:
+		return 3
+	}
 }
 
 func sortedUnique(values []string) []string {
