@@ -2,97 +2,89 @@
 
 Last updated: 2026-07-19
 Application version: 0.14.0-dev
-Main baseline SHA: 1773ec77dbe2c9fcbeaecbc89bf206305ec16644
+Main baseline SHA: 094fea4f03c5a87e37f69a4868fd26e609673c6e
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
-Current milestone: M4.2 — Real-Browser Evidence Harness
-Current task: Complete final review and protected merge for Issue #20 / Draft PR #21
+Current milestone: M4.3 — Identity and Window Consistency
+Current task: Implement Issue #22 as the single authorized Phase 4 product task
 
 ## Operational rule
 
-This is the first file to read after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`. It identifies the only approved next task. It does not override the product charter or active phase document.
+Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`. Work only on the current issue and milestone.
 
-Phase 4 is active. Product implementation is allowed only inside the ordered Phase 4 milestones and the explicitly approved issue scope.
+## Delivered baseline
 
-## Current state
+M4.1 and M4.2 are complete.
 
-Completed foundations include:
+M4.1 established Provider Contract v2, explicit trust and capability states, legacy compatibility, managed binary identity, and fail-closed advanced configuration.
 
-- clean-room core contracts and local profile persistence;
-- Wails and React desktop profile workspace;
-- verified local Chromium kernel registry;
-- supervised browser process lifecycle on Windows and Unix-like systems;
-- operating-system credential vault;
-- authenticated HTTP, HTTPS, and SOCKS5 loopback bridges;
-- proxy diagnostics;
-- managed and supervised Xray and sing-box providers;
-- pinned official adapter validation and explicit installer;
-- repository governance, protected `main`, required pull requests, required checks, force-push protection, and deletion protection;
-- M4.1 Provider Contract v2, explicit trust/capability states, legacy compatibility, managed binary identity, and fail-closed advanced configuration.
+M4.2 was delivered by Issue #20 and PR #21, squash-merged as `094fea4f03c5a87e37f69a4868fd26e609673c6e`. It added:
 
-## Phase 4 approved outcome
+- versioned local Evidence Run and Observation records;
+- private, bounded, independently deletable evidence storage;
+- loopback-only controlled browser collection;
+- top-level, same-origin iframe, and Worker observations;
+- binding to the exact managed profile, session, Provider revision, and binary identity;
+- cancellation, timeout, browser-exit, storage-failure, and shutdown cleanup;
+- desktop report actions and views;
+- Required Windows and Linux real-browser collection checks;
+- `docs/REAL_BROWSER_EVIDENCE.md`.
 
-At Phase 4 completion, users can select a reviewed browser-kernel provider, configure only supported capabilities, launch a profile, and receive local evidence showing whether the declared identity and selected network route were observed in the real browser session.
+M4.2 does not grant reviewed status to a production browser Provider.
 
-The authoritative phase scope, milestones, non-goals, platform policy, validation, rollback rules, and exit criteria are in `docs/PHASE_04.md`. The logical provider, capability, evidence, compatibility, and health contracts are in `docs/PHASE_04_CONTRACTS.md`.
+## Current milestone
 
-## M4.2 delivery
+### M4.3 — Identity and Window Consistency
 
-M4.2 is implemented in Issue #20 and Draft PR #21. The branch now contains:
+Current implementation issue: #22
 
-- versioned Evidence Run, Observation, context, run-status, and observation-status records;
-- cryptographically random run IDs and strict validation bounds;
-- private atomic write-once JSON reports, 1 MiB report limit, 30-day default retention, maximum-count pruning, profile filtering, and independent deletion;
-- rejection of symlinked roots/files, non-regular files, malformed JSON, duplicate IDs, oversized records, and unsupported schemas;
-- a loopback-only Collector with random one-time paths, Host/Origin checks, strict CSP, no-store headers, bounded request bodies, strict decoding, and single-use submission;
-- allowlisted top-level, same-origin iframe, and same-origin Worker collection;
-- UA, Client Hints, platform, language, timezone, hardware concurrency, screen, window, viewport, DPR, local WebRTC indicators, and fixed-surface digest observations;
-- no external STUN, exit-IP, delegated DNS, arbitrary page, history, cookie, token, credential, download, or private proxy-configuration collection;
-- a bounded loopback CDP Target client that can only open the controlled Collector URL and closes the temporary target after collection;
-- an evidence Manager bound to the exact profile, ready managed session, Provider Contract revision, and managed binary identity;
-- terminal passed, partial, failed, cancelled, and incomplete reports for success, mismatch, timeout, cancellation, browser exit, target/collector failures, and cleanup limitations;
-- comparison rules that prevent custom or legacy observations from manufacturing reviewed Provider status;
-- application-shutdown cancellation and cleanup;
-- desktop Service and Wails bindings for run, cancel, list, get, delete, and active-state operations;
-- a desktop profile action and local report view; historical reports remain reviewable while the browser is stopped;
-- contract, store, Collector, Target, comparison, Manager, desktop-service, frontend-helper, and UI/build tests;
-- hosted Chrome collection in the Required Windows job and clean Debian-container Chromium collection in the Required Linux job, both including top-level, iframe, and Worker evidence;
-- `docs/REAL_BROWSER_EVIDENCE.md` covering operation, privacy, retention, statuses, cleanup, test boundary, and deferred work.
+M4.3 owns:
 
-M4.2 does not grant reviewed status to a production Provider. Real-browser CI proves the controlled collection chain only for the exact Windows hosted Chrome and Linux Debian Chromium fixtures used by those runs.
+- versioned consistency rules and results;
+- OS, browser, language, timezone, CPU, GPU mode, screen, available screen, window, viewport, scale, and DPR consistency;
+- real-window sizing and restoration on supported Windows and Linux paths;
+- documented tolerances for browser chrome, work areas, decorations, rounding, and controlled fixtures;
+- pre-launch blocking of contradictory, impossible, unsupported, or stale required combinations;
+- stable relaunch behavior;
+- evidence-freshness invalidation;
+- derived `healthy`, `degraded`, `blocked`, and `unknown` profile health;
+- readable desktop reasons and recovery guidance without silently rewriting profiles.
 
-## Remaining work before M4.2 merge
+## Exact next action
 
-1. make Governance and all seven CI jobs pass on the final documentation commit;
-2. confirm there are no temporary diagnostic workflows or unresolved review threads;
-3. update PR #21 with final validation evidence;
-4. mark PR #21 ready and squash-merge it through protected `main`.
+Read Issue #22 and audit:
 
-## Next milestone
+1. `internal/fingerprint` validation and capabilities;
+2. `internal/launch` planning and arguments;
+3. `internal/supervisor` session and window lifecycle;
+4. `internal/evidence` observations and freshness inputs;
+5. profile persistence timestamps;
+6. frontend profile-health presentation;
+7. Windows/Linux controlled browser fixtures.
 
-Issue #22 — M4.3 Identity and Window Consistency — is created but blocked until PR #21 merges. After merge it becomes the single authorized Phase 4 implementation task.
+Prepare one scoped Draft PR for M4.3 only.
 
 ## Active prohibitions
 
 Do not:
 
-- add live external exit-IP, WebRTC/STUN, or delegated-domain DNS probes before M4.4;
-- implement final window/viewport/DPR correction policy before M4.3;
-- assign reviewed status to a provider without exact provider, binary, platform, and real-browser evidence;
-- add new proxy protocols, transports, or proxy-pool operations;
-- begin cookie, extension, full migration, Launch API, MCP, sync, or release work;
-- copy source from reference browsers or kernels;
-- collect arbitrary page contents, browsing history, cookies, tokens, credentials, private proxy configuration, or uncontrolled URLs;
-- expose CDP or evidence collection beyond loopback;
+- begin M4.4 external network evidence;
+- claim reviewed Provider status without exact applicable evidence;
+- silently rewrite or auto-correct profiles;
+- add new proxy protocols or pool operations;
+- begin cookie, extension, migration, public API, MCP, sync, or release work;
+- copy code from reference browsers or kernels;
+- expose browser control beyond the existing local safety boundary;
 - include unrelated refactors or broad UI redesign.
 
 ## Known risks
 
-- no production Provider is reviewed yet;
-- evidence from custom or legacy Providers may describe observations but cannot create reviewed Provider status;
-- M4.3 still owns final identity/window consistency, tolerances, freshness, and profile-health policy;
-- M4.4 still owns external network evidence and the generated compatibility matrix;
-- macOS remains unclaimed until a real validation path exists.
+- no production browser Provider is reviewed yet;
+- Windows and Linux window decoration and scaling need separate tolerances;
+- headless CI does not prove real desktop-window support;
+- freshness invalidation must be conservative;
+- existing profiles must remain readable;
+- macOS remains unclaimed.
 
 ## Required validation
 
@@ -101,8 +93,8 @@ python scripts/check_project_governance.py
 make check
 ```
 
-Every product PR must also pass the protected-branch Windows, Linux, desktop-build, frontend, official-adapter, and relevant real-browser checks.
+The M4.3 PR must also pass the protected Windows, Linux, frontend, Wails, official-adapter, and applicable controlled window checks.
 
 ## Handoff
 
-Continue only in Draft PR #21 until final checks pass and it is merged. After merge, update Issue #22 from blocked to active and begin one scoped M4.3 Draft PR. Do not add M4.3 or M4.4 product behavior to PR #21.
+The next development session must work only on Issue #22. Out-of-scope findings become separate issues.
