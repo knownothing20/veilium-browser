@@ -55,48 +55,119 @@ declare global {
   }
 }
 
+const genericCapabilities: Capabilities["capabilities"] = {
+  platform: {
+    id: "platform",
+    status: "unsupported",
+    evidenceRequired: false,
+    limitation: "custom Chromium reports its own platform",
+  },
+  "browser-brand": {
+    id: "browser-brand",
+    status: "unsupported",
+    evidenceRequired: false,
+    limitation: "custom Chromium reports its own browser brand",
+  },
+  timezone: {
+    id: "timezone",
+    status: "unsupported",
+    evidenceRequired: false,
+    limitation: "custom Chromium uses the host or browser-configured timezone",
+  },
+  "surface-seed": {
+    id: "surface-seed",
+    status: "unsupported",
+    evidenceRequired: false,
+    limitation: "no reviewed surface-seed contract exists",
+  },
+  "surface-controls": {
+    id: "surface-controls",
+    status: "unsupported",
+    evidenceRequired: false,
+    limitation: "no reviewed surface-control contract exists",
+  },
+  "hardware-concurrency": {
+    id: "hardware-concurrency",
+    status: "unsupported",
+    evidenceRequired: false,
+    limitation: "no reviewed CPU override contract exists",
+  },
+  "device-memory": {
+    id: "device-memory",
+    status: "unsupported",
+    evidenceRequired: false,
+    limitation: "no reviewed device-memory contract exists",
+  },
+  "custom-gpu": {
+    id: "custom-gpu",
+    status: "unsupported",
+    evidenceRequired: false,
+    limitation: "no reviewed GPU override contract exists",
+  },
+  "webrtc-policy": {
+    id: "webrtc-policy",
+    status: "unverified",
+    evidenceRequired: true,
+    limitation: "command-line policy has not completed the Phase 4 evidence chain",
+  },
+};
+
+function sample(
+  provider: string,
+  trustStatus: Capabilities["trustStatus"],
+  capabilities: Capabilities["capabilities"] = genericCapabilities,
+): Capabilities {
+  return {
+    schemaVersion: 2,
+    provider,
+    revision: 1,
+    trustStatus,
+    majorVersion: 148,
+    capabilities,
+    limitations: [
+      "binary integrity does not establish reviewed provider trust",
+    ],
+  };
+}
+
+const legacyPatchedCapabilities: Capabilities["capabilities"] = Object.fromEntries(
+  Object.entries(genericCapabilities).map(([id, declaration]) => [
+    id,
+    id === "device-memory"
+      ? declaration
+      : {
+          ...declaration,
+          status: "unverified",
+          evidenceRequired: true,
+          limitation: "legacy command-line claim lacks reviewed real-browser evidence",
+        },
+  ]),
+) as Capabilities["capabilities"];
+
 const providers: ProviderDescriptor[] = [
   {
-    id: "patched-chromium",
-    name: "Patched Chromium",
-    description: "Verified, version-aware fingerprint controls.",
+    id: "custom-chromium",
+    name: "Custom local Chromium",
+    description:
+      "Locally imported Chromium with generic launch support and no Veilium-reviewed fingerprint claims.",
     versions: ["148.0.0", "144.0.0", "142.0.0"],
-    samples: [
-      {
-        provider: "patched-chromium",
-        majorVersion: 148,
-        canSetPlatform: true,
-        canSetBrand: true,
-        canSetTimezone: true,
-        canSeedSurfaces: true,
-        canDisableSurfaces: true,
-        canSetHardwareThreads: true,
-        canSetDeviceMemory: false,
-        canSetCustomGpu: false,
-        supportsProxyOnlyWebRtc: true,
-      },
-    ],
+    samples: [sample("custom-chromium", "custom")],
   },
   {
     id: "native-chromium",
-    name: "Native Chromium",
-    description: "Profile isolation without synthetic surface modification.",
-    versions: ["148.0.0", "144.0.0"],
-    samples: [
-      {
-        provider: "native-chromium",
-        majorVersion: 148,
-        canSetPlatform: false,
-        canSetBrand: false,
-        canSetTimezone: false,
-        canSeedSurfaces: false,
-        canDisableSurfaces: false,
-        canSetHardwareThreads: false,
-        canSetDeviceMemory: false,
-        canSetCustomGpu: false,
-        supportsProxyOnlyWebRtc: true,
-      },
-    ],
+    name: "Legacy native Chromium",
+    description:
+      "Compatibility definition for records created before Provider Contract v2.",
+    versions: ["148.0.0", "144.0.0", "142.0.0"],
+    samples: [sample("native-chromium", "legacy")],
+  },
+  {
+    id: "patched-chromium",
+    name: "Legacy patched Chromium",
+    description:
+      "Compatibility definition for pre-v2 records; former boolean claims remain unverified.",
+    versions: ["148.0.0", "144.0.0", "142.0.0"],
+    samples: [sample("patched-chromium", "legacy", legacyPatchedCapabilities)],
   },
 ];
 
@@ -115,7 +186,7 @@ export const backend = {
     return api
       ? api.Bootstrap()
       : {
-          version: "0.12.0-browser-preview",
+          version: "0.13.0-browser-preview",
           profiles: clone(mockProfiles),
           providers: clone(providers),
           kernels: clone(mockKernels),
@@ -139,11 +210,11 @@ export const backend = {
     if (api) return api.Capabilities(provider, version);
     const descriptor = providers.find((item) => item.id === provider);
     const major = Number.parseInt(version, 10);
-    const sample =
+    const selected =
       descriptor?.samples.find((item) => item.majorVersion === major) ??
       descriptor?.samples[0];
-    if (!sample) throw new Error(`Unknown provider ${provider}`);
-    return clone(sample);
+    if (!selected) throw new Error(`Unknown provider ${provider}`);
+    return clone(selected);
   },
 
   async createProfile(input: Profile): Promise<Profile> {
@@ -324,11 +395,16 @@ export const backend = {
 
   async validateAdapter(id: string): Promise<AdapterValidationReport> {
     const api = native();
-    if (!api) throw new Error("Official adapter validation is available only in the Wails desktop application");
+    if (!api)
+      throw new Error(
+        "Official adapter validation is available only in the Wails desktop application",
+      );
     return api.ValidateAdapter(id);
   },
 
-  async installOfficialAdapter(request: AdapterInstallRequest): Promise<AdapterRecord> {
+  async installOfficialAdapter(
+    request: AdapterInstallRequest,
+  ): Promise<AdapterRecord> {
     const api = native();
     if (!api)
       throw new Error(
