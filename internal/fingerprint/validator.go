@@ -61,34 +61,60 @@ func Validate(profile domain.Profile) ([]string, error) {
 	if !oneOf(fp.GPUProfile, "auto", "native", "custom") {
 		return nil, fmt.Errorf("gpuProfile must be auto, native, or custom")
 	}
+
+	if fp.Brand != "Chromium" {
+		if err := requireVerifiedCapability(capabilities, CapabilityBrandOverride, "browser-brand override"); err != nil {
+			return nil, err
+		}
+	}
+	if fp.Seed != "" || usesSeededSurfaces(fp) {
+		if strings.TrimSpace(fp.Seed) == "" {
+			return nil, fmt.Errorf("seeded fingerprint surfaces require a non-empty seed")
+		}
+		if err := requireVerifiedCapability(capabilities, CapabilitySurfaceSeed, "seeded fingerprint surfaces"); err != nil {
+			return nil, err
+		}
+	}
+	if fp.HardwareConcurrency != 0 {
+		if err := requireVerifiedCapability(capabilities, CapabilityHardwareConcurrency, "hardware-concurrency override"); err != nil {
+			return nil, err
+		}
+	}
+	if fp.DeviceMemoryGB != 0 {
+		if err := requireVerifiedCapability(capabilities, CapabilityDeviceMemory, "device-memory override"); err != nil {
+			return nil, err
+		}
+	}
 	if fp.GPUProfile == "custom" {
 		if strings.TrimSpace(fp.GPUVendor) == "" || strings.TrimSpace(fp.GPURenderer) == "" {
 			return nil, fmt.Errorf("custom GPU requires both vendor and renderer")
 		}
-		if !capabilities.CanSetCustomGPU {
-			return nil, fmt.Errorf("kernel %s does not support custom GPU metadata", profile.Kernel.Version)
+		if err := requireVerifiedCapability(capabilities, CapabilityCustomGPU, "custom GPU metadata"); err != nil {
+			return nil, err
 		}
 	}
 
-	if fp.Brand != "Chromium" && !capabilities.CanSetBrand {
-		return nil, fmt.Errorf("kernel provider cannot override Chromium brand")
+	warnings := make([]string, 0, 6)
+	if capabilities.TrustStatus == TrustCustom {
+		warnings = append(warnings, "custom Chromium may launch with generic settings but has no Veilium-reviewed fingerprint claims")
 	}
-	if fp.Seed != "" && !capabilities.CanSeedSurfaces {
-		return nil, fmt.Errorf("kernel provider does not support seeded fingerprint surfaces")
+	if capabilities.TrustStatus == TrustLegacy {
+		warnings = append(warnings, "legacy provider record remains readable but is not silently upgraded to reviewed status")
 	}
-	if fp.DeviceMemoryGB != 0 && !capabilities.CanSetDeviceMemory {
-		return nil, fmt.Errorf("kernel provider has no verified device-memory parameter contract")
+	if !capabilities.Supports(CapabilityPlatformOverride) {
+		warnings = append(warnings, "configured platform is descriptive because the selected provider cannot apply a reviewed platform override")
 	}
-
-	warnings := make([]string, 0, 3)
-	if profile.Kernel.Provider == ProviderNative {
-		warnings = append(warnings, "native Chromium reports the host platform and timezone; configured values are descriptive only")
+	if !capabilities.Supports(CapabilityTimezoneOverride) {
+		warnings = append(warnings, "configured timezone is descriptive because the selected provider cannot apply a reviewed timezone override")
 	}
-	if fp.WebRTCPolicy == "default" && profile.Proxy.URL != "" {
+	if fp.WebRTCPolicy != "default" && capabilities.State(CapabilityProxyOnlyWebRTC) == CapabilityUnverified {
+		warnings = append(warnings, "WebRTC command-line policy is configured but remains unverified until the Phase 4 browser evidence harness runs")
+	}
+	if fp.WebRTCPolicy == "default" && profile.Proxy.URL != "" && profile.Proxy.URL != "direct://" {
 		warnings = append(warnings, "proxy is configured while WebRTC is unrestricted")
 	}
-	if fp.Platform == "macos" && fp.Brand == "Edge" {
-		warnings = append(warnings, "Edge on macOS is valid but less common than Chrome")
+	if fp.Platform == "macos" {
+		warnings = append(warnings, "macOS capability support remains unclaimed until a real macOS validation path exists")
 	}
 	return warnings, nil
 }
