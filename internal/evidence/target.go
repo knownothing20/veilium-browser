@@ -40,9 +40,7 @@ func NewTargetClient() *TargetClient {
 			MaxIdleConns:        1,
 			MaxIdleConnsPerHost: 1,
 		},
-		CheckRedirect: func(*http.Request, []*http.Request) error {
-			return errors.New("CDP target endpoint must not redirect")
-		},
+		CheckRedirect: rejectTargetRedirect,
 	}}
 }
 
@@ -50,7 +48,9 @@ func NewTargetClientWithHTTP(client *http.Client) (*TargetClient, error) {
 	if client == nil {
 		return nil, fmt.Errorf("CDP target HTTP client is required")
 	}
-	return &TargetClient{client: client}, nil
+	copy := *client
+	copy.CheckRedirect = rejectTargetRedirect
+	return &TargetClient{client: &copy}, nil
 }
 
 func (c *TargetClient) Open(ctx context.Context, port int, controlledURL string) (Target, error) {
@@ -78,10 +78,15 @@ func (c *TargetClient) Open(ctx context.Context, port int, controlledURL string)
 		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4096))
 		return Target{}, fmt.Errorf("CDP target endpoint returned %s", response.Status)
 	}
+	payload, err := io.ReadAll(io.LimitReader(response.Body, maxTargetResponseBytes+1))
+	if err != nil {
+		return Target{}, fmt.Errorf("read CDP target response: %w", err)
+	}
+	if len(payload) > maxTargetResponseBytes {
+		return Target{}, fmt.Errorf("CDP target response exceeds %d bytes", maxTargetResponseBytes)
+	}
 	var target Target
-	decoder := json.NewDecoder(io.LimitReader(response.Body, maxTargetResponseBytes+1))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&target); err != nil {
+	if err := json.Unmarshal(payload, &target); err != nil {
 		return Target{}, fmt.Errorf("decode CDP target response: %w", err)
 	}
 	if err := validateTarget(target, port); err != nil {
@@ -158,12 +163,20 @@ func validateTarget(target Target, port int) error {
 		if parsed.Scheme != "ws" {
 			return fmt.Errorf("CDP target websocket must use ws")
 		}
-		host, targetPort, err := net.SplitHostPort(parsed.Host)
-		if err != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() || targetPort != strconv.Itoa(port) {
-			return fmt.Errorf("CDP target websocket is not bound to the selected loopback port")
+		host := parsed.Hostname()
+		ip := net.ParseIP(host)
+		if host != "localhost" && (ip == nil || !ip.IsLoopback()) {
+			return fmt.Errorf("CDP target websocket is not loopback-only")
+		}
+		if parsed.Port() != strconv.Itoa(port) {
+			return fmt.Errorf("CDP target websocket does not use the selected port")
 		}
 	}
 	return nil
+}
+
+func rejectTargetRedirect(*http.Request, []*http.Request) error {
+	return errors.New("CDP target endpoint must not redirect")
 }
 
 func nonNilContext(ctx context.Context) context.Context {
