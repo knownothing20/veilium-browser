@@ -21,10 +21,11 @@ export function EvidenceAction({
     () => runs.find((run) => run.id === selectedID) || latestEvidence(runs),
     [runs, selectedID],
   )
-  const ready = nativeMode && Boolean(profile.kernel.id) && session?.state === 'ready' && Boolean(session.cdpPort)
+  const canReview = nativeMode && Boolean(profile.kernel.id)
+  const ready = canReview && session?.state === 'ready' && Boolean(session.cdpPort)
 
-  async function load() {
-    setError('')
+  async function load(clearError = true) {
+    if (clearError) setError('')
     try {
       const items = await backend.listEvidence(profile.id)
       setRuns(items)
@@ -44,11 +45,11 @@ export function EvidenceAction({
     setError('')
     try {
       const result = await backend.runEvidence(profile.id)
-      await load()
+      await load(false)
       setSelectedID(result.id)
     } catch (reason) {
+      await load(false)
       setError(errorText(reason))
-      await load()
     } finally {
       setBusy(false)
     }
@@ -77,8 +78,8 @@ export function EvidenceAction({
   return (
     <>
       <button
-        title={ready ? 'Run or review local browser evidence' : 'Start a managed browser session before collecting evidence'}
-        disabled={!ready}
+        title={!canReview ? 'Managed desktop profile required' : ready ? 'Run or review local browser evidence' : 'Review local evidence reports; start the browser to collect a new report'}
+        disabled={!canReview}
         onClick={() => void show()}
       >
         ◉
@@ -101,6 +102,7 @@ export function EvidenceAction({
               {busy && <button className="button secondary" onClick={() => void cancel()}>Cancel</button>}
               <button className="button secondary" disabled={busy} onClick={() => void load()}>Refresh</button>
             </div>
+            {!ready && <div className="info-banner"><strong>Review mode</strong><p>Start this managed browser profile to collect a new real-browser report.</p></div>}
             {error && <div className="form-error">{error}</div>}
             <div className="evidence-layout">
               <aside className="evidence-run-list">
