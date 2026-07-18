@@ -2,15 +2,17 @@
 
 Last updated: 2026-07-18
 Application version: 0.12.0-dev
-Main baseline SHA: 84f6178b077cfc39d7ee0c4d3cccabbc590ce642
+Main baseline SHA: 524888c8b86e5f003e0c9532a4d176dee36cade2
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
-Current milestone: Phase 4 planning gate
-Current task: Review and freeze the Phase 4 product scope before implementing new product features
+Current milestone: M4.1 — Kernel Provider Contract v2
+Current task: Implement Issue #17 as the single authorized Phase 4 product task
 
 ## Operational rule
 
 This is the first file to read after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`. It identifies the only approved next task. It does not override the product charter or active phase document.
+
+Phase 4 is active. Product implementation is allowed only inside the ordered Phase 4 milestones and the explicitly approved issue scope.
 
 ## Current state
 
@@ -25,39 +27,80 @@ Completed foundations include:
 - proxy diagnostics;
 - managed and supervised Xray and sing-box providers;
 - pinned official adapter validation and explicit installer;
+- repository governance, required PRs, eight required checks, force-push protection, and deletion protection;
 - passing Go, frontend, Windows, Linux, and official-adapter CI on the current baseline.
 
-## Current planning gate
+## Phase 4 approved outcome
 
-Phase 4 is not yet approved for implementation. Its detailed feature order, provider strategy, evidence requirements, and exit criteria will be discussed and frozen in a separate planning change.
+At Phase 4 completion, users can select a reviewed browser-kernel provider, configure only supported capabilities, launch a profile, and receive local evidence showing whether the declared identity and selected network route were observed in the real browser session.
 
-Until that happens:
+Capability states are:
 
-- do not add new product features;
-- do not add new proxy protocols or transports;
-- do not start MCP, cloud sync, or broad automation work;
-- do not claim additional fingerprint support;
-- bug fixes may proceed only when narrowly scoped, tested, and documented here.
+- Verified;
+- Partially verified;
+- Unsupported;
+- Unverified custom provider.
 
-## Next three decisions
+The authoritative phase scope, milestones, non-goals, platform policy, validation, rollback rules, and exit criteria are in `docs/PHASE_04.md`. The logical provider, capability, evidence, compatibility, and health contracts are in `docs/PHASE_04_CONTRACTS.md`.
 
-1. Freeze the Phase 4 user outcome and non-goals.
-2. Choose the supported browser-kernel provider strategy and evidence standard.
-3. Define ordered Phase 4 milestones and measurable exit criteria.
+## Current milestone
 
-## Known governance gaps outside this branch
+### M4.1 — Kernel Provider Contract v2
 
-- GitHub branch protection still needs to be enabled in repository settings.
-- The detailed product feature roadmap after Phase 3 is intentionally not frozen yet.
-- Module documents remain implementation references; they do not determine priority.
+Current implementation issue: #17
 
-## Required validation
+The task is to replace the optimistic provider-capability model with a versioned trust and capability contract that supports:
+
+- reviewed and custom provider classification;
+- exact provenance, license, platform, version, and binary identity;
+- explicit verified, partial, unsupported, unverified, and failed capability meanings;
+- compatibility for existing `native-chromium` and `patched-chromium` records;
+- fail-closed save and launch behavior;
+- provider disable and rollback policy.
+
+## Exact next action
+
+Read Issue #17 and the existing fingerprint, kernel, domain, desktop-service, and frontend provider code. Prepare one scoped Draft PR for M4.1 only.
+
+The M4.1 PR must not implement the M4.2 evidence harness, M4.3 consistency work, M4.4 network probes, or deferred Phase 5/6 features.
+
+## Required M4.1 validation
+
+At minimum:
 
 ```bash
 python scripts/check_project_governance.py
 make check
 ```
 
+The implementation must also include:
+
+- provider-contract schema and policy unit tests;
+- legacy compatibility tests;
+- modified, missing, unsupported, and ambiguous failure-path tests;
+- frontend tests for capability-state and blocking behavior;
+- Windows and Linux policy/build checks;
+- migration and rollback analysis if persisted formats change.
+
+## Active prohibitions
+
+Do not:
+
+- add new proxy protocols, transports, or proxy-pool operations;
+- begin cookie, extension, full migration, Launch API, MCP, sync, or release work;
+- copy source from reference browsers or kernels;
+- select a reviewed provider from upstream marketing claims alone;
+- claim advanced fingerprint support without exact provider contracts and later real-browser evidence;
+- include unrelated refactors or broad UI redesign in the M4.1 PR.
+
+## Known risks
+
+- no reviewed browser provider has yet completed the Phase 4 evidence chain;
+- current capability booleans are legacy declarations and cannot directly become `Verified`;
+- exact provider licensing, maintained artifacts, and supported patch behavior still require review during M4.1 and M4.2;
+- macOS remains unclaimed until a real validation path exists;
+- `docs/STATUS.md` must be updated by every product-code PR, including the first M4.1 implementation PR.
+
 ## Handoff
 
-The next development session must not independently redesign the roadmap. It should read the required documents, discuss Phase 4 scope with the product owner, and update `docs/PHASE_04.md`, `docs/ROADMAP.md`, and this file in one reviewed planning pull request.
+The next development session must work only on Issue #17. New findings outside M4.1 are recorded as separate issues and do not enter the implementation PR unless required for correctness or safety and explicitly approved through scope review.
