@@ -65,69 +65,29 @@ jobs:
 
           service = Path('internal/desktop/service.go')
           text = service.read_text()
-          create_marker = '''\tif _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {
-          \t\treturn domain.Profile{}, err
-          \t}
-          \treturn s.store.Create(input)'''
-          create_replacement = '''\tif _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {
-          \t\treturn domain.Profile{}, err
-          \t}
-          \tif err := s.validateProfileConsistency(input); err != nil {
-          \t\treturn domain.Profile{}, err
-          \t}
-          \treturn s.store.Create(input)'''
-          if create_replacement not in text:
-              if create_marker not in text:
-                  raise SystemExit('create-profile validation marker not found')
-              text = text.replace(create_marker, create_replacement, 1)
-
-          update_marker = '''\tif _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {
-          \t\treturn domain.Profile{}, err
-          \t}
-          \treturn s.store.Update(input)'''
-          update_replacement = '''\tif _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {
-          \t\treturn domain.Profile{}, err
-          \t}
-          \tif err := s.validateProfileConsistency(input); err != nil {
-          \t\treturn domain.Profile{}, err
-          \t}
-          \treturn s.store.Update(input)'''
-          if update_replacement not in text:
-              if update_marker not in text:
-                  raise SystemExit('update-profile validation marker not found')
-              text = text.replace(update_marker, update_replacement, 1)
-
-          launch_marker = '''\tif err := s.validateProxy(item); err != nil {
-          \t\treturn domain.LaunchPlan{}, err
-          \t}
-          \treturn s.planner.Build(item, request.RemoteDebuggingPort)'''
-          launch_replacement = '''\tif err := s.validateProxy(item); err != nil {
-          \t\treturn domain.LaunchPlan{}, err
-          \t}
-          \tif err := s.validateProfileConsistency(item); err != nil {
-          \t\treturn domain.LaunchPlan{}, err
-          \t}
-          \treturn s.planner.Build(item, request.RemoteDebuggingPort)'''
-          if launch_replacement not in text:
-              if launch_marker not in text:
-                  raise SystemExit('launch-plan consistency marker not found')
-              text = text.replace(launch_marker, launch_replacement, 1)
-
-          start_marker = '''\tif err := s.validateProxy(item); err != nil {
-          \t\treturn supervisor.Session{}, err
-          \t}
-          \tmanagedDir := filepath.Join(s.profilesDir, item.ID)'''
-          start_replacement = '''\tif err := s.validateProxy(item); err != nil {
-          \t\treturn supervisor.Session{}, err
-          \t}
-          \tif err := s.validateProfileConsistency(item); err != nil {
-          \t\treturn supervisor.Session{}, err
-          \t}
-          \tmanagedDir := filepath.Join(s.profilesDir, item.ID)'''
-          if start_replacement not in text:
-              if start_marker not in text:
-                  raise SystemExit('start-profile consistency marker not found')
-              text = text.replace(start_marker, start_replacement, 1)
+          replacements = [
+              (
+                  '''\tif _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {\n\t\treturn domain.Profile{}, err\n\t}\n\treturn s.store.Create(input)''',
+                  '''\tif _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {\n\t\treturn domain.Profile{}, err\n\t}\n\tif err := s.validateProfileConsistency(input); err != nil {\n\t\treturn domain.Profile{}, err\n\t}\n\treturn s.store.Create(input)''',
+              ),
+              (
+                  '''\tif _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {\n\t\treturn domain.Profile{}, err\n\t}\n\treturn s.store.Update(input)''',
+                  '''\tif _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {\n\t\treturn domain.Profile{}, err\n\t}\n\tif err := s.validateProfileConsistency(input); err != nil {\n\t\treturn domain.Profile{}, err\n\t}\n\treturn s.store.Update(input)''',
+              ),
+              (
+                  '''\tif err := s.validateProxy(item); err != nil {\n\t\treturn domain.LaunchPlan{}, err\n\t}\n\treturn s.planner.Build(item, request.RemoteDebuggingPort)''',
+                  '''\tif err := s.validateProxy(item); err != nil {\n\t\treturn domain.LaunchPlan{}, err\n\t}\n\tif err := s.validateProfileConsistency(item); err != nil {\n\t\treturn domain.LaunchPlan{}, err\n\t}\n\treturn s.planner.Build(item, request.RemoteDebuggingPort)''',
+              ),
+              (
+                  '''\tif err := s.validateProxy(item); err != nil {\n\t\treturn supervisor.Session{}, err\n\t}\n\tmanagedDir := filepath.Join(s.profilesDir, item.ID)''',
+                  '''\tif err := s.validateProxy(item); err != nil {\n\t\treturn supervisor.Session{}, err\n\t}\n\tif err := s.validateProfileConsistency(item); err != nil {\n\t\treturn supervisor.Session{}, err\n\t}\n\tmanagedDir := filepath.Join(s.profilesDir, item.ID)''',
+              ),
+          ]
+          for old, new in replacements:
+              if new not in text:
+                  if old not in text:
+                      raise SystemExit('desktop integration marker not found')
+                  text = text.replace(old, new, 1)
           service.write_text(text)
           PY
       - name: Format scoped Go files
@@ -142,9 +102,25 @@ jobs:
             internal/desktop/service.go \
             internal/fingerprint/args.go \
             internal/launch/planner.go
-      - name: Verify scoped packages
-        run: go test ./internal/consistency ./internal/evidence ./internal/desktop ./internal/fingerprint ./internal/launch
+      - name: Run scoped tests with diagnostics
+        id: tests
+        shell: bash
+        run: |
+          set +e
+          go test ./internal/consistency ./internal/evidence ./internal/desktop ./internal/fingerprint ./internal/launch 2>&1 | tee m4-3-tests.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+      - name: Upload scoped test diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-3-scoped-test-diagnostics
+          path: m4-3-tests.log
+          retention-days: 1
+          if-no-files-found: error
       - name: Commit scoped integration
+        if: steps.tests.outputs.status == '0'
         shell: bash
         run: |
           if git diff --quiet; then
@@ -165,3 +141,6 @@ jobs:
             internal/launch/planner.go
           git commit -m 'feat: integrate M4.3 consistency preflight and freshness'
           git push origin HEAD:agent/m4-3-identity-window-consistency
+      - name: Fail after diagnostics
+        if: steps.tests.outputs.status != '0'
+        run: exit 1
