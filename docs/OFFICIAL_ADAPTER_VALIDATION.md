@@ -1,6 +1,6 @@
 # Official adapter validation
 
-Veilium keeps a small embedded release manifest for reviewed Xray and sing-box builds. The manifest is not an auto-update feed. It is an immutable trust record used to identify an imported executable and to reproduce CI validation.
+Veilium keeps a small embedded release manifest for reviewed Xray and sing-box builds. The manifest is not an auto-update feed. It is an immutable trust record used to identify an imported executable, reproduce CI validation, and support an explicit disabled-by-default desktop installer.
 
 ## Current pins
 
@@ -45,9 +45,15 @@ Linux and Windows CI run the native configuration checks against the real pinned
 
 This local smoke test validates the browser-to-adapter handoff and process compatibility without depending on or probing a public proxy service.
 
+## Optional desktop installation
+
+The desktop application may download an exact current-platform asset only after the user checks the license acknowledgement and presses the install button. The installer verifies the pinned archive size and SHA-256, safely extracts only the expected regular executable, verifies the executable size and SHA-256, and then imports it through the normal managed adapter store. It does not check for updates or contact release hosts in the background.
+
+See [`OFFICIAL_ADAPTER_INSTALLER.md`](OFFICIAL_ADAPTER_INSTALLER.md).
+
 ## Deliberate limits
 
-- The manifest does not automatically download or update binaries in the desktop application.
+- The manifest does not trigger automatic downloads or updates in the desktop application.
 - GitHub release metadata and SHA-256 pins are not a substitute for publisher code signing or reproducible builds.
 - Only Linux and Windows amd64 are pinned in this version.
 - A real external VLESS, VMess, Trojan, Shadowsocks, Hysteria2, TUIC, or AnyTLS endpoint is still required for endpoint-specific acceptance testing.

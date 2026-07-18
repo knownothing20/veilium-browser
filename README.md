@@ -15,6 +15,7 @@ Veilium is an open-source, multi-profile privacy browser workspace focused on is
 - one-click proxy connectivity, latency, exit-IP, DNS-route, and WebRTC-policy diagnostics;
 - managed Xray and sing-box adapter registry with SHA-256, provenance, license, and profile-reference controls;
 - embedded official Xray/sing-box release pins with archive and executable digests plus native configuration checks;
+- explicit, disabled-by-default desktop installation of exact pinned adapter assets with license acknowledgement and full archive/executable verification;
 - supervised Xray execution for constrained VLESS, VMess, Trojan, and Shadowsocks profiles through a private loopback SOCKS5 endpoint;
 - supervised sing-box execution for constrained Hysteria2, TUIC, and AnyTLS profiles through a private loopback SOCKS5 endpoint;
 - supervised local browser start, stop and runtime-session monitoring;
@@ -47,7 +48,7 @@ wails dev
 make check
 ```
 
-See [`docs/OFFICIAL_ADAPTER_VALIDATION.md`](docs/OFFICIAL_ADAPTER_VALIDATION.md), [`docs/SING_BOX_PROVIDER.md`](docs/SING_BOX_PROVIDER.md), [`docs/XRAY_PROVIDER.md`](docs/XRAY_PROVIDER.md), [`docs/PROXY_ADAPTER_RUNTIME.md`](docs/PROXY_ADAPTER_RUNTIME.md), [`docs/PROXY_DIAGNOSTICS.md`](docs/PROXY_DIAGNOSTICS.md), [`docs/AUTHENTICATED_PROXY_BRIDGE.md`](docs/AUTHENTICATED_PROXY_BRIDGE.md), [`docs/CREDENTIAL_VAULT.md`](docs/CREDENTIAL_VAULT.md), [`docs/RUNTIME_SUPERVISOR.md`](docs/RUNTIME_SUPERVISOR.md), [`docs/KERNEL_REGISTRY.md`](docs/KERNEL_REGISTRY.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md).
+See [`docs/OFFICIAL_ADAPTER_INSTALLER.md`](docs/OFFICIAL_ADAPTER_INSTALLER.md), [`docs/OFFICIAL_ADAPTER_VALIDATION.md`](docs/OFFICIAL_ADAPTER_VALIDATION.md), [`docs/SING_BOX_PROVIDER.md`](docs/SING_BOX_PROVIDER.md), [`docs/XRAY_PROVIDER.md`](docs/XRAY_PROVIDER.md), [`docs/PROXY_ADAPTER_RUNTIME.md`](docs/PROXY_ADAPTER_RUNTIME.md), [`docs/PROXY_DIAGNOSTICS.md`](docs/PROXY_DIAGNOSTICS.md), [`docs/AUTHENTICATED_PROXY_BRIDGE.md`](docs/AUTHENTICATED_PROXY_BRIDGE.md), [`docs/CREDENTIAL_VAULT.md`](docs/CREDENTIAL_VAULT.md), [`docs/RUNTIME_SUPERVISOR.md`](docs/RUNTIME_SUPERVISOR.md), [`docs/KERNEL_REGISTRY.md`](docs/KERNEL_REGISTRY.md), and [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
 ## Safety and intended use
 
