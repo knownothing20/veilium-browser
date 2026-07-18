@@ -1,0 +1,166 @@
+name: M4.3 Integration Autofix
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  autofix:
+    if: github.head_ref == 'agent/m4-3-identity-window-consistency'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Apply audited M4.3 integration edits
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          manager = Path('internal/evidence/manager.go')
+          text = manager.read_text()
+          import_line = '"github.com/knownothing20/veilium-browser/internal/consistency"\n\t'
+          if import_line not in text:
+              text = text.replace(
+                  '"github.com/knownothing20/veilium-browser/internal/domain"',
+                  '"github.com/knownothing20/veilium-browser/internal/consistency"\n\t"github.com/knownothing20/veilium-browser/internal/domain"',
+                  1,
+              )
+          digest_block = '''\tconsistencyDigest, err := consistency.InputDigest(consistency.DigestInput{
+          \t\tProfile:         request.Profile,
+          \t\tCapabilities:    request.Capabilities,
+          \t\tBinaryIdentity:  identity,
+          \t\tRuntimeOS:       identity.OperatingSystem,
+          \t\tRuntimeArch:     identity.Architecture,
+          \t\tHarnessRevision: HarnessRevision,
+          \t})
+          \tif err != nil {
+          \t\treturn Run{}, err
+          \t}
+          '''
+          marker = '\trunID, err := NewRunID()'
+          if 'consistencyDigest, err :=' not in text:
+              if marker not in text:
+                  raise SystemExit('evidence run ID marker not found')
+              text = text.replace(marker, digest_block + marker, 1)
+          if 'ConsistencyInputDigest:' not in text:
+              text = text.replace(
+                  '\t\tHarnessRevision:  HarnessRevision,\n\t\tStatus:',
+                  '\t\tHarnessRevision:          HarnessRevision,\n\t\tConsistencyInputDigest:   consistencyDigest,\n\t\tConsistencyRulesRevision: consistency.RulesRevision,\n\t\tStatus:',
+                  1,
+              )
+          manager.write_text(text)
+
+          service = Path('internal/desktop/service.go')
+          text = service.read_text()
+          create_marker = '''\tif _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {
+          \t\treturn domain.Profile{}, err
+          \t}
+          \treturn s.store.Create(input)'''
+          create_replacement = '''\tif _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {
+          \t\treturn domain.Profile{}, err
+          \t}
+          \tif err := s.validateProfileConsistency(input); err != nil {
+          \t\treturn domain.Profile{}, err
+          \t}
+          \treturn s.store.Create(input)'''
+          if create_replacement not in text:
+              if create_marker not in text:
+                  raise SystemExit('create-profile validation marker not found')
+              text = text.replace(create_marker, create_replacement, 1)
+
+          update_marker = '''\tif _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {
+          \t\treturn domain.Profile{}, err
+          \t}
+          \treturn s.store.Update(input)'''
+          update_replacement = '''\tif _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {
+          \t\treturn domain.Profile{}, err
+          \t}
+          \tif err := s.validateProfileConsistency(input); err != nil {
+          \t\treturn domain.Profile{}, err
+          \t}
+          \treturn s.store.Update(input)'''
+          if update_replacement not in text:
+              if update_marker not in text:
+                  raise SystemExit('update-profile validation marker not found')
+              text = text.replace(update_marker, update_replacement, 1)
+
+          launch_marker = '''\tif err := s.validateProxy(item); err != nil {
+          \t\treturn domain.LaunchPlan{}, err
+          \t}
+          \treturn s.planner.Build(item, request.RemoteDebuggingPort)'''
+          launch_replacement = '''\tif err := s.validateProxy(item); err != nil {
+          \t\treturn domain.LaunchPlan{}, err
+          \t}
+          \tif err := s.validateProfileConsistency(item); err != nil {
+          \t\treturn domain.LaunchPlan{}, err
+          \t}
+          \treturn s.planner.Build(item, request.RemoteDebuggingPort)'''
+          if launch_replacement not in text:
+              if launch_marker not in text:
+                  raise SystemExit('launch-plan consistency marker not found')
+              text = text.replace(launch_marker, launch_replacement, 1)
+
+          start_marker = '''\tif err := s.validateProxy(item); err != nil {
+          \t\treturn supervisor.Session{}, err
+          \t}
+          \tmanagedDir := filepath.Join(s.profilesDir, item.ID)'''
+          start_replacement = '''\tif err := s.validateProxy(item); err != nil {
+          \t\treturn supervisor.Session{}, err
+          \t}
+          \tif err := s.validateProfileConsistency(item); err != nil {
+          \t\treturn supervisor.Session{}, err
+          \t}
+          \tmanagedDir := filepath.Join(s.profilesDir, item.ID)'''
+          if start_replacement not in text:
+              if start_marker not in text:
+                  raise SystemExit('start-profile consistency marker not found')
+              text = text.replace(start_marker, start_replacement, 1)
+          service.write_text(text)
+          PY
+      - name: Format scoped Go files
+        run: |
+          gofmt -w \
+            internal/domain/types.go \
+            internal/domain/window.go \
+            internal/consistency/*.go \
+            internal/evidence/manager.go \
+            internal/evidence/types.go \
+            internal/desktop/consistency.go \
+            internal/desktop/service.go \
+            internal/fingerprint/args.go \
+            internal/launch/planner.go
+      - name: Verify scoped packages
+        run: go test ./internal/consistency ./internal/evidence ./internal/desktop ./internal/fingerprint ./internal/launch
+      - name: Commit scoped integration
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo 'No integration changes required.'
+            exit 0
+          fi
+          git config user.name 'veilium-governance-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add \
+            internal/domain/types.go \
+            internal/domain/window.go \
+            internal/consistency \
+            internal/evidence/manager.go \
+            internal/evidence/types.go \
+            internal/desktop/consistency.go \
+            internal/desktop/service.go \
+            internal/fingerprint/args.go \
+            internal/launch/planner.go
+          git commit -m 'feat: integrate M4.3 consistency preflight and freshness'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
