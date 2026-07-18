@@ -257,6 +257,62 @@ export interface Bootstrap {
   runtimeArch: string
 }
 
+export type EvidenceRunStatus = 'pending' | 'running' | 'passed' | 'partial' | 'failed' | 'cancelled' | 'incomplete'
+export type EvidenceObservationStatus = 'passed' | 'partial' | 'failed' | 'unavailable' | 'skipped'
+export type EvidenceContext = 'top-level' | 'iframe' | 'worker'
+
+export interface ProviderBinaryIdentity {
+  schemaVersion: number
+  providerId: string
+  providerRevision: number
+  providerTrust: ProviderTrustStatus
+  browserVersion: string
+  operatingSystem: string
+  architecture: string
+  executablePath: string
+  executableSize: number
+  executableSha256: string
+  integrityStatus: string
+  verificationTimestamp?: string
+  provenance: string
+  reviewed: boolean
+  limitations?: string[]
+}
+
+export interface EvidenceObservation {
+  id: string
+  context: EvidenceContext
+  capabilityId?: CapabilityID
+  status: EvidenceObservationStatus
+  expected?: string
+  observed?: string
+  reasonCode?: string
+  detail?: string
+}
+
+export interface EvidenceRun {
+  schemaVersion: number
+  id: string
+  profileId: string
+  profileName: string
+  providerId: string
+  providerRevision: number
+  providerTrust: ProviderTrustStatus
+  binaryIdentity: ProviderBinaryIdentity
+  browserVersion: string
+  operatingSystem: string
+  architecture: string
+  harnessRevision: string
+  status: EvidenceRunStatus
+  startedAt: string
+  completedAt?: string
+  expiresAt: string
+  observations: EvidenceObservation[]
+  limitations?: string[]
+  failureCode?: string
+  failureDetail?: string
+}
+
 export interface LaunchPlan {
   executable: string
   args: string[]
