@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "kind": "xray",
+      "version": "26.3.27",
+      "tag": "v26.3.27",
+      "repository": "XTLS/Xray-core",
+      "licenseSpdx": "MPL-2.0",
+      "publishedAt": "2026-03-27T17:51:11Z",
+      "releaseId": 302486999,
+      "assets": [
+        {
+          "platform": "linux",
+          "arch": "amd64",
+          "name": "Xray-linux-64.zip",
+          "url": "https://github.com/XTLS/Xray-core/releases/download/v26.3.27/Xray-linux-64.zip",
+          "archiveSha256": "23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae",
+          "archiveSizeBytes": 21136402,
+          "executablePath": "xray",
+          "executableSha256": "8255dd939c34cf966cc91517b6324dd3c8d0bcf49ffac8beca049a38c46845ed",
+          "executableSizeBytes": 36577406,
+          "versionArgs": [
+            "version"
+          ],
+          "checkArgs": [
+            "run",
+            "-test",
+            "-config",
+            "{config}"
+          ]
+        },
+        {
+          "platform": "windows",
+          "arch": "amd64",
+          "name": "Xray-windows-64.zip",
+          "url": "https://github.com/XTLS/Xray-core/releases/download/v26.3.27/Xray-windows-64.zip",
+          "archiveSha256": "d004c39288ce9ada487c6f398c7c545f7d749e44bdfdd59dbc9f865afba4e1ad",
+          "archiveSizeBytes": 20913304,
+          "executablePath": "xray.exe",
+          "executableSha256": "15c2d007954ac53ba69b80ec91242786b3c0b71d52649165b4ca1d5cc96ef8f1",
+          "executableSizeBytes": 35613696,
+          "versionArgs": [
+            "version"
+          ],
+          "checkArgs": [
+            "run",
+            "-test",
+            "-config",
+            "{config}"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "sing-box",
+      "version": "1.13.12",
+      "tag": "v1.13.12",
+      "repository": "SagerNet/sing-box",
+      "licenseSpdx": "GPL-3.0-or-later",
+      "publishedAt": "2026-05-15T11:06:12Z",
+      "releaseId": 322382630,
+      "assets": [
+        {
+          "platform": "linux",
+          "arch": "amd64",
+          "name": "sing-box-1.13.12-linux-amd64.tar.gz",
+          "url": "https://github.com/SagerNet/sing-box/releases/download/v1.13.12/sing-box-1.13.12-linux-amd64.tar.gz",
+          "archiveSha256": "1540533adb3df24f5ad5f14b5c7ca3dbc2401b10a1c1eb278fcadcada47ec6c4",
+          "archiveSizeBytes": 23809859,
+          "executablePath": "sing-box-1.13.12-linux-amd64/sing-box",
+          "executableSha256": "989e848637725005fdac7f1d3fa3d6eeb16992c5e0a68789da96b6b3fde06ea2",
+          "executableSizeBytes": 57938176,
+          "versionArgs": [
+            "version"
+          ],
+          "checkArgs": [
+            "check",
+            "-c",
+            "{config}"
+          ]
+        },
+        {
+          "platform": "windows",
+          "arch": "amd64",
+          "name": "sing-box-1.13.12-windows-amd64.zip",
+          "url": "https://github.com/SagerNet/sing-box/releases/download/v1.13.12/sing-box-1.13.12-windows-amd64.zip",
+          "archiveSha256": "e93fc531134eb1beb4efa3c74990a24e48456098a31c03b60d5ddf17f223cf98",
+          "archiveSizeBytes": 20432921,
+          "executablePath": "sing-box-1.13.12-windows-amd64/sing-box.exe",
+          "executableSha256": "64b1dfaed6fa758295233fd0bec8b32cf2115f29773adbf38e0f026c3c7986f2",
+          "executableSizeBytes": 44954624,
+          "versionArgs": [
+            "version"
+          ],
+          "checkArgs": [
+            "check",
+            "-c",
+            "{config}"
+          ]
+        }
+      ]
+    }
+  ]
+}

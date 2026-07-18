@@ -45,7 +45,10 @@
 - [ ] Broader share-link import, including legacy VMess payloads and ecosystem-specific aliases.
 - [ ] Additional reviewed sing-box options, transports, multiplexing, and endpoint formats.
 - [ ] XHTTP, HTTPUpgrade, mKCP, Hysteria transport, and additional reviewed Xray options.
-- [ ] Pinned optional download manifests with signatures, checksums, notices, and disabled-by-default policy.
+- [x] Pinned official Xray and sing-box release manifests with archive and executable SHA-256.
+- [x] Native Xray/sing-box configuration checks on Linux and Windows.
+- [x] Local Chromium-through-adapter smoke test without a public proxy endpoint.
+- [ ] Publisher signatures, transparency evidence, notices, and disabled-by-default optional installers.
 
 ## Proxy platform follow-up
 

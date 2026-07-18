@@ -12,6 +12,7 @@ import (
 
 	"github.com/knownothing20/veilium-browser/internal/adapter"
 	"github.com/knownothing20/veilium-browser/internal/adapterruntime"
+	"github.com/knownothing20/veilium-browser/internal/adaptervalidation"
 	"github.com/knownothing20/veilium-browser/internal/credential"
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/fingerprint"
@@ -334,4 +335,31 @@ func (b *adapterCredentialBackend) Delete(service, account string) error {
 	defer b.mu.Unlock()
 	delete(b.items, service+"\x00"+account)
 	return nil
+}
+
+func TestValidateAdapterUsesManagedRecord(t *testing.T) {
+	service, _, _ := adapterTestService(t)
+	record := importTestAdapter(t, service, adapter.KindXray)
+	validator := &fakeAdapterValidator{report: adaptervalidation.Report{
+		AdapterID: record.ID, AdapterName: record.Name, Kind: record.Kind, Version: record.Version, Status: "passed",
+	}}
+	service.adapterValidator = validator
+	report, err := service.ValidateAdapter(context.Background(), record.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Status != "passed" || validator.record.ID != record.ID {
+		t.Fatalf("unexpected validation result: %#v record=%#v", report, validator.record)
+	}
+}
+
+type fakeAdapterValidator struct {
+	record adapter.Record
+	report adaptervalidation.Report
+	err    error
+}
+
+func (v *fakeAdapterValidator) Validate(_ context.Context, record adapter.Record) (adaptervalidation.Report, error) {
+	v.record = record
+	return v.report, v.err
 }

@@ -110,3 +110,19 @@ func TestRejectsInvalidMetadataAndSymlink(t *testing.T) {
 		t.Fatal("expected symlink rejection")
 	}
 }
+
+func TestOfficialIdentityIsDerivedFromPinnedExecutableDigest(t *testing.T) {
+	record := Record{
+		Kind: KindXray, Version: "26.3.27",
+		SHA256:      "8255dd939c34cf966cc91517b6324dd3c8d0bcf49ffac8beca049a38c46845ed",
+		SizeBytes:   36577406,
+		LicenseSPDX: "Custom-1.0", SourceURL: "https://example.test/custom",
+	}
+	applyOfficialIdentity(&record)
+	if !record.Official || record.OfficialTag != "v26.3.27" || record.OfficialPlatform != "linux" {
+		t.Fatalf("official identity not derived: %#v", record)
+	}
+	if record.LicenseSPDX != "MPL-2.0" || record.OfficialAsset != "Xray-linux-64.zip" {
+		t.Fatalf("official metadata was not canonicalized: %#v", record)
+	}
+}

@@ -2,6 +2,7 @@ import { defaultProfile } from "./model";
 import type {
   AdapterImportRequest,
   AdapterRecord,
+  AdapterValidationReport,
   Bootstrap,
   Capabilities,
   CredentialRecord,
@@ -42,6 +43,7 @@ type WailsDesktopApp = {
   PickAdapterExecutable: () => Promise<string>;
   ImportAdapter: (request: AdapterImportRequest) => Promise<AdapterRecord>;
   VerifyAdapter: (id: string) => Promise<AdapterRecord>;
+  ValidateAdapter: (id: string) => Promise<AdapterValidationReport>;
   DeleteAdapter: (id: string) => Promise<void>;
 };
 
@@ -110,7 +112,7 @@ export const backend = {
     return api
       ? api.Bootstrap()
       : {
-          version: "0.10.0-browser-preview",
+          version: "0.11.0-browser-preview",
           profiles: clone(mockProfiles),
           providers: clone(providers),
           kernels: clone(mockKernels),
@@ -118,6 +120,7 @@ export const backend = {
           sessions: clone(mockSessions),
           credentials: [],
           credentialProvider: "Desktop operating-system keyring",
+          adapterPins: [],
         };
   },
   async listSessions(): Promise<RuntimeSession[]> {
@@ -293,6 +296,11 @@ export const backend = {
     const record = mockAdapters.find((item) => item.id === id);
     if (!record) throw new Error("Proxy adapter not found");
     return clone(record);
+  },
+  async validateAdapter(id: string): Promise<AdapterValidationReport> {
+    const api = native();
+    if (!api) throw new Error("Official adapter validation is available only in the Wails desktop application");
+    return api.ValidateAdapter(id);
   },
   async deleteAdapter(id: string): Promise<void> {
     const api = native();

@@ -32,9 +32,9 @@ Veilium re-verifies the adapter when a profile is saved, when a launch plan is r
 
 ## License and provenance boundary
 
-The source URL and SPDX value are user-declared provenance metadata. Veilium validates their syntax but does not prove that the selected binary was actually produced by that source or that the declared license is legally correct.
+The source URL and SPDX value begin as user-declared provenance metadata. Veilium now compares imported executables with an embedded official release manifest. Exact kind, version, executable SHA-256, and byte-size matches receive an `official` identity and canonical release metadata; all other files remain clearly labeled `custom local`.
 
-For known upstream projects, the UI offers editable defaults. Users remain responsible for obtaining binaries lawfully and reviewing the upstream license, notices, and redistribution obligations.
+The official identity still does not prove reproducible source provenance or replace publisher signing. Users remain responsible for obtaining binaries lawfully and reviewing upstream licenses, notices, and redistribution obligations. See [`OFFICIAL_ADAPTER_VALIDATION.md`](OFFICIAL_ADAPTER_VALIDATION.md).
 
 ## Runtime provider boundary
 

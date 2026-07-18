@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/knownothing20/veilium-browser/internal/adapterrelease"
 )
 
 const (
@@ -25,19 +27,24 @@ const (
 var ErrNotFound = errors.New("proxy adapter not found")
 
 type Record struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Kind        string    `json:"kind"`
-	Version     string    `json:"version"`
-	Executable  string    `json:"executable"`
-	SHA256      string    `json:"sha256"`
-	SizeBytes   int64     `json:"sizeBytes"`
-	LicenseSPDX string    `json:"licenseSpdx"`
-	SourceURL   string    `json:"sourceUrl"`
-	Protocols   []string  `json:"protocols"`
-	Status      string    `json:"status"`
-	ImportedAt  time.Time `json:"importedAt"`
-	VerifiedAt  time.Time `json:"verifiedAt"`
+	ID               string    `json:"id"`
+	Name             string    `json:"name"`
+	Kind             string    `json:"kind"`
+	Version          string    `json:"version"`
+	Executable       string    `json:"executable"`
+	SHA256           string    `json:"sha256"`
+	SizeBytes        int64     `json:"sizeBytes"`
+	LicenseSPDX      string    `json:"licenseSpdx"`
+	SourceURL        string    `json:"sourceUrl"`
+	Protocols        []string  `json:"protocols"`
+	Status           string    `json:"status"`
+	ImportedAt       time.Time `json:"importedAt"`
+	VerifiedAt       time.Time `json:"verifiedAt"`
+	Official         bool      `json:"official"`
+	OfficialTag      string    `json:"officialTag,omitempty"`
+	OfficialAsset    string    `json:"officialAsset,omitempty"`
+	OfficialPlatform string    `json:"officialPlatform,omitempty"`
+	OfficialArch     string    `json:"officialArch,omitempty"`
 }
 
 type ImportRequest struct {
@@ -210,6 +217,7 @@ func (s *Store) Import(request ImportRequest) (Record, error) {
 		Protocols: ProtocolsForKind(request.Kind), Status: StatusVerified,
 		ImportedAt: now, VerifiedAt: now,
 	}
+	applyOfficialIdentity(&record)
 	s.items[id] = record
 	if err := s.persistLocked(); err != nil {
 		delete(s.items, id)
@@ -236,6 +244,7 @@ func (s *Store) Verify(id string) (Record, error) {
 	if status == StatusVerified && (digest != record.SHA256 || size != record.SizeBytes) {
 		record.Status = StatusModified
 	}
+	applyOfficialIdentity(&record)
 	s.items[record.ID] = record
 	if err := s.persistLocked(); err != nil {
 		s.items[record.ID] = previous
@@ -307,6 +316,7 @@ func (s *Store) load() error {
 		}
 		record.Kind = NormalizeKind(record.Kind)
 		record.Protocols = ProtocolsForKind(record.Kind)
+		applyOfficialIdentity(&record)
 		if _, duplicate := s.items[record.ID]; duplicate {
 			return fmt.Errorf("adapter store contains duplicate id %q", record.ID)
 		}
@@ -413,6 +423,28 @@ func isWithin(root, candidate string) bool {
 	}
 	rel, err := filepath.Rel(rootAbs, candidateAbs)
 	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+func applyOfficialIdentity(record *Record) {
+	if record == nil {
+		return
+	}
+	record.Official = false
+	record.OfficialTag = ""
+	record.OfficialAsset = ""
+	record.OfficialPlatform = ""
+	record.OfficialArch = ""
+	pin, ok := adapterrelease.MatchExecutable(record.Kind, record.Version, record.SHA256, record.SizeBytes)
+	if !ok {
+		return
+	}
+	record.Official = true
+	record.OfficialTag = pin.Tag
+	record.OfficialAsset = pin.AssetName
+	record.OfficialPlatform = pin.Platform
+	record.OfficialArch = pin.Arch
+	record.LicenseSPDX = pin.LicenseSPDX
+	record.SourceURL = pin.AssetURL
 }
 
 func cloneRecord(record Record) Record {
