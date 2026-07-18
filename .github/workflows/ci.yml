@@ -88,7 +88,7 @@ jobs:
   windows:
     name: Windows Go tests
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -102,13 +102,37 @@ jobs:
       - name: Unit tests
         run: go test ./cmd/... ./internal/...
 
+      - name: Locate hosted Chrome
+        id: chromium
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+            "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+            "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+          )
+          $chrome = $candidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+          if (-not $chrome) {
+            $command = Get-Command chrome.exe -ErrorAction SilentlyContinue
+            if ($command) { $chrome = $command.Source }
+          }
+          if (-not $chrome) { throw 'Hosted Chrome was not found' }
+          "path=$chrome" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          & $chrome --version
+
+      - name: Exercise real-browser evidence collector
+        shell: pwsh
+        env:
+          VEILIUM_CHROMIUM_BINARY: ${{ steps.chromium.outputs.path }}
+        run: go test -v -run '^TestRealChromiumEvidenceCollector$' ./internal/evidence
+
       - name: Build headless packages
         run: go build ./cmd/... ./internal/...
 
   official-adapters-linux:
     name: Official adapters Linux
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -141,6 +165,24 @@ jobs:
           test -n "$chromium_path"
           echo "path=$chromium_path" >> "$GITHUB_OUTPUT"
           "$chromium_path" --version
+
+      - name: Build static evidence integration test
+        shell: bash
+        run: CGO_ENABLED=0 go test -c -o "$RUNNER_TEMP/veilium-evidence.test" ./internal/evidence
+
+      - name: Exercise real-browser evidence collector in clean Linux container
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "$RUNNER_TEMP/veilium-evidence.test:/tmp/veilium-evidence.test:ro" \
+            debian:13-slim \
+            bash -lc '
+              set -e
+              apt-get update >/dev/null
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends chromium ca-certificates >/dev/null
+              chromium --version
+              VEILIUM_CHROMIUM_BINARY=/usr/bin/chromium /tmp/veilium-evidence.test -test.v -test.run "^TestRealChromiumEvidenceCollector$"
+            '
 
       - name: Exercise Chromium through both official adapters
         run: |
