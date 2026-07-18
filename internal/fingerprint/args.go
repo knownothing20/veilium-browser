@@ -18,20 +18,34 @@ func BuildArgs(profile domain.Profile) ([]string, error) {
 		fmt.Sprintf("--window-size=%d,%d", fp.ScreenWidth, fp.ScreenHeight),
 	}
 
-	if capabilities.CanSeedSurfaces {
+	if fp.Seed != "" || usesSeededSurfaces(fp) {
+		if err := requireVerifiedCapability(capabilities, CapabilitySurfaceSeed, "seeded fingerprint surfaces"); err != nil {
+			return nil, err
+		}
 		args = append(args, fmt.Sprintf("--fingerprint=%s", fp.Seed))
 	}
-	if capabilities.CanSetPlatform {
+	if capabilities.Supports(CapabilityPlatformOverride) {
 		args = append(args, fmt.Sprintf("--fingerprint-platform=%s", fp.Platform))
 	}
-	if capabilities.CanSetBrand {
+	if fp.Brand != "Chromium" {
+		if err := requireVerifiedCapability(capabilities, CapabilityBrandOverride, "browser-brand override"); err != nil {
+			return nil, err
+		}
 		args = append(args, fmt.Sprintf("--fingerprint-brand=%s", fp.Brand))
 	}
-	if capabilities.CanSetTimezone {
+	if capabilities.Supports(CapabilityTimezoneOverride) {
 		args = append(args, fmt.Sprintf("--timezone=%s", fp.Timezone))
 	}
-	if capabilities.CanSetHardwareThreads && fp.HardwareConcurrency > 0 {
+	if fp.HardwareConcurrency > 0 {
+		if err := requireVerifiedCapability(capabilities, CapabilityHardwareConcurrency, "hardware-concurrency override"); err != nil {
+			return nil, err
+		}
 		args = append(args, fmt.Sprintf("--fingerprint-hardware-concurrency=%d", fp.HardwareConcurrency))
+	}
+	if fp.DeviceMemoryGB > 0 {
+		if err := requireVerifiedCapability(capabilities, CapabilityDeviceMemory, "device-memory override"); err != nil {
+			return nil, err
+		}
 	}
 	if fp.WebRTCPolicy == "proxy-only" {
 		args = append(args, "--disable-non-proxied-udp")
@@ -39,7 +53,7 @@ func BuildArgs(profile domain.Profile) ([]string, error) {
 		args = append(args, "--webrtc-ip-handling-policy=disable_non_proxied_udp")
 	}
 
-	if capabilities.CanDisableSurfaces {
+	if capabilities.Supports(CapabilitySurfaceControls) {
 		disabled := make([]string, 0, 5)
 		if fp.FontMode == "native" {
 			disabled = append(disabled, "font")
@@ -60,11 +74,26 @@ func BuildArgs(profile domain.Profile) ([]string, error) {
 			args = append(args, "--disable-spoofing="+strings.Join(disabled, ","))
 		}
 	}
-	if capabilities.CanSetCustomGPU && fp.GPUProfile == "custom" {
+	if fp.GPUProfile == "custom" {
+		if err := requireVerifiedCapability(capabilities, CapabilityCustomGPU, "custom GPU metadata"); err != nil {
+			return nil, err
+		}
 		args = append(args,
 			"--fingerprint-gpu-vendor="+fp.GPUVendor,
 			"--fingerprint-gpu-renderer="+fp.GPURenderer,
 		)
 	}
 	return args, nil
+}
+
+func requireVerifiedCapability(capabilities Capabilities, id CapabilityID, label string) error {
+	state := capabilities.State(id)
+	if state == CapabilityVerified || state == CapabilityPartial {
+		return nil
+	}
+	return fmt.Errorf("kernel provider %q cannot apply %s: capability is %s", capabilities.Provider, label, state)
+}
+
+func usesSeededSurfaces(fp domain.FingerprintConfig) bool {
+	return fp.CanvasMode == "seeded" || fp.AudioMode == "seeded" || fp.FontMode == "seeded" || fp.ClientRectsMode == "seeded"
 }
