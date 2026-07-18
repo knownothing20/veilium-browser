@@ -67,7 +67,7 @@ func Validate(profile domain.Profile) ([]string, error) {
 			return nil, err
 		}
 	}
-	if fp.Seed != "" || usesSeededSurfaces(fp) {
+	if usesSeededSurfaces(fp) {
 		if strings.TrimSpace(fp.Seed) == "" {
 			return nil, fmt.Errorf("seeded fingerprint surfaces require a non-empty seed")
 		}
