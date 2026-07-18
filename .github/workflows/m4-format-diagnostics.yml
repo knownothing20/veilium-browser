@@ -16,6 +16,55 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Generate desktop provider catalog patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('internal/desktop/service.go')
+          text = path.read_text()
+          text = text.replace('const AppVersion = "0.12.0-dev"', 'const AppVersion = "0.13.0-dev"')
+          old = '''func providerCatalog() []ProviderDescriptor {
+          definitions := []ProviderDescriptor{
+          	{ID: fingerprint.ProviderPatched, Name: "Patched Chromium", Description: "Version-aware fingerprint provider with verified command-line contracts.", Versions: []string{"148.0.0", "144.0.0", "142.0.0"}},
+          	{ID: fingerprint.ProviderNative, Name: "Native Chromium", Description: "Standard Chromium isolation without synthetic fingerprint surfaces.", Versions: []string{"148.0.0", "144.0.0"}},
+          }
+          for index := range definitions {
+          	for _, version := range definitions[index].Versions {
+          		capabilities, err := fingerprint.For(definitions[index].ID, version)
+          		if err == nil {
+          			definitions[index].Samples = append(definitions[index].Samples, capabilities)
+          		}
+          	}
+          }
+          return definitions
+          }
+          '''
+          new = '''func providerCatalog() []ProviderDescriptor {
+          contracts := fingerprint.Definitions()
+          definitions := make([]ProviderDescriptor, 0, len(contracts))
+          for _, contract := range contracts {
+          	descriptor := ProviderDescriptor{
+          		ID:          contract.ID,
+          		Name:        contract.Name,
+          		Description: contract.Description,
+          		Versions:    append([]string(nil), contract.Versions...),
+          	}
+          	for _, version := range descriptor.Versions {
+          		capabilities, err := fingerprint.For(descriptor.ID, version)
+          		if err == nil {
+          			descriptor.Samples = append(descriptor.Samples, capabilities)
+          		}
+          	}
+          	definitions = append(definitions, descriptor)
+          }
+          return definitions
+          }
+          '''
+          if old not in text:
+              raise SystemExit('providerCatalog source did not match expected baseline')
+          path.write_text(text.replace(old, new))
+          PY
       - name: Format changed Go files
         run: |
           gofmt -w \
@@ -27,7 +76,8 @@ jobs:
             internal/fingerprint/replacement.go \
             internal/fingerprint/replacement_test.go \
             internal/kernel/identity.go \
-            internal/kernel/identity_test.go
+            internal/kernel/identity_test.go \
+            internal/desktop/service.go
       - name: Upload formatted files
         uses: actions/upload-artifact@v4
         with:
@@ -42,4 +92,5 @@ jobs:
             internal/fingerprint/replacement_test.go
             internal/kernel/identity.go
             internal/kernel/identity_test.go
+            internal/desktop/service.go
           retention-days: 1
