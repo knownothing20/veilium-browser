@@ -17,8 +17,8 @@ import (
 const defaultRunTimeout = 15 * time.Second
 
 var (
-	ErrRunActive = errors.New("evidence run is already active for profile")
-	ErrNoRun     = errors.New("no active evidence run for profile")
+	ErrRunActive   = errors.New("evidence run is already active for profile")
+	ErrNoRun       = errors.New("no active evidence run for profile")
 	ErrBrowserExit = errors.New("managed browser session exited during evidence collection")
 )
 
@@ -145,6 +145,7 @@ func (m *Manager) Run(ctx context.Context, request RunRequest) (Run, error) {
 	}
 	var target Target
 	targetOpened := false
+	collectorClosed := false
 	cleanupLimitations := make([]string, 0, 2)
 	defer func() {
 		cleanupContext, cleanupCancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -152,12 +153,15 @@ func (m *Manager) Run(ctx context.Context, request RunRequest) (Run, error) {
 		if targetOpened {
 			_ = m.targetController.Close(cleanupContext, request.Session.CDPPort, target.ID)
 		}
-		_ = collector.Close(cleanupContext)
+		if !collectorClosed {
+			_ = collector.Close(cleanupContext)
+		}
 	}()
 
 	target, err = m.targetController.Open(runContext, request.Session.CDPPort, collector.URL())
 	if err != nil {
 		closeCollectorWithLimitation(collector, &cleanupLimitations)
+		collectorClosed = true
 		return m.persistFailureWithLimitations(run, RunFailed, "target-open-failed", err, cleanupLimitations)
 	}
 	targetOpened = true
@@ -171,6 +175,7 @@ func (m *Manager) Run(ctx context.Context, request RunRequest) (Run, error) {
 	if err := collector.Close(cleanupContext); err != nil {
 		cleanupLimitations = append(cleanupLimitations, "collector-close-failed:"+boundedError(err))
 	}
+	collectorClosed = true
 	cleanupCancel()
 
 	if collectionErr != nil {
@@ -195,6 +200,18 @@ func (m *Manager) Run(ctx context.Context, request RunRequest) (Run, error) {
 	return run, nil
 }
 
+func (m *Manager) Shutdown() {
+	m.mu.Lock()
+	cancels := make([]context.CancelFunc, 0, len(m.active))
+	for _, cancel := range m.active {
+		cancels = append(cancels, cancel)
+	}
+	m.mu.Unlock()
+	for _, cancel := range cancels {
+		cancel()
+	}
+}
+
 func (m *Manager) Cancel(profileID string) error {
 	profileID = strings.TrimSpace(profileID)
 	m.mu.Lock()
@@ -208,8 +225,8 @@ func (m *Manager) Cancel(profileID string) error {
 }
 
 func (m *Manager) List(profileID string) ([]Run, error) { return m.store.List(profileID) }
-func (m *Manager) Get(id string) (Run, error)            { return m.store.Get(id) }
-func (m *Manager) Delete(id string) error                { return m.store.Delete(id) }
+func (m *Manager) Get(id string) (Run, error)           { return m.store.Get(id) }
+func (m *Manager) Delete(id string) error               { return m.store.Delete(id) }
 
 func (m *Manager) IsActive(profileID string) bool {
 	m.mu.Lock()

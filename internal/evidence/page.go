@@ -9,11 +9,11 @@ func renderRunPage(nonce string, surfaces []string, origin, token string) string
 	requested, _ := json.Marshal(surfaces)
 	page := runPageTemplate
 	replacements := map[string]string{
-		"__NONCE__":       nonce,
-		"__SURFACES__":    string(requested),
-		"__FRAME_URL__":   origin + "/frame/" + token,
-		"__WORKER_URL__":  origin + "/worker/" + token + ".js",
-		"__SUBMIT_URL__":  origin + "/submit/" + token,
+		"__NONCE__":         nonce,
+		"__SURFACES__":      string(requested),
+		"__FRAME_URL__":     origin + "/frame/" + token,
+		"__WORKER_URL__":    origin + "/worker/" + token + ".js",
+		"__SUBMIT_URL__":    origin + "/submit/" + token,
 		"__COMMON_SCRIPT__": browserCommonScript,
 	}
 	for placeholder, value := range replacements {
@@ -26,8 +26,8 @@ func renderFramePage(nonce string, surfaces []string, origin string) string {
 	requested, _ := json.Marshal(surfaces)
 	page := framePageTemplate
 	replacements := map[string]string{
-		"__NONCE__":        nonce,
-		"__SURFACES__":     string(requested),
+		"__NONCE__":         nonce,
+		"__SURFACES__":      string(requested),
 		"__PARENT_ORIGIN__": origin,
 		"__COMMON_SCRIPT__": browserCommonScript,
 	}

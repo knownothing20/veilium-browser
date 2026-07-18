@@ -45,37 +45,37 @@ const (
 )
 
 type Observation struct {
-	ID           string                    `json:"id"`
-	Context      BrowserContext            `json:"context"`
-	CapabilityID fingerprint.CapabilityID  `json:"capabilityId,omitempty"`
-	Status       ObservationStatus         `json:"status"`
-	Expected     string                    `json:"expected,omitempty"`
-	Observed     string                    `json:"observed,omitempty"`
-	ReasonCode   string                    `json:"reasonCode,omitempty"`
-	Detail       string                    `json:"detail,omitempty"`
+	ID           string                   `json:"id"`
+	Context      BrowserContext           `json:"context"`
+	CapabilityID fingerprint.CapabilityID `json:"capabilityId,omitempty"`
+	Status       ObservationStatus        `json:"status"`
+	Expected     string                   `json:"expected,omitempty"`
+	Observed     string                   `json:"observed,omitempty"`
+	ReasonCode   string                   `json:"reasonCode,omitempty"`
+	Detail       string                   `json:"detail,omitempty"`
 }
 
 type Run struct {
-	SchemaVersion      int                           `json:"schemaVersion"`
-	ID                 string                        `json:"id"`
-	ProfileID          string                        `json:"profileId"`
-	ProfileName        string                        `json:"profileName"`
-	ProviderID         string                        `json:"providerId"`
-	ProviderRevision   int                           `json:"providerRevision"`
-	ProviderTrust      fingerprint.TrustStatus       `json:"providerTrust"`
-	BinaryIdentity     kernel.ProviderBinaryIdentity `json:"binaryIdentity"`
-	BrowserVersion     string                        `json:"browserVersion"`
-	OperatingSystem    string                        `json:"operatingSystem"`
-	Architecture       string                        `json:"architecture"`
-	HarnessRevision    string                        `json:"harnessRevision"`
-	Status             RunStatus                     `json:"status"`
-	StartedAt          time.Time                     `json:"startedAt"`
-	CompletedAt        *time.Time                    `json:"completedAt,omitempty"`
-	ExpiresAt          time.Time                     `json:"expiresAt"`
-	Observations       []Observation                 `json:"observations"`
-	Limitations        []string                      `json:"limitations,omitempty"`
-	FailureCode        string                        `json:"failureCode,omitempty"`
-	FailureDetail      string                        `json:"failureDetail,omitempty"`
+	SchemaVersion    int                           `json:"schemaVersion"`
+	ID               string                        `json:"id"`
+	ProfileID        string                        `json:"profileId"`
+	ProfileName      string                        `json:"profileName"`
+	ProviderID       string                        `json:"providerId"`
+	ProviderRevision int                           `json:"providerRevision"`
+	ProviderTrust    fingerprint.TrustStatus       `json:"providerTrust"`
+	BinaryIdentity   kernel.ProviderBinaryIdentity `json:"binaryIdentity"`
+	BrowserVersion   string                        `json:"browserVersion"`
+	OperatingSystem  string                        `json:"operatingSystem"`
+	Architecture     string                        `json:"architecture"`
+	HarnessRevision  string                        `json:"harnessRevision"`
+	Status           RunStatus                     `json:"status"`
+	StartedAt        time.Time                     `json:"startedAt"`
+	CompletedAt      *time.Time                    `json:"completedAt,omitempty"`
+	ExpiresAt        time.Time                     `json:"expiresAt"`
+	Observations     []Observation                 `json:"observations"`
+	Limitations      []string                      `json:"limitations,omitempty"`
+	FailureCode      string                        `json:"failureCode,omitempty"`
+	FailureDetail    string                        `json:"failureDetail,omitempty"`
 }
 
 func (r Run) Validate() error {
