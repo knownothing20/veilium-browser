@@ -35,6 +35,10 @@ jobs:
           go build ./cmd/... ./internal/... 2>&1 | tee go-build-linux.log
           echo ${PIPESTATUS[0]} > go-build-linux.status
           exit 0
+      - name: Package checked-out source
+        shell: bash
+        run: |
+          tar --exclude=.git --exclude=frontend/node_modules --exclude=frontend/dist -czf m4-evidence-source.tgz .
       - name: Upload diagnostics
         uses: actions/upload-artifact@v4
         with:
@@ -45,6 +49,7 @@ jobs:
             go-test-linux.status
             go-build-linux.log
             go-build-linux.status
+            m4-evidence-source.tgz
           retention-days: 1
           if-no-files-found: error
 
