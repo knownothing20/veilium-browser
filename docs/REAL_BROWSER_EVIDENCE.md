@@ -115,7 +115,7 @@ Failures do not edit or delete the profile. Target/collector cleanup limitations
 
 Unit and integration tests cover contracts, private storage, retention, symlink rejection, Collector HTTP security, Target client loopback restrictions, comparison semantics, cancellation, timeout, browser exit, cleanup, and desktop bindings.
 
-The existing required Windows and Linux CI jobs also launch hosted Chromium in headless mode, dynamically discover its loopback CDP port, open only the controlled evidence page, and require valid top-level, iframe, and worker submissions. This proves the M4.2 collection chain for the CI binary; it does not by itself grant production reviewed-provider status.
+The required Windows job launches the hosted Chrome binary. The required Linux job compiles the Evidence integration test as a static binary and runs it with repository Chromium inside a clean official Debian container, avoiding host enterprise-policy differences. Both dynamically discover loopback CDP, open only the controlled evidence page, and require valid top-level, iframe, and worker submissions. This proves the M4.2 collection chain for those exact CI fixtures; it does not by itself grant production reviewed-provider status.
 
 ## Deferred work
 
