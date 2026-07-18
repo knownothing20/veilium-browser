@@ -1,9 +1,46 @@
 import { describe, expect, it } from 'vitest'
-import { applyKernel, defaultProfile, filterProfiles, profileHealth } from './model'
+import {
+  applyKernel,
+  capabilityAllowsConfiguration,
+  capabilityStatus,
+  defaultProfile,
+  filterProfiles,
+  profileHealth,
+  providerTrust,
+} from './model'
+import type { ProviderDescriptor } from '../types'
+
+const providers: ProviderDescriptor[] = [
+  {
+    id: 'custom-chromium',
+    name: 'Custom local Chromium',
+    description: 'Generic custom provider',
+    versions: ['148.0.0'],
+    samples: [{
+      schemaVersion: 2,
+      provider: 'custom-chromium',
+      revision: 1,
+      trustStatus: 'custom',
+      majorVersion: 148,
+      capabilities: {
+        'surface-seed': {
+          id: 'surface-seed',
+          status: 'unsupported',
+          evidenceRequired: false,
+        },
+        'webrtc-policy': {
+          id: 'webrtc-policy',
+          status: 'unverified',
+          evidenceRequired: true,
+        },
+      },
+    }],
+  },
+]
 
 const profiles = [
-  { ...defaultProfile(), id: 'a', name: 'Shop US', group: 'Commerce', tags: ['amazon'] },
-  { ...defaultProfile(), id: 'b', name: 'Social JP', group: 'Social', tags: ['x'] },
+  { ...defaultProfile(providers[0]), id: 'a', name: 'Shop US', group: 'Commerce', tags: ['amazon'] },
+  { ...defaultProfile(providers[0]), id: 'b', name: 'Social JP', group: 'Social', tags: ['x'] },
 ]
 
 describe('profile model', () => {
@@ -13,20 +50,23 @@ describe('profile model', () => {
   })
 
   it('marks missing executable as incomplete', () => {
-    expect(profileHealth(defaultProfile())).toBe('incomplete')
+    expect(profileHealth(defaultProfile(providers[0]))).toBe('incomplete')
   })
 
-  it('creates privacy-safe defaults', () => {
-    const profile = defaultProfile()
+  it('creates generic defaults without advanced fingerprint claims', () => {
+    const profile = defaultProfile(providers[0])
+    expect(profile.kernel.provider).toBe('custom-chromium')
+    expect(profile.fingerprint.brand).toBe('Chromium')
+    expect(profile.fingerprint.canvasMode).toBe('native')
+    expect(profile.fingerprint.hardwareConcurrency).toBeUndefined()
     expect(profile.fingerprint.webrtcPolicy).toBe('proxy-only')
-    expect(profile.proxy.url).toBe('direct://')
   })
 
-  it('applies a verified registry record atomically', () => {
-    const profile = applyKernel(defaultProfile(), {
+  it('applies an integrity-verified registry record atomically', () => {
+    const profile = applyKernel(defaultProfile(providers[0]), {
       id: 'k1',
       name: 'Chromium',
-      provider: 'patched-chromium',
+      provider: 'custom-chromium',
       version: '148.0.0',
       executable: '/managed/chrome',
       sha256: 'a'.repeat(64),
@@ -35,6 +75,14 @@ describe('profile model', () => {
       importedAt: '',
       verifiedAt: '',
     })
-    expect(profile.kernel).toEqual({ id: 'k1', provider: 'patched-chromium', version: '148.0.0', executable: '/managed/chrome' })
+    expect(profile.kernel).toEqual({ id: 'k1', provider: 'custom-chromium', version: '148.0.0', executable: '/managed/chrome' })
+  })
+
+  it('keeps trust and capability state separate', () => {
+    expect(providerTrust(providers, 'custom-chromium', '148.0.0')).toBe('custom')
+    expect(capabilityStatus(providers, 'custom-chromium', '148.0.0', 'surface-seed')).toBe('unsupported')
+    expect(capabilityStatus(providers, 'custom-chromium', '148.0.0', 'webrtc-policy')).toBe('unverified')
+    expect(capabilityAllowsConfiguration('unverified')).toBe(false)
+    expect(capabilityAllowsConfiguration('partial')).toBe(true)
   })
 })

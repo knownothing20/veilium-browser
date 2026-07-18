@@ -177,12 +177,12 @@ func TestStartProfileRejectsLegacyAndUnmanagedProfiles(t *testing.T) {
 func validProfile() domain.Profile {
 	return domain.Profile{
 		Name:   "Store A",
-		Kernel: domain.KernelRef{Provider: fingerprint.ProviderPatched, Version: "148.0.0", Executable: `C:\Browsers\Chromium\chrome.exe`},
+		Kernel: domain.KernelRef{Provider: fingerprint.ProviderCustom, Version: "148.0.0", Executable: `C:\Browsers\Chromium\chrome.exe`},
 		Fingerprint: domain.FingerprintConfig{
-			Platform: "windows", Brand: "Chrome", Language: "en-US", Timezone: "America/Los_Angeles",
-			ScreenWidth: 1920, ScreenHeight: 1080, HardwareConcurrency: 8,
-			WebRTCPolicy: "proxy-only", CanvasMode: "seeded", AudioMode: "seeded",
-			FontMode: "seeded", ClientRectsMode: "seeded", GPUProfile: "auto",
+			Platform: "windows", Brand: "Chromium", Language: "en-US", Timezone: "America/Los_Angeles",
+			ScreenWidth: 1920, ScreenHeight: 1080,
+			WebRTCPolicy: "proxy-only", CanvasMode: "native", AudioMode: "native",
+			FontMode: "native", ClientRectsMode: "native", GPUProfile: "auto",
 		},
 		Proxy: domain.ProxyConfig{URL: "direct://"},
 	}

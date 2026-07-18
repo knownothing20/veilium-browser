@@ -1,9 +1,18 @@
-import type { Capabilities, KernelRecord, Profile, ProviderDescriptor } from '../types'
+import type {
+  Capabilities,
+  CapabilityDeclaration,
+  CapabilityID,
+  CapabilityStatus,
+  KernelRecord,
+  Profile,
+  ProviderDescriptor,
+  ProviderTrustStatus,
+} from '../types'
 
 export type ProfileHealth = 'ready' | 'warning' | 'incomplete'
 
 export function defaultProfile(provider?: ProviderDescriptor): Profile {
-  const selectedProvider = provider?.id ?? 'patched-chromium'
+  const selectedProvider = provider?.id ?? 'custom-chromium'
   const version = provider?.versions[0] ?? '148.0.0'
   return {
     id: '',
@@ -13,17 +22,16 @@ export function defaultProfile(provider?: ProviderDescriptor): Profile {
     kernel: { provider: selectedProvider, version, executable: '' },
     fingerprint: {
       platform: 'windows',
-      brand: selectedProvider === 'native-chromium' ? 'Chromium' : 'Chrome',
+      brand: 'Chromium',
       language: 'en-US',
       timezone: 'America/Los_Angeles',
       screenWidth: 1920,
       screenHeight: 1080,
-      hardwareConcurrency: 8,
       webrtcPolicy: 'proxy-only',
-      canvasMode: selectedProvider === 'native-chromium' ? 'native' : 'seeded',
-      audioMode: selectedProvider === 'native-chromium' ? 'native' : 'seeded',
-      fontMode: selectedProvider === 'native-chromium' ? 'native' : 'seeded',
-      clientRectsMode: selectedProvider === 'native-chromium' ? 'native' : 'seeded',
+      canvasMode: 'native',
+      audioMode: 'native',
+      fontMode: 'native',
+      clientRectsMode: 'native',
       gpuProfile: 'auto',
     },
     proxy: { url: 'direct://' },
@@ -59,10 +67,59 @@ export function profileHealth(profile: Profile): ProfileHealth {
   return 'ready'
 }
 
-export function capabilityFor(providers: ProviderDescriptor[], providerID: string, version: string): Capabilities | undefined {
+export function capabilitiesFor(
+  providers: ProviderDescriptor[],
+  providerID: string,
+  version: string,
+): Capabilities | undefined {
   const provider = providers.find((item) => item.id === providerID)
   const major = Number.parseInt(version.split('.')[0] || '0', 10)
   return provider?.samples.find((sample) => sample.majorVersion === major) ?? provider?.samples[0]
+}
+
+export function capabilityFor(
+  providers: ProviderDescriptor[],
+  providerID: string,
+  version: string,
+  capabilityID: CapabilityID,
+): CapabilityDeclaration | undefined {
+  const capabilities = capabilitiesFor(providers, providerID, version)
+  const declaration = capabilities?.capabilities[capabilityID]
+  if (!declaration) return undefined
+  if (declaration.minMajor && capabilities && capabilities.majorVersion < declaration.minMajor) return undefined
+  if (declaration.maxMajor && capabilities && capabilities.majorVersion > declaration.maxMajor) return undefined
+  return declaration
+}
+
+export function capabilityStatus(
+  providers: ProviderDescriptor[],
+  providerID: string,
+  version: string,
+  capabilityID: CapabilityID,
+): CapabilityStatus {
+  return capabilityFor(providers, providerID, version, capabilityID)?.status ?? 'unsupported'
+}
+
+export function capabilityAllowsConfiguration(status: CapabilityStatus): boolean {
+  return status === 'verified' || status === 'partial'
+}
+
+export function providerTrust(
+  providers: ProviderDescriptor[],
+  providerID: string,
+  version: string,
+): ProviderTrustStatus {
+  return capabilitiesFor(providers, providerID, version)?.trustStatus ?? 'invalid'
+}
+
+export function capabilityLabel(status: CapabilityStatus): string {
+  switch (status) {
+    case 'verified': return 'Verified'
+    case 'partial': return 'Partial'
+    case 'unverified': return 'Unverified'
+    case 'failed': return 'Failed'
+    default: return 'Unsupported'
+  }
 }
 
 export function groupsOf(profiles: Profile[]): string[] {
