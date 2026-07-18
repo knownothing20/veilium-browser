@@ -55,7 +55,7 @@ func testProfile() domain.Profile {
 			Platform: "linux", Brand: "Chromium", Language: "en-US",
 			Timezone: "UTC", ScreenWidth: 1366, ScreenHeight: 768,
 			WebRTCPolicy: "proxy-only",
-			CanvasMode: "native", AudioMode: "native", FontMode: "native",
+			CanvasMode:   "native", AudioMode: "native", FontMode: "native",
 			ClientRectsMode: "native", GPUProfile: "auto",
 		},
 		Proxy: domain.ProxyConfig{URL: "http://127.0.0.1:8080"},
