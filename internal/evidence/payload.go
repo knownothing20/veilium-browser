@@ -28,9 +28,9 @@ type BrowserSnapshot struct {
 	HardwareConcurrency int               `json:"hardwareConcurrency,omitempty"`
 	Screen              *ScreenSnapshot   `json:"screen,omitempty"`
 	Window              *WindowSnapshot   `json:"window,omitempty"`
-	WebRTC               *WebRTCSnapshot   `json:"webRtc,omitempty"`
-	SurfaceDigests       map[string]string `json:"surfaceDigests,omitempty"`
-	Limitations          []string          `json:"limitations,omitempty"`
+	WebRTC              *WebRTCSnapshot   `json:"webRtc,omitempty"`
+	SurfaceDigests      map[string]string `json:"surfaceDigests,omitempty"`
+	Limitations         []string          `json:"limitations,omitempty"`
 }
 
 type ScreenSnapshot struct {
@@ -178,6 +178,12 @@ func (w WindowSnapshot) Validate() error {
 	}
 	for label, value := range map[string]float64{
 		"viewport width": w.ViewportWidth, "viewport height": w.ViewportHeight,
+	} {
+		if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 || value > 16384 {
+			return fmt.Errorf("%s is outside the evidence range", label)
+		}
+	}
+	for label, value := range map[string]float64{
 		"viewport scale": w.ViewportScale, "device pixel ratio": w.DevicePixelRatio,
 	} {
 		if math.IsNaN(value) || math.IsInf(value, 0) || value < 0 || value > 128 {
