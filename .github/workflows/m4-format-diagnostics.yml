@@ -1,0 +1,37 @@
+name: M4 Format Diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Format changed Go files
+        run: |
+          gofmt -w \
+            internal/fingerprint/catalog.go \
+            internal/fingerprint/args.go \
+            internal/fingerprint/validator.go \
+            internal/fingerprint/catalog_test.go \
+            internal/fingerprint/validator_test.go
+      - name: Upload formatted files
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-formatted-go
+          path: |
+            internal/fingerprint/catalog.go
+            internal/fingerprint/args.go
+            internal/fingerprint/validator.go
+            internal/fingerprint/catalog_test.go
+            internal/fingerprint/validator_test.go
+          retention-days: 1
