@@ -6,7 +6,7 @@ Main baseline SHA: 1773ec77dbe2c9fcbeaecbc89bf206305ec16644
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
 Current milestone: M4.2 — Real-Browser Evidence Harness
-Current task: Complete final review and required checks for Issue #20 / Draft PR #21
+Current task: Complete final review and protected merge for Issue #20 / Draft PR #21
 
 ## Operational rule
 
@@ -56,18 +56,17 @@ M4.2 is implemented in Issue #20 and Draft PR #21. The branch now contains:
 - desktop Service and Wails bindings for run, cancel, list, get, delete, and active-state operations;
 - a desktop profile action and local report view; historical reports remain reviewable while the browser is stopped;
 - contract, store, Collector, Target, comparison, Manager, desktop-service, frontend-helper, and UI/build tests;
-- real hosted Chromium collection in existing Required Windows and Linux CI jobs, including top-level, iframe, and Worker evidence;
+- hosted Chrome collection in the Required Windows job and clean Debian-container Chromium collection in the Required Linux job, both including top-level, iframe, and Worker evidence;
 - `docs/REAL_BROWSER_EVIDENCE.md` covering operation, privacy, retention, statuses, cleanup, test boundary, and deferred work.
 
-M4.2 does not grant reviewed status to a production Provider. Real-browser CI proves the controlled collection chain for the exact hosted test binary only.
+M4.2 does not grant reviewed status to a production Provider. Real-browser CI proves the controlled collection chain only for the exact Windows hosted Chrome and Linux Debian Chromium fixtures used by those runs.
 
 ## Remaining work before M4.2 merge
 
-1. synchronize the desktop application constant with `0.14.0-dev`;
-2. make Governance and all seven CI jobs pass on the final commit;
-3. confirm there are no temporary diagnostic workflows or unresolved review threads;
-4. update PR #21 with final validation evidence;
-5. mark PR #21 ready and squash-merge it through protected `main`.
+1. make Governance and all seven CI jobs pass on the final documentation commit;
+2. confirm there are no temporary diagnostic workflows or unresolved review threads;
+3. update PR #21 with final validation evidence;
+4. mark PR #21 ready and squash-merge it through protected `main`.
 
 ## Next milestone
 
