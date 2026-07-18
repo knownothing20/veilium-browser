@@ -48,7 +48,8 @@
 - [x] Pinned official Xray and sing-box release manifests with archive and executable SHA-256.
 - [x] Native Xray/sing-box configuration checks on Linux and Windows.
 - [x] Local Chromium-through-adapter smoke test without a public proxy endpoint.
-- [ ] Publisher signatures, transparency evidence, notices, and disabled-by-default optional installers.
+- [x] Disabled-by-default official adapter installer with explicit license acknowledgement and pinned archive/executable verification.
+- [ ] Publisher signatures, transparency evidence, and reproducible builds.
 
 ## Proxy platform follow-up
 

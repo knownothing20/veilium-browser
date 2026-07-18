@@ -1,6 +1,7 @@
 import { defaultProfile } from "./model";
 import type {
   AdapterImportRequest,
+  AdapterInstallRequest,
   AdapterRecord,
   AdapterValidationReport,
   Bootstrap,
@@ -44,6 +45,7 @@ type WailsDesktopApp = {
   ImportAdapter: (request: AdapterImportRequest) => Promise<AdapterRecord>;
   VerifyAdapter: (id: string) => Promise<AdapterRecord>;
   ValidateAdapter: (id: string) => Promise<AdapterValidationReport>;
+  InstallOfficialAdapter: (request: AdapterInstallRequest) => Promise<AdapterRecord>;
   DeleteAdapter: (id: string) => Promise<void>;
 };
 
@@ -107,12 +109,13 @@ const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 export const backend = {
   isNative: () => Boolean(native()),
+
   async bootstrap(): Promise<Bootstrap> {
     const api = native();
     return api
       ? api.Bootstrap()
       : {
-          version: "0.11.0-browser-preview",
+          version: "0.12.0-browser-preview",
           profiles: clone(mockProfiles),
           providers: clone(providers),
           kernels: clone(mockKernels),
@@ -121,12 +124,16 @@ export const backend = {
           credentials: [],
           credentialProvider: "Desktop operating-system keyring",
           adapterPins: [],
+          runtimePlatform: "browser",
+          runtimeArch: "unknown",
         };
   },
+
   async listSessions(): Promise<RuntimeSession[]> {
     const api = native();
     return api ? api.ListSessions() : clone(mockSessions);
   },
+
   async capabilities(provider: string, version: string): Promise<Capabilities> {
     const api = native();
     if (api) return api.Capabilities(provider, version);
@@ -138,6 +145,7 @@ export const backend = {
     if (!sample) throw new Error(`Unknown provider ${provider}`);
     return clone(sample);
   },
+
   async createProfile(input: Profile): Promise<Profile> {
     const api = native();
     if (api) return api.CreateProfile(input);
@@ -150,6 +158,7 @@ export const backend = {
     mockProfiles = [...mockProfiles, created];
     return clone(created);
   },
+
   async updateProfile(input: Profile): Promise<Profile> {
     const api = native();
     if (api) return api.UpdateProfile(input);
@@ -159,6 +168,7 @@ export const backend = {
     );
     return clone(updated);
   },
+
   async cloneProfile(id: string, name: string): Promise<Profile> {
     const api = native();
     if (api) return api.CloneProfile(id, name);
@@ -173,11 +183,13 @@ export const backend = {
     mockProfiles = [...mockProfiles, cloned];
     return clone(cloned);
   },
+
   async deleteProfile(id: string): Promise<void> {
     const api = native();
     if (api) return api.DeleteProfile(id);
     mockProfiles = mockProfiles.filter((item) => item.id !== id);
   },
+
   async saveCredential(
     request: CredentialSaveRequest,
   ): Promise<CredentialRecord> {
@@ -188,6 +200,7 @@ export const backend = {
       );
     return api.SaveCredential(request);
   },
+
   async deleteCredential(id: string): Promise<void> {
     const api = native();
     if (!api)
@@ -196,6 +209,7 @@ export const backend = {
       );
     return api.DeleteCredential(id);
   },
+
   async buildLaunchPlan(
     profileId: string,
     remoteDebuggingPort = 0,
@@ -220,6 +234,7 @@ export const backend = {
       warnings: ["Browser preview mode: no native process will be launched."],
     };
   },
+
   async startProfile(profileId: string): Promise<RuntimeSession> {
     const api = native();
     if (!api)
@@ -228,6 +243,7 @@ export const backend = {
       );
     return api.StartProfile(profileId);
   },
+
   async stopProfile(profileId: string): Promise<RuntimeSession> {
     const api = native();
     if (!api)
@@ -236,6 +252,7 @@ export const backend = {
       );
     return api.StopProfile(profileId);
   },
+
   async runProxyDiagnostics(profileId: string): Promise<ProxyDiagnosticReport> {
     const api = native();
     if (!api)
@@ -244,6 +261,7 @@ export const backend = {
       );
     return api.RunProxyDiagnostics(profileId);
   },
+
   async pickKernelExecutable(): Promise<string> {
     const api = native();
     if (!api)
@@ -252,6 +270,7 @@ export const backend = {
       );
     return api.PickKernelExecutable();
   },
+
   async importKernel(request: KernelImportRequest): Promise<KernelRecord> {
     const api = native();
     if (!api)
@@ -260,6 +279,7 @@ export const backend = {
       );
     return api.ImportKernel(request);
   },
+
   async verifyKernel(id: string): Promise<KernelRecord> {
     const api = native();
     if (api) return api.VerifyKernel(id);
@@ -267,6 +287,7 @@ export const backend = {
     if (!record) throw new Error("Kernel not found");
     return clone(record);
   },
+
   async deleteKernel(id: string): Promise<void> {
     const api = native();
     if (api) return api.DeleteKernel(id);
@@ -274,6 +295,7 @@ export const backend = {
       throw new Error("Kernel is used by a profile");
     mockKernels = mockKernels.filter((item) => item.id !== id);
   },
+
   async pickAdapterExecutable(): Promise<string> {
     const api = native();
     if (!api)
@@ -282,6 +304,7 @@ export const backend = {
       );
     return api.PickAdapterExecutable();
   },
+
   async importAdapter(request: AdapterImportRequest): Promise<AdapterRecord> {
     const api = native();
     if (!api)
@@ -290,6 +313,7 @@ export const backend = {
       );
     return api.ImportAdapter(request);
   },
+
   async verifyAdapter(id: string): Promise<AdapterRecord> {
     const api = native();
     if (api) return api.VerifyAdapter(id);
@@ -297,11 +321,22 @@ export const backend = {
     if (!record) throw new Error("Proxy adapter not found");
     return clone(record);
   },
+
   async validateAdapter(id: string): Promise<AdapterValidationReport> {
     const api = native();
     if (!api) throw new Error("Official adapter validation is available only in the Wails desktop application");
     return api.ValidateAdapter(id);
   },
+
+  async installOfficialAdapter(request: AdapterInstallRequest): Promise<AdapterRecord> {
+    const api = native();
+    if (!api)
+      throw new Error(
+        "Official adapter installation is available only in the Wails desktop application",
+      );
+    return api.InstallOfficialAdapter(request);
+  },
+
   async deleteAdapter(id: string): Promise<void> {
     const api = native();
     if (api) return api.DeleteAdapter(id);

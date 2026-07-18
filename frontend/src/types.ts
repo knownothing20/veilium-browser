@@ -96,6 +96,12 @@ export interface AdapterImportRequest {
   sourceUrl: string
 }
 
+export interface AdapterInstallRequest {
+  kind: 'xray' | 'sing-box'
+  version: string
+  licenseAccepted: boolean
+}
+
 export interface CredentialRecord {
   id: string
   name: string
@@ -229,6 +235,8 @@ export interface Bootstrap {
   credentials: CredentialRecord[]
   credentialProvider: string
   adapterPins: AdapterReleasePin[]
+  runtimePlatform: string
+  runtimeArch: string
 }
 
 export interface LaunchPlan {

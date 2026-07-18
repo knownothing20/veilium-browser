@@ -7,9 +7,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/knownothing20/veilium-browser/internal/adapter"
+	"github.com/knownothing20/veilium-browser/internal/adapterinstaller"
 	"github.com/knownothing20/veilium-browser/internal/adapterrelease"
 	"github.com/knownothing20/veilium-browser/internal/adapterruntime"
 	"github.com/knownothing20/veilium-browser/internal/adaptervalidation"
@@ -25,7 +27,7 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/xrayprovider"
 )
 
-const AppVersion = "0.11.0-dev"
+const AppVersion = "0.12.0-dev"
 
 type RuntimeSupervisor interface {
 	Start(context.Context, string, string, supervisor.PlanBuilder) (supervisor.Session, error)
@@ -39,12 +41,17 @@ type AdapterValidator interface {
 	Validate(context.Context, adapter.Record) (adaptervalidation.Report, error)
 }
 
+type AdapterInstaller interface {
+	Install(context.Context, adapterinstaller.Request) (adapter.Record, error)
+}
+
 type Service struct {
 	store            *profile.Store
 	kernels          *kernel.Store
 	adapters         *adapter.Store
 	adapterRuntime   adapterruntime.Factory
 	adapterValidator AdapterValidator
+	adapterInstaller AdapterInstaller
 	credentials      *credential.Manager
 	planner          launch.Planner
 	supervisor       RuntimeSupervisor
@@ -62,6 +69,8 @@ type Bootstrap struct {
 	Credentials        []credential.Record  `json:"credentials"`
 	CredentialProvider string               `json:"credentialProvider"`
 	AdapterPins        []adapterrelease.Pin `json:"adapterPins"`
+	RuntimePlatform    string               `json:"runtimePlatform"`
+	RuntimeArch        string               `json:"runtimeArch"`
 }
 
 type ProviderDescriptor struct {
@@ -125,12 +134,17 @@ func newServiceWithCredentials(store *profile.Store, dataRoot string, runtimeSup
 	if err != nil {
 		return nil, err
 	}
+	officialInstaller, err := adapterinstaller.New(adapters, filepath.Join(dataRoot, "adapter-installer"))
+	if err != nil {
+		return nil, err
+	}
 	service := &Service{
 		store:            store,
 		kernels:          kernels,
 		adapters:         adapters,
 		adapterRuntime:   adapterManager,
 		adapterValidator: adaptervalidation.New(),
+		adapterInstaller: officialInstaller,
 		credentials:      credentials,
 		planner:          launch.Planner{},
 		supervisor:       runtimeSupervisor,
@@ -152,6 +166,8 @@ func (s *Service) Bootstrap() Bootstrap {
 		Credentials:        s.credentials.List(),
 		CredentialProvider: credential.ProviderName(),
 		AdapterPins:        officialAdapterPins(),
+		RuntimePlatform:    runtime.GOOS,
+		RuntimeArch:        runtime.GOARCH,
 	}
 }
 
@@ -212,6 +228,13 @@ func (s *Service) ValidateAdapter(ctx context.Context, id string) (adaptervalida
 		return adaptervalidation.Report{}, fmt.Errorf("adapter validator is unavailable")
 	}
 	return s.adapterValidator.Validate(ctx, record)
+}
+
+func (s *Service) InstallOfficialAdapter(ctx context.Context, request adapterinstaller.Request) (adapter.Record, error) {
+	if s.adapterInstaller == nil {
+		return adapter.Record{}, fmt.Errorf("official adapter installer is unavailable")
+	}
+	return s.adapterInstaller.Install(ctx, request)
 }
 
 func (s *Service) DeleteAdapter(id string) error {
