@@ -12,16 +12,21 @@ func ValidateReplacement(current, candidate ProviderDefinition) error {
 	if candidate.TrustStatus == TrustDisabled || candidate.TrustStatus == TrustInvalid {
 		return fmt.Errorf("candidate provider %q is not launchable", candidate.ID)
 	}
-	if candidate.Revision <= current.Revision && candidate.ID == current.ID {
-		return fmt.Errorf("candidate provider revision must advance from %d", current.Revision)
+
+	if candidate.ID == current.ID {
+		if candidate.Revision <= current.Revision {
+			return fmt.Errorf("candidate provider revision must advance from %d", current.Revision)
+		}
+		if current.TrustStatus == TrustReviewed && candidate.TrustStatus == TrustReviewed {
+			if candidate.SourceURL != current.SourceURL || candidate.LicenseSPDX != current.LicenseSPDX {
+				return fmt.Errorf("reviewed provider %q cannot change source or license without a new provider identity", current.ID)
+			}
+		}
+		return nil
 	}
+
 	if !containsProviderID(candidate.PredecessorIDs, current.ID) {
 		return fmt.Errorf("candidate provider %q does not explicitly name %q as a predecessor", candidate.ID, current.ID)
-	}
-	if current.TrustStatus == TrustReviewed && candidate.TrustStatus == TrustReviewed {
-		if candidate.SourceURL != current.SourceURL || candidate.LicenseSPDX != current.LicenseSPDX {
-			return fmt.Errorf("reviewed provider replacement changes source or license and requires a new provider identity")
-		}
 	}
 	return nil
 }
