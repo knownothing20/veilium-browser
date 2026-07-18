@@ -5,8 +5,8 @@ Application version: 0.13.0-dev
 Main baseline SHA: 863e88cbbbc1c904dfbcda967be028d36ccb9ece
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
-Current milestone: M4.1 — Kernel Provider Contract v2
-Current task: Complete Issue #17 in Draft PR #19 and make every required check pass
+Current milestone: M4.2 — Real-Browser Evidence Harness
+Current task: Begin Issue #20 after M4.1 PR #19 is merged
 
 ## Operational rule
 
@@ -33,65 +33,59 @@ Completed foundations include:
 
 At Phase 4 completion, users can select a reviewed browser-kernel provider, configure only supported capabilities, launch a profile, and receive local evidence showing whether the declared identity and selected network route were observed in the real browser session.
 
-Capability states are:
-
-- Verified;
-- Partially verified;
-- Unsupported;
-- Unverified custom provider.
-
 The authoritative phase scope, milestones, non-goals, platform policy, validation, rollback rules, and exit criteria are in `docs/PHASE_04.md`. The logical provider, capability, evidence, compatibility, and health contracts are in `docs/PHASE_04_CONTRACTS.md`.
 
-## Current milestone
+## M4.1 delivery
 
-### M4.1 — Kernel Provider Contract v2
+M4.1 — Kernel Provider Contract v2 is delivered by Issue #17 and PR #19.
 
-Current implementation issue: #17
-Current Draft PR: #19
-
-Implemented in the Draft branch:
+The merged behavior establishes:
 
 - provider contract schema version 2;
 - reviewed, custom, legacy, disabled, and invalid provider trust states;
 - verified, partial, unsupported, unverified, and failed capability states;
-- a generic `custom-chromium` contract;
-- compatibility definitions for legacy `native-chromium` and `patched-chromium` IDs;
-- fail-closed backend validation for advanced unverified claims;
-- Provider-derived desktop bootstrap data instead of a hard-coded UI provider list;
-- frontend trust and capability states, generic defaults, status labels, and disabled unsupported controls;
-- derived managed-kernel binary identity that keeps integrity and reviewed trust separate;
-- explicit predecessor and rollback policy for provider replacements;
-- provider, validation, kernel identity, rollback, and frontend tests;
-- updated kernel registry documentation;
-- temporary formatting diagnostics removed after the generated result was applied.
+- `custom-chromium` as the generic local-import path without reviewed fingerprint claims;
+- compatibility definitions for legacy `native-chromium` and `patched-chromium` records;
+- mandatory source, license, platform, architecture, version, executable, and provenance fields for reviewed providers;
+- fail-closed validation for advanced unsupported or unverified fingerprint configuration;
+- Provider-derived desktop bootstrap data rather than a hard-coded UI provider list;
+- frontend trust and capability labels with unsupported controls disabled;
+- managed-kernel binary identity that keeps integrity and reviewed trust separate;
+- explicit provider predecessor, replacement, and rollback policy;
+- tests for legacy compatibility, reviewed-candidate representation, trust boundaries, binary identity, failure behavior, launch behavior, and frontend states;
+- updated kernel registry documentation.
 
-Work still required before M4.1 can merge:
+M4.1 deliberately does not select or claim a production reviewed browser provider. A custom or legacy binary can remain integrity-verified without gaining reviewed capability status.
 
-1. use required CI failures to find any remaining legacy boolean assumptions or incompatible tests;
-2. add only the service, launch, or compatibility tests required by those failures;
-3. confirm no legacy record is silently upgraded and generic custom launch remains usable;
-4. make Governance, Go, frontend, Windows, Linux, desktop, and adapter checks pass;
-5. update the PR description and this handoff with the exact next M4.1 or M4.2 task.
+## Current milestone
+
+### M4.2 — Real-Browser Evidence Harness
+
+Current implementation issue: #20
+
+The first M4.2 task is to implement a versioned, local evidence harness that observes a Veilium-managed real browser session through controlled top-level, iframe, and worker contexts and stores a private redacted report.
+
+Issue #20 controls the exact scope, privacy boundaries, failure paths, supported observations, tests, and non-scope. It remains blocked until PR #19 merges.
 
 ## Active prohibitions
 
 Do not:
 
-- implement the M4.2 evidence harness in PR #19;
-- add window, viewport, DPR, live WebRTC, DNS, or exit-IP evidence;
+- add live external exit-IP, WebRTC/STUN, or delegated-domain DNS probes before M4.4;
+- implement final window/viewport/DPR correction policy before M4.3;
+- assign reviewed status to a provider without exact provider, binary, platform, and real-browser evidence;
 - add new proxy protocols, transports, or proxy-pool operations;
 - begin cookie, extension, full migration, Launch API, MCP, sync, or release work;
 - copy source from reference browsers or kernels;
-- select a reviewed provider from upstream marketing claims alone;
-- claim advanced fingerprint support without exact provider contracts and later real-browser evidence;
+- collect arbitrary page contents, browsing history, cookies, tokens, credentials, or private proxy configuration;
 - include unrelated refactors or broad UI redesign.
 
 ## Known risks
 
-- no production provider is reviewed yet; M4.1 must not fabricate one;
-- existing `patched-chromium` profiles with advanced settings remain readable but are blocked from claiming reviewed support until a reviewed replacement exists;
-- integrity status and provider trust are separate and must not be presented as the same check;
-- exact provider licensing, maintained artifacts, and real behavior remain future evidence work;
+- no production provider is reviewed yet;
+- existing `patched-chromium` profiles with advanced settings remain readable but cannot claim reviewed support until an exact reviewed replacement and evidence exist;
+- integrity status and provider trust remain separate;
+- M4.2 evidence must not mutate browser profiles or become a general browsing-inspection interface;
 - macOS remains unclaimed until a real validation path exists.
 
 ## Required validation
@@ -101,8 +95,8 @@ python scripts/check_project_governance.py
 make check
 ```
 
-The PR must also pass the protected-branch Windows, Linux, desktop-build, frontend, and official-adapter checks.
+Every product PR must also pass the protected-branch Windows, Linux, desktop-build, frontend, and official-adapter checks.
 
 ## Handoff
 
-Continue only in Draft PR #19 and Issue #17. Use CI failures to find remaining legacy assumptions, update only files required by M4.1, and keep `docs/STATUS.md` synchronized with merged behavior and the next task.
+After PR #19 merges, read Issue #20 and create one scoped Draft PR for M4.2 only. Do not reopen M4.1 design, add a reviewed provider from upstream claims, or begin later milestone work without a separately reviewed planning change.
