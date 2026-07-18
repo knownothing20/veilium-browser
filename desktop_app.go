@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/knownothing20/veilium-browser/internal/adapter"
+	"github.com/knownothing20/veilium-browser/internal/adaptervalidation"
 	"github.com/knownothing20/veilium-browser/internal/credential"
 	"github.com/knownothing20/veilium-browser/internal/desktop"
 	"github.com/knownothing20/veilium-browser/internal/domain"
@@ -75,6 +76,11 @@ func (a *DesktopApp) ImportAdapter(request adapter.ImportRequest) (adapter.Recor
 }
 func (a *DesktopApp) VerifyAdapter(id string) (adapter.Record, error) {
 	return a.service.VerifyAdapter(id)
+}
+func (a *DesktopApp) ValidateAdapter(id string) (adaptervalidation.Report, error) {
+	ctx, cancel := context.WithTimeout(a.runtimeContext(), 90*time.Second)
+	defer cancel()
+	return a.service.ValidateAdapter(ctx, id)
 }
 func (a *DesktopApp) DeleteAdapter(id string) error { return a.service.DeleteAdapter(id) }
 func (a *DesktopApp) shutdown(ctx context.Context) {

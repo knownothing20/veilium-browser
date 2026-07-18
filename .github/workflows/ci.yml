@@ -105,6 +105,85 @@ jobs:
       - name: Build headless packages
         run: go build ./cmd/... ./internal/...
 
+  official-adapters-linux:
+    name: Official adapters Linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Fetch pinned official adapters
+        id: adapters
+        run: |
+          python3 scripts/fetch_official_adapters.py \
+            --platform linux \
+            --arch amd64 \
+            --output-dir "$RUNNER_TEMP/veilium-official-adapters"
+
+      - name: Run official binary configuration checks
+        env:
+          VEILIUM_XRAY_BINARY: ${{ steps.adapters.outputs.xray_path }}
+          VEILIUM_SINGBOX_BINARY: ${{ steps.adapters.outputs.sing_box_path }}
+        run: go test -v -run '^TestOfficialAdapterBinaries$' ./internal/adaptervalidation
+
+      - name: Locate hosted Chromium
+        id: chromium
+        shell: bash
+        run: |
+          chromium_path=$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || command -v chromium-browser || true)
+          test -n "$chromium_path"
+          echo "path=$chromium_path" >> "$GITHUB_OUTPUT"
+          "$chromium_path" --version
+
+      - name: Exercise Chromium through both official adapters
+        run: |
+          python3 scripts/adapter_chromium_smoke.py \
+            --xray "${{ steps.adapters.outputs.xray_path }}" \
+            --sing-box "${{ steps.adapters.outputs.sing_box_path }}" \
+            --chromium "${{ steps.chromium.outputs.path }}"
+
+  official-adapters-windows:
+    name: Official adapters Windows
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Fetch pinned official adapters
+        id: adapters
+        shell: pwsh
+        run: |
+          python scripts/fetch_official_adapters.py `
+            --platform windows `
+            --arch amd64 `
+            --output-dir "$env:RUNNER_TEMP\veilium-official-adapters"
+
+      - name: Run official binary configuration checks
+        shell: pwsh
+        env:
+          VEILIUM_XRAY_BINARY: ${{ steps.adapters.outputs.xray_path }}
+          VEILIUM_SINGBOX_BINARY: ${{ steps.adapters.outputs.sing_box_path }}
+        run: go test -v -run '^TestOfficialAdapterBinaries$' ./internal/adaptervalidation
+
   desktop-windows:
     name: Wails Windows build
     runs-on: windows-latest

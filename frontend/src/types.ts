@@ -39,6 +39,52 @@ export interface AdapterRecord {
   status: 'verified' | 'modified' | 'missing'
   importedAt: string
   verifiedAt: string
+  official: boolean
+  officialTag?: string
+  officialAsset?: string
+  officialPlatform?: string
+  officialArch?: string
+}
+
+export interface AdapterReleasePin {
+  kind: 'xray' | 'sing-box'
+  version: string
+  tag: string
+  repository: string
+  licenseSpdx: string
+  publishedAt: string
+  platform: string
+  arch: string
+  assetName: string
+  assetUrl: string
+  archiveSha256: string
+  archiveSizeBytes: number
+  executablePath: string
+  executableSha256: string
+  executableSizeBytes: number
+  versionArgs: string[]
+  configurationArgs: string[]
+}
+
+export interface AdapterValidationCheck {
+  id: string
+  label: string
+  status: 'pass' | 'warn' | 'fail'
+  detail: string
+}
+
+export interface AdapterValidationReport {
+  adapterId: string
+  adapterName: string
+  kind: string
+  version: string
+  officialTag: string
+  platform: string
+  arch: string
+  status: 'passed' | 'failed'
+  versionText: string
+  checks: AdapterValidationCheck[]
+  completedAt: string
 }
 
 export interface AdapterImportRequest {
@@ -182,6 +228,7 @@ export interface Bootstrap {
   sessions: RuntimeSession[]
   credentials: CredentialRecord[]
   credentialProvider: string
+  adapterPins: AdapterReleasePin[]
 }
 
 export interface LaunchPlan {

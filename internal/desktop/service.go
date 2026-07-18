@@ -10,7 +10,9 @@ import (
 	"strings"
 
 	"github.com/knownothing20/veilium-browser/internal/adapter"
+	"github.com/knownothing20/veilium-browser/internal/adapterrelease"
 	"github.com/knownothing20/veilium-browser/internal/adapterruntime"
+	"github.com/knownothing20/veilium-browser/internal/adaptervalidation"
 	"github.com/knownothing20/veilium-browser/internal/credential"
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/fingerprint"
@@ -23,7 +25,7 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/xrayprovider"
 )
 
-const AppVersion = "0.10.0-dev"
+const AppVersion = "0.11.0-dev"
 
 type RuntimeSupervisor interface {
 	Start(context.Context, string, string, supervisor.PlanBuilder) (supervisor.Session, error)
@@ -33,16 +35,21 @@ type RuntimeSupervisor interface {
 	IsActive(string) bool
 }
 
+type AdapterValidator interface {
+	Validate(context.Context, adapter.Record) (adaptervalidation.Report, error)
+}
+
 type Service struct {
-	store          *profile.Store
-	kernels        *kernel.Store
-	adapters       *adapter.Store
-	adapterRuntime adapterruntime.Factory
-	credentials    *credential.Manager
-	planner        launch.Planner
-	supervisor     RuntimeSupervisor
-	dataRoot       string
-	profilesDir    string
+	store            *profile.Store
+	kernels          *kernel.Store
+	adapters         *adapter.Store
+	adapterRuntime   adapterruntime.Factory
+	adapterValidator AdapterValidator
+	credentials      *credential.Manager
+	planner          launch.Planner
+	supervisor       RuntimeSupervisor
+	dataRoot         string
+	profilesDir      string
 }
 
 type Bootstrap struct {
@@ -54,6 +61,7 @@ type Bootstrap struct {
 	Sessions           []supervisor.Session `json:"sessions"`
 	Credentials        []credential.Record  `json:"credentials"`
 	CredentialProvider string               `json:"credentialProvider"`
+	AdapterPins        []adapterrelease.Pin `json:"adapterPins"`
 }
 
 type ProviderDescriptor struct {
@@ -118,15 +126,16 @@ func newServiceWithCredentials(store *profile.Store, dataRoot string, runtimeSup
 		return nil, err
 	}
 	service := &Service{
-		store:          store,
-		kernels:        kernels,
-		adapters:       adapters,
-		adapterRuntime: adapterManager,
-		credentials:    credentials,
-		planner:        launch.Planner{},
-		supervisor:     runtimeSupervisor,
-		dataRoot:       dataRoot,
-		profilesDir:    filepath.Join(dataRoot, "profiles"),
+		store:            store,
+		kernels:          kernels,
+		adapters:         adapters,
+		adapterRuntime:   adapterManager,
+		adapterValidator: adaptervalidation.New(),
+		credentials:      credentials,
+		planner:          launch.Planner{},
+		supervisor:       runtimeSupervisor,
+		dataRoot:         dataRoot,
+		profilesDir:      filepath.Join(dataRoot, "profiles"),
 	}
 	_ = registryFor(service)
 	return service, nil
@@ -142,6 +151,7 @@ func (s *Service) Bootstrap() Bootstrap {
 		Sessions:           s.supervisor.List(),
 		Credentials:        s.credentials.List(),
 		CredentialProvider: credential.ProviderName(),
+		AdapterPins:        officialAdapterPins(),
 	}
 }
 
@@ -191,6 +201,17 @@ func (s *Service) ImportAdapter(request adapter.ImportRequest) (adapter.Record, 
 
 func (s *Service) VerifyAdapter(id string) (adapter.Record, error) {
 	return s.adapters.Verify(id)
+}
+
+func (s *Service) ValidateAdapter(ctx context.Context, id string) (adaptervalidation.Report, error) {
+	record, err := s.adapters.Verify(id)
+	if err != nil {
+		return adaptervalidation.Report{}, err
+	}
+	if s.adapterValidator == nil {
+		return adaptervalidation.Report{}, fmt.Errorf("adapter validator is unavailable")
+	}
+	return s.adapterValidator.Validate(ctx, record)
 }
 
 func (s *Service) DeleteAdapter(id string) error {
@@ -528,6 +549,14 @@ func withValidationSeed(item domain.Profile) domain.Profile {
 		item.Fingerprint.Seed = "profile-default"
 	}
 	return item
+}
+
+func officialAdapterPins() []adapterrelease.Pin {
+	pins, err := adapterrelease.Pins()
+	if err != nil {
+		return nil
+	}
+	return pins
 }
 
 func providerCatalog() []ProviderDescriptor {
