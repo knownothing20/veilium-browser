@@ -12,21 +12,21 @@ import (
 const BinaryIdentitySchemaVersion = 1
 
 type ProviderBinaryIdentity struct {
-	SchemaVersion        int                     `json:"schemaVersion"`
-	ProviderID           string                  `json:"providerId"`
-	ProviderRevision     int                     `json:"providerRevision"`
-	ProviderTrust        fingerprint.TrustStatus `json:"providerTrust"`
-	BrowserVersion       string                  `json:"browserVersion"`
-	OperatingSystem      string                  `json:"operatingSystem"`
-	Architecture         string                  `json:"architecture"`
-	ExecutablePath       string                  `json:"executablePath"`
-	ExecutableSize       int64                   `json:"executableSize"`
-	ExecutableSHA256     string                  `json:"executableSha256"`
-	IntegrityStatus      string                  `json:"integrityStatus"`
-	VerificationTimestamp string                 `json:"verificationTimestamp,omitempty"`
-	Provenance           string                  `json:"provenance"`
-	Reviewed             bool                    `json:"reviewed"`
-	Limitations          []string                `json:"limitations,omitempty"`
+	SchemaVersion         int                     `json:"schemaVersion"`
+	ProviderID            string                  `json:"providerId"`
+	ProviderRevision      int                     `json:"providerRevision"`
+	ProviderTrust         fingerprint.TrustStatus `json:"providerTrust"`
+	BrowserVersion        string                  `json:"browserVersion"`
+	OperatingSystem       string                  `json:"operatingSystem"`
+	Architecture          string                  `json:"architecture"`
+	ExecutablePath        string                  `json:"executablePath"`
+	ExecutableSize        int64                   `json:"executableSize"`
+	ExecutableSHA256      string                  `json:"executableSha256"`
+	IntegrityStatus       string                  `json:"integrityStatus"`
+	VerificationTimestamp string                  `json:"verificationTimestamp,omitempty"`
+	Provenance            string                  `json:"provenance"`
+	Reviewed              bool                    `json:"reviewed"`
+	Limitations           []string                `json:"limitations,omitempty"`
 }
 
 func BinaryIdentity(record Record) (ProviderBinaryIdentity, error) {
