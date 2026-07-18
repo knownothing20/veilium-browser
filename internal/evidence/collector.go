@@ -154,11 +154,11 @@ func (c *Collector) loopbackOnly(next http.Handler) http.Handler {
 }
 
 func (c *Collector) handleRun(writer http.ResponseWriter, _ *http.Request) {
-	c.writeHTML(writer, renderRunPage(c.nonce, c.surfaces, c.origin, c.token))
+	c.writeHTML(writer, renderRunPage(c.nonce, c.surfaces, c.origin, c.token), "'none'")
 }
 
 func (c *Collector) handleFrame(writer http.ResponseWriter, _ *http.Request) {
-	c.writeHTML(writer, renderFramePage(c.nonce, c.surfaces, c.origin))
+	c.writeHTML(writer, renderFramePage(c.nonce, c.surfaces, c.origin), "'self'")
 }
 
 func (c *Collector) handleWorker(writer http.ResponseWriter, _ *http.Request) {
@@ -168,10 +168,10 @@ func (c *Collector) handleWorker(writer http.ResponseWriter, _ *http.Request) {
 	_, _ = io.WriteString(writer, renderWorkerScript())
 }
 
-func (c *Collector) writeHTML(writer http.ResponseWriter, body string) {
+func (c *Collector) writeHTML(writer http.ResponseWriter, body, frameAncestors string) {
 	setEvidenceHeaders(writer.Header())
 	writer.Header().Set("Content-Type", "text/html; charset=utf-8")
-	writer.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self' 'nonce-"+c.nonce+"'; style-src 'nonce-"+c.nonce+"'; connect-src 'self'; frame-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+	writer.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self' 'nonce-"+c.nonce+"'; style-src 'nonce-"+c.nonce+"'; connect-src 'self'; frame-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors "+frameAncestors)
 	_, _ = io.WriteString(writer, body)
 }
 
