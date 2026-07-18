@@ -39,15 +39,15 @@ const (
 type CapabilityID string
 
 const (
-	CapabilityPlatformOverride     CapabilityID = "platform"
-	CapabilityBrandOverride        CapabilityID = "browser-brand"
-	CapabilityTimezoneOverride     CapabilityID = "timezone"
-	CapabilitySurfaceSeed          CapabilityID = "surface-seed"
-	CapabilitySurfaceControls      CapabilityID = "surface-controls"
-	CapabilityHardwareConcurrency  CapabilityID = "hardware-concurrency"
-	CapabilityDeviceMemory         CapabilityID = "device-memory"
-	CapabilityCustomGPU            CapabilityID = "custom-gpu"
-	CapabilityProxyOnlyWebRTC      CapabilityID = "webrtc-policy"
+	CapabilityPlatformOverride    CapabilityID = "platform"
+	CapabilityBrandOverride       CapabilityID = "browser-brand"
+	CapabilityTimezoneOverride    CapabilityID = "timezone"
+	CapabilitySurfaceSeed         CapabilityID = "surface-seed"
+	CapabilitySurfaceControls     CapabilityID = "surface-controls"
+	CapabilityHardwareConcurrency CapabilityID = "hardware-concurrency"
+	CapabilityDeviceMemory        CapabilityID = "device-memory"
+	CapabilityCustomGPU           CapabilityID = "custom-gpu"
+	CapabilityProxyOnlyWebRTC     CapabilityID = "webrtc-policy"
 )
 
 type CapabilityDeclaration struct {
@@ -60,38 +60,38 @@ type CapabilityDeclaration struct {
 }
 
 type ProviderDefinition struct {
-	SchemaVersion          int                                  `json:"schemaVersion"`
-	Revision               int                                  `json:"revision"`
-	ID                     string                               `json:"id"`
-	Name                   string                               `json:"name"`
-	Description            string                               `json:"description"`
-	TrustStatus            TrustStatus                          `json:"trustStatus"`
-	SourceURL              string                               `json:"sourceUrl,omitempty"`
-	LicenseSPDX            string                               `json:"licenseSpdx,omitempty"`
-	SupportedOS            []string                             `json:"supportedOs"`
-	SupportedArch          []string                             `json:"supportedArch"`
-	Versions               []string                             `json:"versions"`
-	MinMajor               int                                  `json:"minMajor,omitempty"`
-	MaxMajor               int                                  `json:"maxMajor,omitempty"`
-	ExpectedExecutable     string                               `json:"expectedExecutable,omitempty"`
-	ProvenanceRequirement  string                               `json:"provenanceRequirement,omitempty"`
-	Capabilities           map[CapabilityID]CapabilityDeclaration `json:"capabilities"`
-	KnownLimitations       []string                             `json:"knownLimitations,omitempty"`
-	PredecessorIDs         []string                             `json:"predecessorIds,omitempty"`
-	ReplacementID          string                               `json:"replacementId,omitempty"`
-	DisabledReason         string                               `json:"disabledReason,omitempty"`
-	CreatedAt              string                               `json:"createdAt"`
-	ReviewedAt             string                               `json:"reviewedAt,omitempty"`
+	SchemaVersion         int                                    `json:"schemaVersion"`
+	Revision              int                                    `json:"revision"`
+	ID                    string                                 `json:"id"`
+	Name                  string                                 `json:"name"`
+	Description           string                                 `json:"description"`
+	TrustStatus           TrustStatus                            `json:"trustStatus"`
+	SourceURL             string                                 `json:"sourceUrl,omitempty"`
+	LicenseSPDX           string                                 `json:"licenseSpdx,omitempty"`
+	SupportedOS           []string                               `json:"supportedOs"`
+	SupportedArch         []string                               `json:"supportedArch"`
+	Versions              []string                               `json:"versions"`
+	MinMajor              int                                    `json:"minMajor,omitempty"`
+	MaxMajor              int                                    `json:"maxMajor,omitempty"`
+	ExpectedExecutable    string                                 `json:"expectedExecutable,omitempty"`
+	ProvenanceRequirement string                                 `json:"provenanceRequirement,omitempty"`
+	Capabilities          map[CapabilityID]CapabilityDeclaration `json:"capabilities"`
+	KnownLimitations      []string                               `json:"knownLimitations,omitempty"`
+	PredecessorIDs        []string                               `json:"predecessorIds,omitempty"`
+	ReplacementID         string                                 `json:"replacementId,omitempty"`
+	DisabledReason        string                                 `json:"disabledReason,omitempty"`
+	CreatedAt             string                                 `json:"createdAt"`
+	ReviewedAt            string                                 `json:"reviewedAt,omitempty"`
 }
 
 type Capabilities struct {
-	SchemaVersion int                                  `json:"schemaVersion"`
-	Provider      string                               `json:"provider"`
-	Revision      int                                  `json:"revision"`
-	TrustStatus   TrustStatus                          `json:"trustStatus"`
-	MajorVersion  int                                  `json:"majorVersion"`
+	SchemaVersion int                                    `json:"schemaVersion"`
+	Provider      string                                 `json:"provider"`
+	Revision      int                                    `json:"revision"`
+	TrustStatus   TrustStatus                            `json:"trustStatus"`
+	MajorVersion  int                                    `json:"majorVersion"`
 	Capabilities  map[CapabilityID]CapabilityDeclaration `json:"capabilities"`
-	Limitations   []string                             `json:"limitations,omitempty"`
+	Limitations   []string                               `json:"limitations,omitempty"`
 }
 
 func (c Capabilities) State(id CapabilityID) CapabilityStatus {
@@ -244,7 +244,7 @@ func customDefinition() ProviderDefinition {
 		SupportedArch: []string{"amd64", "arm64"},
 		Versions:      []string{"148.0.0", "144.0.0", "142.0.0"},
 		MinMajor:      1,
-		Capabilities: genericCapabilities(CapabilityUnsupported),
+		Capabilities:  genericCapabilities(CapabilityUnsupported),
 		KnownLimitations: []string{
 			"custom binaries may launch but do not receive reviewed fingerprint capability claims",
 			"language, window size, and WebRTC command-line policy remain unverified until real-browser evidence exists",
