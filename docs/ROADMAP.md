@@ -3,13 +3,13 @@
 Last updated: 2026-07-18
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
-Current phase status: Planning
+Current phase status: Active
 
 ## How to use this roadmap
 
 This file controls phase order and phase status. It does not authorize an individual implementation task by itself. Detailed scope and exit criteria live in the active phase document, while the single current task lives in `docs/STATUS.md`.
 
-A later phase must not begin before the current phase closes through a dedicated phase-closure pull request. Changing phase order or goals requires a planning issue and reviewed roadmap update.
+A later phase must not begin before the current phase closes through a dedicated phase-closure pull request. Changing phase order, user outcome, milestone sequence, or phase goals requires a planning issue and reviewed planning pull request.
 
 ## Six-phase plan
 
@@ -18,7 +18,7 @@ A later phase must not begin before the current phase closes through a dedicated
 | Phase 1 | Clean-room core contracts, local persistence, policy validation, and secure local API foundation | Done | Historical PR and module documents |
 | Phase 2 | Wails and React desktop profile workspace with capability-driven configuration | Done | Historical PR and module documents |
 | Phase 3 | Verified local kernels, supervised browser runtime, credential vault, proxy bridges, diagnostics, and reviewed Xray/sing-box adapters | Done | Historical PR and module documents |
-| Phase 4 | Next product capability and evidence phase; detailed user outcome and milestone order must be frozen before implementation | Planning | `docs/PHASE_04.md` |
+| Phase 4 | Reviewed browser-provider contracts plus real-browser identity, consistency, and network evidence with truthful compatibility states | Active | `docs/PHASE_04.md` |
 | Phase 5 | Profile lifecycle and scalable day-to-day operations; final scope depends on Phase 4 closure | Planned | To be created during Phase 5 planning |
 | Phase 6 | Controlled automation, migration/sync options, and production release hardening; final scope depends on prior phases | Planned | To be created during Phase 6 planning |
 
@@ -37,37 +37,75 @@ The current baseline includes:
 - managed Xray and sing-box binaries with provenance, license, integrity, and in-use controls;
 - supervised reviewed protocol subsets through private per-session configurations;
 - pinned official adapter manifests, native configuration checks, Chromium smoke tests, and explicit verified installation;
-- Linux and Windows Go, frontend, desktop-build, and adapter-validation CI.
+- Linux and Windows Go, frontend, desktop-build, and adapter-validation CI;
+- repository governance, required pull requests, status checks, phase gates, and SSOT documents.
 
-## Unsequenced candidate backlog
+## Active Phase 4 milestone sequence
 
-The following items were present in the earlier module-oriented roadmap. They are retained as planning inputs, not approved Phase 4 tasks:
+Phase 4 is frozen in this dependency order:
 
-### Browser runtime and identity
+1. **M4.1 — Kernel Provider Contract v2**
+   - reviewed versus custom provider trust;
+   - versioned provider, provenance, license, binary identity, and capability contracts;
+   - compatibility for existing kernel and profile records;
+   - unsupported and unverified states fail closed.
+2. **M4.2 — Real-Browser Evidence Harness**
+   - observe real browser behavior across controlled contexts;
+   - create local, structured, redacted evidence reports;
+   - derive capability states from exact provider evidence.
+3. **M4.3 — Identity and Window Consistency**
+   - enforce coherent OS, browser, language, timezone, CPU, screen, window, viewport, DPR, and supported GPU behavior;
+   - derive understandable profile health from evidence.
+4. **M4.4 — Live Browser Network Evidence and Compatibility Matrix**
+   - verify browser-observed route, exit IP, WebRTC/STUN, and DNS behavior;
+   - publish reviewed provider/version/OS/capability compatibility states.
 
-- real-window and declared fingerprint dimension consistency;
-- extension and cookie management;
-- bounded crash-restart policy;
-- approved real Chromium test-kernel matrix across supported platforms;
-- live browser WebRTC/STUN and delegated-domain DNS leak tests;
-- Windows suspended-process creation if evidence shows the remaining launch window is material.
+The full scope, non-scope, platform policy, acceptance criteria, rollback rules, and exit gate are defined in `docs/PHASE_04.md`. Logical data and evidence contracts are defined in `docs/PHASE_04_CONTRACTS.md`.
 
-### Proxy platform
+## Phase 4 explicit deferrals
+
+The following work is not authorized during Phase 4 unless a reviewed planning change proves it is strictly required for the approved evidence chain:
+
+### Profile lifecycle and operations
+
+- cookie import, export, or editing;
+- extension package management;
+- complete profile backup, restore, or cross-device migration;
+- profile templates and broad batch operations;
+- bounded crash-restart policy unless required by evidence-harness reliability.
+
+### Proxy platform expansion
 
 - broader share-link compatibility and ecosystem aliases;
-- additional reviewed Xray and sing-box transports and options;
-- optional local-client authentication for ephemeral bridges;
-- proxy import, tagging, batch testing, and rotation policy;
-- configurable diagnostic endpoints;
-- historical health reports and scheduled retesting;
-- publisher signatures, transparency evidence, and reproducible runtime builds.
+- additional Xray, sing-box, or Mihomo protocols, transports, and options;
+- proxy import, tagging, batch testing, rotation, or scheduled health operations;
+- unrelated proxy UI expansion.
 
-### Lifecycle, automation, and release
+### Automation, sync, and release
 
-- stable Launch API and unified CDP endpoint;
-- MCP server with per-tool authorization;
-- export/import with schema migration and optional encrypted sync;
-- signed releases, SBOM, provenance, updates, and reproducible application builds.
+- stable public Launch API and unified CDP gateway;
+- MCP server and broad automation-script platform;
+- cloud sync;
+- application release signing, auto-update, SBOM, and full reproducible application builds except evidence needed for reviewed provider trust;
+- broad UI redesign unrelated to provider, capability, evidence, or health states.
+
+These are candidates for Phase 5 or Phase 6 planning and do not gain priority from this backlog entry.
+
+## Phase 4 exit summary
+
+Phase 4 cannot close until:
+
+- Provider Contract v2 and legacy compatibility are frozen;
+- at least one exact reviewed provider path has real-browser evidence;
+- custom providers cannot inherit reviewed claims;
+- capability states are provider- and evidence-derived;
+- window, screen, viewport, and DPR consistency passes the approved matrix;
+- browser-observed route, WebRTC, and DNS evidence exists for supported routes;
+- unsafe, unsupported, modified, missing, and contradictory states fail closed;
+- a reviewed compatibility matrix exists;
+- the complete governance and technical validation matrix passes.
+
+The detailed closure requirements live in `docs/PHASE_04.md`.
 
 ## Phase status rules
 
