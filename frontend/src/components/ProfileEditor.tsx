@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { applyKernel, capabilityFor, defaultProfile } from "../lib/model";
+import {
+  applyKernel,
+  capabilityAllowsConfiguration,
+  capabilityFor,
+  capabilityLabel,
+  capabilitiesFor,
+  defaultProfile,
+  providerTrust,
+} from "../lib/model";
 import type {
   AdapterRecord,
+  CapabilityID,
   CredentialRecord,
   KernelRecord,
   Profile,
@@ -14,6 +23,12 @@ function requiredAdapterKind(raw?: string): AdapterRecord["kind"] | undefined {
     return "xray";
   if (["hysteria2", "tuic", "anytls"].includes(scheme)) return "sing-box";
   return undefined;
+}
+
+function preferredProvider(providers: ProviderDescriptor[]): ProviderDescriptor | undefined {
+  return providers.find((item) => item.id === "custom-chromium")
+    || providers.find((item) => item.id === "native-chromium")
+    || providers[0];
 }
 
 export function ProfileEditor({
@@ -35,8 +50,9 @@ export function ProfileEditor({
   onClose: () => void;
   onSave: (profile: Profile) => Promise<void>;
 }) {
+  const initialProvider = preferredProvider(providers);
   const [draft, setDraft] = useState<Profile>(() =>
-    profile ? structuredClone(profile) : defaultProfile(providers[0]),
+    profile ? structuredClone(profile) : defaultProfile(initialProvider),
   );
   const [tags, setTags] = useState("");
   const [saving, setSaving] = useState(false);
@@ -44,23 +60,35 @@ export function ProfileEditor({
   useEffect(() => {
     const next = profile
       ? structuredClone(profile)
-      : defaultProfile(providers[0]);
+      : defaultProfile(preferredProvider(providers));
     setDraft(next);
     setTags((next.tags || []).join(", "));
     setError("");
   }, [profile, providers, open]);
   const selectedProvider =
-    providers.find((item) => item.id === draft.kernel.provider) || providers[0];
-  const capability = useMemo(
-    () => capabilityFor(providers, draft.kernel.provider, draft.kernel.version),
+    providers.find((item) => item.id === draft.kernel.provider) || preferredProvider(providers);
+  const providerCapabilities = useMemo(
+    () => capabilitiesFor(providers, draft.kernel.provider, draft.kernel.version),
     [providers, draft.kernel.provider, draft.kernel.version],
   );
+  const trust = providerTrust(providers, draft.kernel.provider, draft.kernel.version);
+  const providerBlocked = trust === "disabled" || trust === "invalid";
   const verifiedKernels = kernels.filter((item) => item.status === "verified");
   const adapterKind = requiredAdapterKind(draft.proxy.url);
   const compatibleAdapters = adapters.filter(
     (item) => item.status === "verified" && item.kind === adapterKind,
   );
   if (!open) return null;
+
+  const declaration = (id: CapabilityID) => capabilityFor(
+    providers,
+    draft.kernel.provider,
+    draft.kernel.version,
+    id,
+  );
+  const canConfigure = (id: CapabilityID) => capabilityAllowsConfiguration(
+    declaration(id)?.status || "unsupported",
+  );
   const update = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
   const updateFingerprint = (
@@ -83,6 +111,10 @@ export function ProfileEditor({
     }));
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (providerBlocked) {
+      setError(`Provider ${draft.kernel.provider} is ${trust} and cannot be saved or launched.`);
+      return;
+    }
     setSaving(true);
     setError("");
     try {
@@ -169,10 +201,22 @@ export function ProfileEditor({
               <div>
                 <h3>Kernel contract</h3>
                 <p>
-                  Registered kernels are copied into managed storage and
-                  verified by SHA-256.
+                  Binary integrity, provider trust, and capability evidence are
+                  separate states.
                 </p>
               </div>
+            </div>
+            <div className="info-banner">
+              <strong>Provider trust: {trust}</strong>
+              <p>
+                {trust === "reviewed"
+                  ? "Reviewed trust applies only to the exact provider, version, platform, and binary identity."
+                  : trust === "custom"
+                    ? "Custom binaries may use generic launch settings but receive no reviewed fingerprint claims."
+                    : trust === "legacy"
+                      ? "This compatibility provider remains readable but former boolean claims are not treated as verified."
+                      : "This provider is blocked until its contract is repaired or replaced."}
+              </p>
             </div>
             <label>
               Registered kernel
@@ -198,7 +242,7 @@ export function ProfileEditor({
                   </option>
                 ))}
               </select>
-              <small>Modified or missing kernels cannot be selected.</small>
+              <small>Integrity verification alone does not create reviewed provider trust.</small>
             </label>
             <div className="form-grid two">
               <label>
@@ -210,7 +254,7 @@ export function ProfileEditor({
                     const provider =
                       providers.find(
                         (item) => item.id === event.target.value,
-                      ) || providers[0];
+                      ) || preferredProvider(providers);
                     const defaults = defaultProfile(provider);
                     setDraft((current) => ({
                       ...current,
@@ -253,19 +297,25 @@ export function ProfileEditor({
               />
             </label>
             <div className="capability-strip">
-              <span className={capability?.canSeedSurfaces ? "on" : ""}>
-                Seeded surfaces
-              </span>
-              <span className={capability?.canDisableSurfaces ? "on" : ""}>
-                Surface controls
-              </span>
-              <span className={capability?.canSetCustomGpu ? "on" : ""}>
-                Custom GPU
-              </span>
-              <span className={capability?.canSetHardwareThreads ? "on" : ""}>
-                CPU override
-              </span>
+              {([
+                ["surface-seed", "Seeded surfaces"],
+                ["surface-controls", "Surface controls"],
+                ["custom-gpu", "Custom GPU"],
+                ["hardware-concurrency", "CPU override"],
+              ] as const).map(([id, label]) => {
+                const item = declaration(id);
+                return <span
+                  key={id}
+                  className={capabilityAllowsConfiguration(item?.status || "unsupported") ? "on" : ""}
+                  title={item?.limitation || "No provider declaration"}
+                >
+                  {label}: {capabilityLabel(item?.status || "unsupported")}
+                </span>;
+              })}
             </div>
+            {providerCapabilities?.limitations?.length ? (
+              <small>{providerCapabilities.limitations.join(" · ")}</small>
+            ) : null}
           </section>
           <section className="form-section">
             <div className="section-heading">
@@ -273,8 +323,8 @@ export function ProfileEditor({
               <div>
                 <h3>Identity consistency</h3>
                 <p>
-                  Platform, locale, timezone and screen settings should describe
-                  one plausible device.
+                  Unsupported controls are read-only until a reviewed provider
+                  and real-browser evidence authorize them.
                 </p>
               </div>
             </div>
@@ -283,7 +333,7 @@ export function ProfileEditor({
                 Platform
                 <select
                   value={draft.fingerprint.platform}
-                  disabled={!capability?.canSetPlatform}
+                  disabled={!canConfigure("platform")}
                   onChange={(event) =>
                     updateFingerprint("platform", event.target.value)
                   }
@@ -297,7 +347,7 @@ export function ProfileEditor({
                 Brand
                 <select
                   value={draft.fingerprint.brand}
-                  disabled={!capability?.canSetBrand}
+                  disabled={!canConfigure("browser-brand")}
                   onChange={(event) =>
                     updateFingerprint("brand", event.target.value)
                   }
@@ -322,7 +372,7 @@ export function ProfileEditor({
                 Timezone
                 <input
                   value={draft.fingerprint.timezone}
-                  disabled={!capability?.canSetTimezone}
+                  disabled={!canConfigure("timezone")}
                   onChange={(event) =>
                     updateFingerprint("timezone", event.target.value)
                   }
@@ -361,7 +411,7 @@ export function ProfileEditor({
                   type="number"
                   min="2"
                   max="128"
-                  disabled={!capability?.canSetHardwareThreads}
+                  disabled={!canConfigure("hardware-concurrency")}
                   value={draft.fingerprint.hardwareConcurrency || 0}
                   onChange={(event) =>
                     updateFingerprint(
@@ -394,7 +444,7 @@ export function ProfileEditor({
                 >
                   <option value="auto">Auto-consistent</option>
                   <option value="native">Native host</option>
-                  {capability?.canSetCustomGpu && (
+                  {canConfigure("custom-gpu") && (
                     <option value="custom">Custom metadata</option>
                   )}
                 </select>
@@ -481,7 +531,7 @@ export function ProfileEditor({
           <button type="button" className="button secondary" onClick={onClose}>
             Cancel
           </button>
-          <button className="button primary" disabled={saving}>
+          <button className="button primary" disabled={saving || providerBlocked}>
             {saving ? "Saving…" : profile ? "Save changes" : "Create profile"}
           </button>
         </footer>
