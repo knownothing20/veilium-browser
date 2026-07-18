@@ -166,48 +166,23 @@ jobs:
           echo "path=$chromium_path" >> "$GITHUB_OUTPUT"
           "$chromium_path" --version
 
-      - name: Temporarily isolate hosted Chromium managed policies
-        id: chromium-policy
+      - name: Build static evidence integration test
+        shell: bash
+        run: CGO_ENABLED=0 go test -c -o "$RUNNER_TEMP/veilium-evidence.test" ./internal/evidence
+
+      - name: Exercise real-browser evidence collector in clean Linux container
         shell: bash
         run: |
-          backup="$RUNNER_TEMP/veilium-chromium-policy-backup"
-          mkdir -p "$backup"
-          index=0
-          for directory in /etc/chromium/policies/managed /etc/opt/chrome/policies/managed; do
-            if [ ! -d "$directory" ]; then
-              continue
-            fi
-            while IFS= read -r -d '' policy; do
-              index=$((index + 1))
-              printf '%s' "$policy" > "$backup/$index.path"
-              sudo mv "$policy" "$backup/$index.json"
-            done < <(sudo find "$directory" -maxdepth 1 -type f -name '*.json' -print0)
-          done
-          echo "backup=$backup" >> "$GITHUB_OUTPUT"
-          echo "Temporarily isolated $index managed policy file(s) for the controlled loopback-only browser test."
-
-      - name: Exercise real-browser evidence collector
-        env:
-          VEILIUM_CHROMIUM_BINARY: ${{ steps.chromium.outputs.path }}
-        run: go test -v -run '^TestRealChromiumEvidenceCollector$' ./internal/evidence
-
-      - name: Restore hosted Chromium managed policies
-        if: always()
-        shell: bash
-        env:
-          POLICY_BACKUP: ${{ steps.chromium-policy.outputs.backup }}
-        run: |
-          if [ -z "$POLICY_BACKUP" ] || [ ! -d "$POLICY_BACKUP" ]; then
-            exit 0
-          fi
-          shopt -s nullglob
-          for path_file in "$POLICY_BACKUP"/*.path; do
-            original=$(cat "$path_file")
-            number=$(basename "$path_file" .path)
-            sudo mkdir -p "$(dirname "$original")"
-            sudo mv "$POLICY_BACKUP/$number.json" "$original"
-          done
-          rm -rf "$POLICY_BACKUP"
+          docker run --rm \
+            -v "$RUNNER_TEMP/veilium-evidence.test:/tmp/veilium-evidence.test:ro" \
+            debian:13-slim \
+            bash -lc '
+              set -e
+              apt-get update >/dev/null
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends chromium ca-certificates >/dev/null
+              chromium --version
+              VEILIUM_CHROMIUM_BINARY=/usr/bin/chromium /tmp/veilium-evidence.test -test.v -test.run "^TestRealChromiumEvidenceCollector$"
+            '
 
       - name: Exercise Chromium through both official adapters
         run: |
