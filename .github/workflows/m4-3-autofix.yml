@@ -1,6 +1,8 @@
 name: M4.3 Integration Autofix
 
 on:
+  push:
+    branches: [agent/m4-3-identity-window-consistency]
   pull_request:
     branches: [main]
 
@@ -9,14 +11,14 @@ permissions:
 
 jobs:
   autofix:
-    if: github.head_ref == 'agent/m4-3-identity-window-consistency'
+    if: github.ref_name == 'agent/m4-3-identity-window-consistency' || github.head_ref == 'agent/m4-3-identity-window-consistency'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: agent/m4-3-identity-window-consistency
+          repository: knownothing20/veilium-browser
           fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
@@ -30,8 +32,7 @@ jobs:
 
           manager = Path('internal/evidence/manager.go')
           text = manager.read_text()
-          import_line = '"github.com/knownothing20/veilium-browser/internal/consistency"\n\t'
-          if import_line not in text:
+          if '"github.com/knownothing20/veilium-browser/internal/consistency"' not in text:
               text = text.replace(
                   '"github.com/knownothing20/veilium-browser/internal/domain"',
                   '"github.com/knownothing20/veilium-browser/internal/consistency"\n\t"github.com/knownothing20/veilium-browser/internal/domain"',
@@ -163,4 +164,4 @@ jobs:
             internal/fingerprint/args.go \
             internal/launch/planner.go
           git commit -m 'feat: integrate M4.3 consistency preflight and freshness'
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
+          git push origin HEAD:agent/m4-3-identity-window-consistency
