@@ -203,18 +203,36 @@ export interface Profile {
   updatedAt?: string
 }
 
+export type ProviderTrustStatus = 'reviewed' | 'custom' | 'legacy' | 'disabled' | 'invalid'
+export type CapabilityStatus = 'verified' | 'partial' | 'unsupported' | 'unverified' | 'failed'
+export type CapabilityID =
+  | 'platform'
+  | 'browser-brand'
+  | 'timezone'
+  | 'surface-seed'
+  | 'surface-controls'
+  | 'hardware-concurrency'
+  | 'device-memory'
+  | 'custom-gpu'
+  | 'webrtc-policy'
+
+export interface CapabilityDeclaration {
+  id: CapabilityID
+  status: CapabilityStatus
+  evidenceRequired: boolean
+  minMajor?: number
+  maxMajor?: number
+  limitation?: string
+}
+
 export interface Capabilities {
+  schemaVersion: number
   provider: string
+  revision: number
+  trustStatus: ProviderTrustStatus
   majorVersion: number
-  canSetPlatform: boolean
-  canSetBrand: boolean
-  canSetTimezone: boolean
-  canSeedSurfaces: boolean
-  canDisableSurfaces: boolean
-  canSetHardwareThreads: boolean
-  canSetDeviceMemory: boolean
-  canSetCustomGpu: boolean
-  supportsProxyOnlyWebRtc: boolean
+  capabilities: Partial<Record<CapabilityID, CapabilityDeclaration>>
+  limitations?: string[]
 }
 
 export interface ProviderDescriptor {
