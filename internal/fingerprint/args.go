@@ -18,7 +18,7 @@ func BuildArgs(profile domain.Profile) ([]string, error) {
 		fmt.Sprintf("--window-size=%d,%d", fp.ScreenWidth, fp.ScreenHeight),
 	}
 
-	if fp.Seed != "" || usesSeededSurfaces(fp) {
+	if usesSeededSurfaces(fp) {
 		if err := requireVerifiedCapability(capabilities, CapabilitySurfaceSeed, "seeded fingerprint surfaces"); err != nil {
 			return nil, err
 		}
