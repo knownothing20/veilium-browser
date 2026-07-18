@@ -23,7 +23,11 @@ jobs:
             internal/fingerprint/args.go \
             internal/fingerprint/validator.go \
             internal/fingerprint/catalog_test.go \
-            internal/fingerprint/validator_test.go
+            internal/fingerprint/validator_test.go \
+            internal/fingerprint/replacement.go \
+            internal/fingerprint/replacement_test.go \
+            internal/kernel/identity.go \
+            internal/kernel/identity_test.go
       - name: Upload formatted files
         uses: actions/upload-artifact@v4
         with:
@@ -34,4 +38,8 @@ jobs:
             internal/fingerprint/validator.go
             internal/fingerprint/catalog_test.go
             internal/fingerprint/validator_test.go
+            internal/fingerprint/replacement.go
+            internal/fingerprint/replacement_test.go
+            internal/kernel/identity.go
+            internal/kernel/identity_test.go
           retention-days: 1
