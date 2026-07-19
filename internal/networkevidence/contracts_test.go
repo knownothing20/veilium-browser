@@ -8,6 +8,7 @@ import (
 
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/fingerprint"
+	"github.com/knownothing20/veilium-browser/internal/kernelrelease"
 )
 
 func TestProbeSetRequiresExplicitSelfHostableSecureDefinitions(t *testing.T) {
@@ -96,6 +97,44 @@ func TestCompatibilityCannotPromoteCustomProviderToVerified(t *testing.T) {
 	entry.ProviderTrust = fingerprint.TrustCustom
 	if err := entry.Validate(); err == nil || !strings.Contains(err.Error(), "reviewed Provider") {
 		t.Fatalf("expected custom trust rejection, got %v", err)
+	}
+}
+
+func TestOfficialReviewedCompatibilityRequiresExactEmbeddedCombination(t *testing.T) {
+	releases, err := kernelrelease.Releases()
+	if err != nil || len(releases) != 1 {
+		t.Fatalf("load exact reviewed Chromium release: %#v %v", releases, err)
+	}
+	release := releases[0]
+	entry := validCompatibilityEntry(time.Now().UTC())
+	entry.ProviderID = release.ProviderID
+	entry.ProviderRevision = release.ProviderRevision
+	entry.ProviderTrust = fingerprint.TrustReviewed
+	entry.BrowserVersion = release.BrowserVersion
+	entry.OperatingSystem = release.Platform
+	entry.Architecture = release.Arch
+	if err := entry.Validate(); err != nil {
+		t.Fatalf("exact reviewed Chromium combination rejected: %v", err)
+	}
+
+	tests := []struct {
+		name   string
+		mutate func(*CompatibilityEntry)
+	}{
+		{name: "provider revision", mutate: func(item *CompatibilityEntry) { item.ProviderRevision++ }},
+		{name: "browser version", mutate: func(item *CompatibilityEntry) { item.BrowserVersion = "152.0.7960.1" }},
+		{name: "operating system", mutate: func(item *CompatibilityEntry) { item.OperatingSystem = "linux" }},
+		{name: "architecture", mutate: func(item *CompatibilityEntry) { item.Architecture = "arm64" }},
+		{name: "provider trust", mutate: func(item *CompatibilityEntry) { item.ProviderTrust = fingerprint.TrustCustom }},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			candidate := entry
+			test.mutate(&candidate)
+			if err := candidate.Validate(); err == nil || !strings.Contains(err.Error(), "exact embedded release") {
+				t.Fatalf("expected exact reviewed Chromium scope rejection, got %v", err)
+			}
+		})
 	}
 }
 

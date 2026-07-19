@@ -3,6 +3,7 @@ package evidence
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -20,6 +21,13 @@ import (
 
 func TestRealChromiumEvidenceCollector(t *testing.T) {
 	binary := strings.TrimSpace(os.Getenv("VEILIUM_CHROMIUM_BINARY"))
+	diagnosticStage := "validate Chromium binary"
+	var logs bytes.Buffer
+	defer func() {
+		if t.Failed() {
+			writeRealBrowserCIDiagnostic(binary, diagnosticStage, logs.String())
+		}
+	}()
 	if binary == "" {
 		t.Skip("VEILIUM_CHROMIUM_BINARY is not configured")
 	}
@@ -62,9 +70,9 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	command := exec.CommandContext(ctx, binary, args...)
-	var logs bytes.Buffer
 	command.Stdout = &logs
 	command.Stderr = &logs
+	diagnosticStage = "start Chromium"
 	if err := command.Start(); err != nil {
 		t.Fatalf("start Chromium: %v", err)
 	}
@@ -81,6 +89,7 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 		}
 	}()
 
+	diagnosticStage = "discover Chromium CDP port"
 	portContext, portCancel := context.WithTimeout(ctx, 30*time.Second)
 	port, err := discovery.Wait(portContext, userDataDir)
 	portCancel()
@@ -88,6 +97,7 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 		t.Fatalf("discover Chromium CDP port: %v\n%s", err, boundedLog(logs.String()))
 	}
 
+	diagnosticStage = "read Chromium Browser WebSocket"
 	prober := supervisor.HTTPProber{
 		Client:   &http.Client{Timeout: 2 * time.Second, Transport: &http.Transport{Proxy: nil}},
 		Interval: 50 * time.Millisecond,
@@ -97,6 +107,7 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 		t.Fatalf("read Chromium Browser WebSocket: %v\n%s", err, boundedLog(logs.String()))
 	}
 
+	diagnosticStage = "start controlled evidence collector"
 	collector, err := StartCollector(CollectorOptions{})
 	if err != nil {
 		t.Fatal(err)
@@ -110,6 +121,7 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 		}
 	}()
 
+	diagnosticStage = "open controlled Chromium target"
 	targetClient := NewTargetClient()
 	target, err := targetClient.Open(ctx, port, collector.URL())
 	if err != nil {
@@ -121,6 +133,7 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 		closeCancel()
 	}()
 
+	diagnosticStage = "apply real Chromium managed window"
 	windowPlan := domain.WindowPlan{Width: 1024, Height: 768, DeviceScaleFactor: 1, Source: domain.WindowSourceExplicit}
 	windowState, err := windowcontrol.New().Apply(ctx, port, version.WebSocketDebuggerURL, windowPlan)
 	if err != nil {
@@ -130,16 +143,19 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 		t.Fatalf("unexpected real Chromium window state: %#v", windowState)
 	}
 
+	diagnosticStage = "wait for real-browser evidence"
 	submissionContext, submissionCancel := context.WithTimeout(ctx, 15*time.Second)
 	submission, err := collector.Wait(submissionContext)
 	submissionCancel()
 	if err != nil {
 		t.Fatalf("wait for real-browser evidence: %v\n%s", err, boundedLog(logs.String()))
 	}
+	diagnosticStage = "validate real-browser evidence"
 	if err := submission.Validate(); err != nil {
 		t.Fatalf("validate real-browser evidence: %v", err)
 	}
 
+	diagnosticStage = "validate required evidence contexts"
 	contexts := make(map[BrowserContext]BrowserSnapshot, len(submission.Contexts))
 	for _, snapshot := range submission.Contexts {
 		contexts[snapshot.Context] = snapshot
@@ -154,6 +170,7 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 		}
 	}
 
+	diagnosticStage = "close evidence collector"
 	closeContext, closeCancel := context.WithTimeout(context.Background(), 2*time.Second)
 	if err := collector.Close(closeContext); err != nil {
 		closeCancel()
@@ -161,6 +178,26 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 	}
 	closeCancel()
 	collectorClosed = true
+}
+
+func writeRealBrowserCIDiagnostic(binary, stage, browserLog string) {
+	if runtime.GOOS != "windows" {
+		return
+	}
+	runnerTemp := strings.TrimSpace(os.Getenv("RUNNER_TEMP"))
+	if runnerTemp == "" {
+		return
+	}
+	payload := struct {
+		Binary     string `json:"binary"`
+		Stage      string `json:"stage"`
+		BrowserLog string `json:"browserLog"`
+	}{Binary: binary, Stage: stage, BrowserLog: boundedLog(browserLog)}
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return
+	}
+	_ = os.WriteFile(filepath.Join(runnerTemp, "reviewed-chromium-evidence-packet.json"), data, 0o600)
 }
 
 func withinWindowTolerance(observed, expected int) bool {

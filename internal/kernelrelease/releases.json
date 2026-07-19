@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "releases": [
+    {
+      "providerId": "official-chromium-snapshot-win64",
+      "providerRevision": 1,
+      "name": "Official Chromium Snapshot 152 (Windows x64)",
+      "browserVersion": "152.0.7960.0",
+      "snapshotRevision": 1664436,
+      "sourceProject": "The Chromium Project",
+      "sourcePageUrl": "https://www.chromium.org/getting-involved/download-chromium/",
+      "licenseSpdx": "BSD-3-Clause",
+      "licenseUrl": "https://chromium.googlesource.com/chromium/src/+/main/LICENSE",
+      "thirdPartyNoticesUrl": "chrome://credits/",
+      "reviewedAt": "2026-07-19T10:26:54Z",
+      "platform": "windows",
+      "arch": "amd64",
+      "archiveName": "chrome-win.zip",
+      "archiveUrl": "https://commondatastorage.googleapis.com/chromium-browser-snapshots/Win_x64/1664436/chrome-win.zip",
+      "archiveSizeBytes": 343585547,
+      "archiveSha256": "d224019b7cbc115951b0f5dce8cf232c37244881a3eb969c010e457aa369332f",
+      "archiveEntryCount": 261,
+      "archiveRoot": "chrome-win",
+      "executablePath": "chrome-win/chrome.exe",
+      "executableSizeBytes": 2926080,
+      "executableSha256": "5093988c8fdf969494f921deb32c177dbe5ed88cc101346852d93e760041e5c9",
+      "packageFileCount": 261,
+      "expandedSizeBytes": 814120936,
+      "packageTreeSha256": "312cb62d6bfab56ecfa52c4e8047dd33c05a1c17c7e44bc2afd9be436854a8dc",
+      "limitations": [
+        "Chromium snapshots are best-effort builds from arbitrary source revisions and do not necessarily map to user-facing stable Chrome releases.",
+        "Reviewed status applies only to this exact revision, Windows amd64 archive, extracted package tree, executable identity, and recorded Evidence chain.",
+        "The snapshot archive does not include a standalone license file; installation requires an explicit Chromium and third-party notice acknowledgement and Veilium does not bundle the archive.",
+        "Stock Chromium advanced fingerprint overrides remain unsupported unless the exact capability is separately demonstrated."
+      ]
+    }
+  ]
+}

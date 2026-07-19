@@ -27,16 +27,22 @@ const (
 var ErrNotFound = errors.New("kernel not found")
 
 type Record struct {
-	ID         string    `json:"id"`
-	Name       string    `json:"name"`
-	Provider   string    `json:"provider"`
-	Version    string    `json:"version"`
-	Executable string    `json:"executable"`
-	SHA256     string    `json:"sha256"`
-	SizeBytes  int64     `json:"sizeBytes"`
-	Status     string    `json:"status"`
-	ImportedAt time.Time `json:"importedAt"`
-	VerifiedAt time.Time `json:"verifiedAt"`
+	ID                string    `json:"id"`
+	Name              string    `json:"name"`
+	Provider          string    `json:"provider"`
+	Version           string    `json:"version"`
+	Executable        string    `json:"executable"`
+	SHA256            string    `json:"sha256"`
+	SizeBytes         int64     `json:"sizeBytes"`
+	Status            string    `json:"status"`
+	ImportedAt        time.Time `json:"importedAt"`
+	VerifiedAt        time.Time `json:"verifiedAt"`
+	PackageRoot       string    `json:"packageRoot,omitempty"`
+	PackageTreeSHA256 string    `json:"packageTreeSha256,omitempty"`
+	PackageFileCount  int       `json:"packageFileCount,omitempty"`
+	PackageSizeBytes  int64     `json:"packageSizeBytes,omitempty"`
+	SnapshotRevision  int64     `json:"snapshotRevision,omitempty"`
+	ArchiveSHA256     string    `json:"archiveSha256,omitempty"`
 }
 
 type ImportRequest struct {
@@ -102,6 +108,9 @@ func (s *Store) Import(request ImportRequest) (Record, error) {
 	capabilities, err := fingerprint.For(strings.TrimSpace(request.Provider), strings.TrimSpace(request.Version))
 	if err != nil {
 		return Record{}, err
+	}
+	if capabilities.IsReviewed() {
+		return Record{}, fmt.Errorf("reviewed kernel providers require the pinned package installer")
 	}
 
 	sourceInfo, err := os.Lstat(sourcePath)
@@ -220,6 +229,15 @@ func (s *Store) Verify(id string) (Record, error) {
 	record.VerifiedAt = time.Now().UTC()
 	if status == StatusVerified && (digest != record.SHA256 || size != record.SizeBytes) {
 		record.Status = StatusModified
+	}
+	if record.Status == StatusVerified && record.PackageRoot != "" {
+		packageStatus, packageErr := verifyPackageRecord(record, s.root)
+		if packageErr != nil {
+			return Record{}, packageErr
+		}
+		if packageStatus != StatusVerified {
+			record.Status = packageStatus
+		}
 	}
 	s.items[id] = record
 	if err := s.persistLocked(); err != nil {

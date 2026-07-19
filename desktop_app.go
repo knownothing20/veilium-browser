@@ -12,6 +12,7 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/fingerprint"
 	"github.com/knownothing20/veilium-browser/internal/kernel"
+	"github.com/knownothing20/veilium-browser/internal/kernelinstaller"
 	"github.com/knownothing20/veilium-browser/internal/supervisor"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -67,6 +68,11 @@ func (a *DesktopApp) ImportKernel(request kernel.ImportRequest) (kernel.Record, 
 }
 func (a *DesktopApp) VerifyKernel(id string) (kernel.Record, error) {
 	return a.service.VerifyKernel(id)
+}
+func (a *DesktopApp) InstallOfficialKernel(request kernelinstaller.Request) (kernel.Record, error) {
+	ctx, cancel := context.WithTimeout(a.runtimeContext(), 12*time.Minute)
+	defer cancel()
+	return a.service.InstallOfficialKernel(ctx, request)
 }
 func (a *DesktopApp) DeleteKernel(id string) error { return a.service.DeleteKernel(id) }
 func (a *DesktopApp) PickAdapterExecutable() (string, error) {

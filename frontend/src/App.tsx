@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { AdapterRegistry } from './components/AdapterRegistry'
 import { CredentialVault } from './components/CredentialVault'
 import { MetricCard } from './components/MetricCard'
+import { OfficialKernelCard } from './components/OfficialKernelCard'
 import { PlanDrawer } from './components/PlanDrawer'
 import { ProfileEditor } from './components/ProfileEditor'
 import { ProfileTable } from './components/ProfileTable'
@@ -18,6 +19,7 @@ import type {
   Bootstrap,
   CredentialSaveRequest,
   KernelImportRequest,
+  KernelInstallRequest,
   KernelRecord,
   LaunchPlan,
   Profile,
@@ -33,6 +35,7 @@ const emptyBootstrap: Bootstrap = {
   credentials: [],
   credentialProvider: 'Operating-system keyring',
   adapterPins: [],
+  kernelPins: [],
   runtimePlatform: 'browser',
   runtimeArch: 'unknown',
 }
@@ -54,6 +57,7 @@ export default function App() {
   const [runtimeError, setRuntimeError] = useState('')
   const [kernelBusy, setKernelBusy] = useState(false)
   const [kernelError, setKernelError] = useState('')
+  const [kernelLicenseAccepted, setKernelLicenseAccepted] = useState(false)
   const [kernelRequest, setKernelRequest] = useState<KernelImportRequest>({
     name: '',
     provider: 'custom-chromium',
@@ -137,6 +141,14 @@ export default function App() {
     catch (reason) { setKernelError(errorText(reason)) }
     finally { setKernelBusy(false) }
   }
+
+  async function installOfficialKernel(request: KernelInstallRequest) {
+    setKernelBusy(true); setKernelError('')
+    try { await backend.installOfficialKernel(request); setKernelLicenseAccepted(false); await refresh() }
+    catch (reason) { setKernelError(errorText(reason)) }
+    finally { setKernelBusy(false) }
+  }
+
   async function verifyKernel(record: KernelRecord) { setKernelBusy(true); try { await backend.verifyKernel(record.id); await refresh() } catch (reason) { setKernelError(errorText(reason)) } finally { setKernelBusy(false) } }
   async function removeKernel(record: KernelRecord) { if (!window.confirm(`Remove “${record.name}”?`)) return; setKernelBusy(true); try { await backend.deleteKernel(record.id); await refresh() } catch (reason) { setKernelError(errorText(reason)) } finally { setKernelBusy(false) } }
 
@@ -145,7 +157,6 @@ export default function App() {
   async function verifyAdapter(record: AdapterRecord) { setAdapterBusy(true); try { await backend.verifyAdapter(record.id); await refresh() } catch (reason) { setAdapterError(errorText(reason)) } finally { setAdapterBusy(false) } }
   async function validateAdapter(record: AdapterRecord) { setAdapterBusy(true); setAdapterError(''); try { const report = await backend.validateAdapter(record.id); setAdapterReports((current) => ({ ...current, [record.id]: report })); await refresh() } catch (reason) { setAdapterError(errorText(reason)) } finally { setAdapterBusy(false) } }
   async function installOfficialAdapter(request: AdapterInstallRequest) { setAdapterBusy(true); setAdapterError(''); try { await backend.installOfficialAdapter(request); await refresh() } catch (reason) { setAdapterError(errorText(reason)) } finally { setAdapterBusy(false) } }
-
   async function removeAdapter(record: AdapterRecord) { if (!window.confirm(`Remove “${record.name}”?`)) return; setAdapterBusy(true); try { await backend.deleteAdapter(record.id); await refresh() } catch (reason) { setAdapterError(errorText(reason)) } finally { setAdapterBusy(false) } }
 
   const table = (profiles: Profile[]) => <ProfileTable
@@ -189,8 +200,41 @@ export default function App() {
   }
 
   function kernels() {
-    const provider = data.providers.find((item) => item.id === kernelRequest.provider)
-    return <><Heading eyebrow="Verified local binaries" title="Kernel registry" description="Import Chromium into private managed storage with an explicit provider contract." /><section className="panel kernel-import"><div className="panel-heading"><div><h2>Register local kernel</h2><p>Symbolic links, directories and empty files are rejected.</p></div></div><div className="kernel-import-grid"><label>Name<input value={kernelRequest.name} onChange={(event) => setKernelRequest((current) => ({ ...current, name: event.target.value }))} /></label><label>Provider<select value={kernelRequest.provider} onChange={(event) => { const next = data.providers.find((item) => item.id === event.target.value); setKernelRequest((current) => ({ ...current, provider: event.target.value, version: next?.versions[0] || '' })) }}>{data.providers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>Version<select value={kernelRequest.version} onChange={(event) => setKernelRequest((current) => ({ ...current, version: event.target.value }))}>{provider?.versions.map((version) => <option key={version}>{version}</option>)}</select></label><label className="kernel-path">Executable path<div className="path-picker"><input readOnly value={kernelRequest.sourcePath} /><button type="button" className="button secondary" onClick={() => void pickKernel()} disabled={!backend.isNative()}>Browse</button></div></label><button className="button primary kernel-import-button" onClick={() => void importKernel()} disabled={kernelBusy || !backend.isNative() || !kernelRequest.name.trim() || !kernelRequest.sourcePath.trim()}>{kernelBusy ? 'Working…' : 'Import and hash'}</button></div>{kernelError && <div className="form-error">{kernelError}</div>}</section><div className="kernel-registry-list">{data.kernels.length === 0 ? <Empty icon="⬡" title="No registered kernels" detail="Import a Chromium executable to create the first managed record." /> : data.kernels.map((record) => <article className="kernel-record" key={record.id}><div className="kernel-record-head"><div className="kernel-symbol">⬡</div><div><h2>{record.name}</h2><code>{record.provider} · Chromium {record.version.split('.')[0]}</code></div><span className={`kernel-status ${record.status}`}>{record.status}</span></div><dl><div><dt>SHA-256</dt><dd>{record.sha256.slice(0, 16)}…{record.sha256.slice(-8)}</dd></div><div><dt>Size</dt><dd>{(record.sizeBytes / 1024 / 1024).toFixed(1)} MB</dd></div><div><dt>Managed path</dt><dd title={record.executable}>{record.executable}</dd></div></dl><div className="kernel-actions"><button className="button secondary" onClick={() => void verifyKernel(record)} disabled={kernelBusy}>Verify</button><button className="button secondary danger-text" onClick={() => void removeKernel(record)} disabled={kernelBusy}>Remove</button></div></article>)}</div></>
+    const pin = data.kernelPins[0]
+    const importProviders = data.providers.filter((item) => item.id !== pin?.providerId)
+    const provider = importProviders.find((item) => item.id === kernelRequest.provider)
+    return <>
+      <Heading eyebrow="Verified local binaries" title="Kernel registry" description="Install one exact reviewed Chromium package or import a custom local executable." />
+      <OfficialKernelCard
+        pin={pin}
+        records={data.kernels}
+        runtimePlatform={data.runtimePlatform}
+        runtimeArch={data.runtimeArch}
+        nativeMode={backend.isNative()}
+        busy={kernelBusy}
+        accepted={kernelLicenseAccepted}
+        onAcceptedChange={setKernelLicenseAccepted}
+        onInstall={(request) => void installOfficialKernel(request)}
+      />
+      <section className="panel kernel-import">
+        <div className="panel-heading"><div><h2>Register custom local Chromium</h2><p>Custom and legacy files remain unverified and cannot inherit the reviewed package claim.</p></div></div>
+        <div className="kernel-import-grid">
+          <label>Name<input value={kernelRequest.name} onChange={(event) => setKernelRequest((current) => ({ ...current, name: event.target.value }))} /></label>
+          <label>Provider<select value={kernelRequest.provider} onChange={(event) => { const next = importProviders.find((item) => item.id === event.target.value); setKernelRequest((current) => ({ ...current, provider: event.target.value, version: next?.versions[0] || '' })) }}>{importProviders.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          <label>Version<select value={kernelRequest.version} onChange={(event) => setKernelRequest((current) => ({ ...current, version: event.target.value }))}>{provider?.versions.map((version) => <option key={version}>{version}</option>)}</select></label>
+          <label className="kernel-path">Executable path<div className="path-picker"><input readOnly value={kernelRequest.sourcePath} /><button type="button" className="button secondary" onClick={() => void pickKernel()} disabled={!backend.isNative()}>Browse</button></div></label>
+          <button className="button primary kernel-import-button" onClick={() => void importKernel()} disabled={kernelBusy || !backend.isNative() || !kernelRequest.name.trim() || !kernelRequest.sourcePath.trim()}>{kernelBusy ? 'Working…' : 'Import and hash'}</button>
+        </div>
+        {kernelError && <div className="form-error">{kernelError}</div>}
+      </section>
+      <div className="kernel-registry-list">
+        {data.kernels.length === 0 ? <Empty icon="⬡" title="No registered kernels" detail="Install the reviewed package or import a custom Chromium executable." /> : data.kernels.map((record) => <article className="kernel-record" key={record.id}>
+          <div className="kernel-record-head"><div className="kernel-symbol">⬡</div><div><h2>{record.name}</h2><code>{record.provider} · Chromium {record.version}</code></div><span className={`kernel-status ${record.status}`}>{record.status}</span></div>
+          <dl><div><dt>Executable SHA-256</dt><dd>{record.sha256.slice(0, 16)}…{record.sha256.slice(-8)}</dd></div>{record.packageTreeSha256 && <div><dt>Package tree</dt><dd>{record.packageFileCount} files · {record.packageTreeSha256.slice(0, 16)}…</dd></div>}<div><dt>Size</dt><dd>{(record.sizeBytes / 1024 / 1024).toFixed(1)} MB</dd></div><div><dt>Managed path</dt><dd title={record.executable}>{record.executable}</dd></div></dl>
+          <div className="kernel-actions"><button className="button secondary" onClick={() => void verifyKernel(record)} disabled={kernelBusy}>Verify</button><button className="button secondary danger-text" onClick={() => void removeKernel(record)} disabled={kernelBusy}>Remove</button></div>
+        </article>)}
+      </div>
+    </>
   }
 
   const adapters = () => <><Heading eyebrow="Managed external runtimes" title="Proxy adapters" description="Register local Xray or sing-box binaries, identify exact pinned official releases, and run their native configuration checks before production use." /><AdapterRegistry records={data.adapters} pins={data.adapterPins} reports={adapterReports} runtimePlatform={data.runtimePlatform} runtimeArch={data.runtimeArch} nativeMode={backend.isNative()} busy={adapterBusy} error={adapterError} onPick={pickAdapter} onImport={importAdapter} onInstall={installOfficialAdapter} onVerify={verifyAdapter} onValidate={validateAdapter} onDelete={removeAdapter} /></>
