@@ -79,9 +79,9 @@ func TestBrowserExecutorReturnsValidatedObservations(t *testing.T) {
 	}
 	result, err := executor.Execute(context.Background(), ExecutionRequest{
 		ProfileID: "profile-a",
-		Session: supervisor.Session{ProfileID: "profile-a", State: supervisor.StateReady, CDPPort: 9222, WebSocketDebuggerURL: "ws://127.0.0.1:9222/devtools/browser/test"},
-		Route:    RouteIdentity{Kind: RouteDirect, Scheme: "direct", Digest: strings.Repeat("a", 64)},
-		ProbeSet: set,
+		Session:   supervisor.Session{ProfileID: "profile-a", State: supervisor.StateReady, CDPPort: 9222, WebSocketDebuggerURL: "ws://127.0.0.1:9222/devtools/browser/test"},
+		Route:     RouteIdentity{Kind: RouteDirect, Scheme: "direct", Digest: strings.Repeat("a", 64)},
+		ProbeSet:  set,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -118,7 +118,7 @@ func TestBrowserExecutorRejectsSubmissionOutsideProbeSet(t *testing.T) {
 		url: "http://127.0.0.1:45678/run/token",
 		submission: BrowserSubmission{
 			SchemaVersion: BrowserSubmissionSchemaVersion,
-			Observations: []BrowserObservation{{ProbeID: "unknown", ProbeRevision: 1, ProbeKind: ProbeExitIP, Status: ObservationPassed, Values: []string{"203.0.113.8"}}},
+			Observations:  []BrowserObservation{{ProbeID: "unknown", ProbeRevision: 1, ProbeKind: ProbeExitIP, Status: ObservationPassed, Values: []string{"203.0.113.8"}}},
 		},
 	}
 	target := &fakeBrowserTargetController{target: evidence.Target{ID: "target-a", Type: "page"}}
@@ -144,7 +144,7 @@ func TestBrowserExecutorReportsCleanupLimitations(t *testing.T) {
 		closeErr: errors.New("collector close failed"),
 		submission: BrowserSubmission{
 			SchemaVersion: BrowserSubmissionSchemaVersion,
-			Observations: []BrowserObservation{{ProbeID: "exit", ProbeRevision: 1, ProbeKind: ProbeExitIP, Status: ObservationPassed, Values: []string{"203.0.113.8"}}},
+			Observations:  []BrowserObservation{{ProbeID: "exit", ProbeRevision: 1, ProbeKind: ProbeExitIP, Status: ObservationPassed, Values: []string{"203.0.113.8"}}},
 		},
 	}
 	set := ProbeSet{SchemaVersion: ProbeSchemaVersion, ID: "exit-only", Revision: 1, Definitions: []ProbeDefinition{{

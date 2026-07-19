@@ -15,13 +15,13 @@ type BrowserSubmission struct {
 }
 
 type BrowserObservation struct {
-	ProbeID      string            `json:"probeId"`
-	ProbeRevision int              `json:"probeRevision"`
-	ProbeKind    ProbeKind         `json:"probeKind"`
-	Status       ObservationStatus `json:"status"`
-	Values       []string          `json:"values,omitempty"`
-	ReasonCode   string            `json:"reasonCode,omitempty"`
-	Detail       string            `json:"detail,omitempty"`
+	ProbeID       string            `json:"probeId"`
+	ProbeRevision int               `json:"probeRevision"`
+	ProbeKind     ProbeKind         `json:"probeKind"`
+	Status        ObservationStatus `json:"status"`
+	Values        []string          `json:"values,omitempty"`
+	ReasonCode    string            `json:"reasonCode,omitempty"`
+	Detail        string            `json:"detail,omitempty"`
 }
 
 func (submission BrowserSubmission) Validate(set ProbeSet) error {
