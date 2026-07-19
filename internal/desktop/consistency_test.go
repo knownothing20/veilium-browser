@@ -35,7 +35,7 @@ func TestProfileConsistencyDerivesDegradedCustomHealth(t *testing.T) {
 		t.Fatal(err)
 	}
 	created, err := service.CreateProfile(domain.Profile{
-		Name: "Consistency Profile",
+		Name:   "Consistency Profile",
 		Kernel: domain.KernelRef{ID: record.ID},
 		Fingerprint: domain.FingerprintConfig{
 			Platform: runtime.GOOS, Brand: "Chromium", Language: "en-US", Timezone: "UTC",
