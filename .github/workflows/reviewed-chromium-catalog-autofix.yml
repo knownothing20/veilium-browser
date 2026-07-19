@@ -1,0 +1,59 @@
+name: Reviewed Chromium Catalog Autofix
+
+on:
+  push:
+    branches: [agent/reviewed-official-chromium-provider]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-test:
+    if: github.ref_name == 'agent/reviewed-official-chromium-provider' || github.head_ref == 'agent/reviewed-official-chromium-provider'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/reviewed-official-chromium-provider
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Register exact reviewed Provider
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('internal/fingerprint/catalog.go')
+          text = path.read_text()
+          old = '''definitions := []ProviderDefinition{\n\t\tcustomDefinition(),'''
+          new = '''definitions := []ProviderDefinition{\n\t\tofficialDefinition(),\n\t\tcustomDefinition(),'''
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('Provider registration marker not found')
+              text = text.replace(old, new, 1)
+          old = '''\tfor _, supported := range definition.Versions {\n\t\tif supported == version {\n\t\t\treturn true\n\t\t}\n\t\tsupportedMajor, err := majorVersion(supported)\n\t\tif err == nil && supportedMajor == major {\n\t\t\treturn true\n\t\t}\n\t}\n\treturn definition.TrustStatus != TrustReviewed\n'''
+          new = '''\tfor _, supported := range definition.Versions {\n\t\tif supported == version {\n\t\t\treturn true\n\t\t}\n\t}\n\tif definition.TrustStatus == TrustReviewed {\n\t\treturn false\n\t}\n\treturn true\n'''
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('Reviewed version marker not found')
+              text = text.replace(old, new, 1)
+          path.write_text(text)
+          PY
+          gofmt -w internal/fingerprint/catalog.go internal/fingerprint/official.go internal/fingerprint/official_test.go
+      - name: Test exact Provider contract
+        run: go test ./internal/kernelrelease ./internal/fingerprint
+      - name: Commit scoped catalog change
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'veilium-governance-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add internal/fingerprint/catalog.go internal/fingerprint/official.go internal/fingerprint/official_test.go
+          git commit -m 'feat: register exact reviewed Chromium provider'
+          git push origin HEAD:agent/reviewed-official-chromium-provider
