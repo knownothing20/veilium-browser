@@ -181,30 +181,30 @@ func validRunRequest(now time.Time) RunRequest {
 	completed := now.Add(-time.Second)
 	base := evidence.Run{
 		SchemaVersion: evidence.SchemaVersion,
-		ID: "0123456789abcdef0123456789abcdef",
-		ProfileID: profile.ID, ProfileName: profile.Name,
+		ID:            "0123456789abcdef0123456789abcdef",
+		ProfileID:     profile.ID, ProfileName: profile.Name,
 		ProviderID: profile.Kernel.Provider, ProviderRevision: 1, ProviderTrust: fingerprint.TrustCustom,
 		BinaryIdentity: kernel.ProviderBinaryIdentity{
 			SchemaVersion: kernel.BinaryIdentitySchemaVersion,
-			ProviderID: profile.Kernel.Provider, ProviderRevision: 1, ProviderTrust: fingerprint.TrustCustom,
+			ProviderID:    profile.Kernel.Provider, ProviderRevision: 1, ProviderTrust: fingerprint.TrustCustom,
 			BrowserVersion: profile.Kernel.Version, OperatingSystem: "windows", Architecture: "amd64",
 			ExecutablePath: profile.Kernel.Executable, ExecutableSize: 10, ExecutableSHA256: strings.Repeat("a", 64),
 			IntegrityStatus: kernel.StatusVerified, Provenance: "test", Reviewed: false,
 		},
 		BrowserVersion: profile.Kernel.Version, OperatingSystem: "windows", Architecture: "amd64",
-		HarnessRevision: evidence.HarnessRevision,
+		HarnessRevision:        evidence.HarnessRevision,
 		ConsistencyInputDigest: strings.Repeat("b", 64), ConsistencyRulesRevision: "m4.3-v1",
 		Status: evidence.RunPartial, StartedAt: now.Add(-2 * time.Second), CompletedAt: &completed, ExpiresAt: now.Add(time.Hour),
 		Limitations: []string{"custom Provider remains unreviewed"},
 	}
 	return RunRequest{
-		Profile: profile,
+		Profile:      profile,
 		BaseEvidence: base,
 		Session: supervisor.Session{
 			ProfileID: profile.ID, ProfileName: profile.Name, State: supervisor.StateReady,
 			PID: 42, CDPPort: 9222, WebSocketDebuggerURL: "ws://127.0.0.1:9222/devtools/browser/test", StartedAt: now,
 		},
-		ProbeSet: validProbeSet(),
+		ProbeSet:     validProbeSet(),
 		SessionReady: func() bool { return true },
 	}
 }

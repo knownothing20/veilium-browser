@@ -70,16 +70,16 @@ type RouteIdentity struct {
 }
 
 type Observation struct {
-	ID           string            `json:"id"`
-	ProbeKind    ProbeKind         `json:"probeKind"`
-	ProbeID      string            `json:"probeId"`
-	ProbeRevision int              `json:"probeRevision"`
-	Status       ObservationStatus `json:"status"`
-	Expected     string            `json:"expected,omitempty"`
-	Values       []string          `json:"values,omitempty"`
-	ReasonCode   string            `json:"reasonCode,omitempty"`
-	Detail       string            `json:"detail,omitempty"`
-	CollectedAt  time.Time         `json:"collectedAt"`
+	ID            string            `json:"id"`
+	ProbeKind     ProbeKind         `json:"probeKind"`
+	ProbeID       string            `json:"probeId"`
+	ProbeRevision int               `json:"probeRevision"`
+	Status        ObservationStatus `json:"status"`
+	Expected      string            `json:"expected,omitempty"`
+	Values        []string          `json:"values,omitempty"`
+	ReasonCode    string            `json:"reasonCode,omitempty"`
+	Detail        string            `json:"detail,omitempty"`
+	CollectedAt   time.Time         `json:"collectedAt"`
 }
 
 type Run struct {
@@ -133,7 +133,7 @@ func (run Run) Validate() error {
 		return fmt.Errorf("network evidence revisions are required")
 	}
 	for label, digest := range map[string]string{
-		"binary identity": run.BinaryIdentityDigest,
+		"binary identity":   run.BinaryIdentityDigest,
 		"consistency input": run.ConsistencyInputDigest,
 	} {
 		if !validSHA256(digest) {

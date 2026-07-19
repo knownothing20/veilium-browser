@@ -19,9 +19,9 @@ import (
 const defaultRunTimeout = 45 * time.Second
 
 var (
-	ErrRunActive       = errors.New("network evidence run is already active for profile")
-	ErrNoActiveRun     = errors.New("no active network evidence run for profile")
-	ErrSessionExited   = errors.New("managed browser session exited during network evidence")
+	ErrRunActive        = errors.New("network evidence run is already active for profile")
+	ErrNoActiveRun      = errors.New("no active network evidence run for profile")
+	ErrSessionExited    = errors.New("managed browser session exited during network evidence")
 	ErrProbeUnavailable = errors.New("network evidence probe is unavailable")
 )
 
@@ -195,9 +195,11 @@ func (manager *Manager) IsActive(profileID string) bool {
 	return exists
 }
 
-func (manager *Manager) List(profileID string) ([]Run, error) { return manager.store.List(strings.TrimSpace(profileID)) }
-func (manager *Manager) Get(id string) (Run, error)            { return manager.store.Get(strings.TrimSpace(id)) }
-func (manager *Manager) Delete(id string) error                { return manager.store.Delete(strings.TrimSpace(id)) }
+func (manager *Manager) List(profileID string) ([]Run, error) {
+	return manager.store.List(strings.TrimSpace(profileID))
+}
+func (manager *Manager) Get(id string) (Run, error) { return manager.store.Get(strings.TrimSpace(id)) }
+func (manager *Manager) Delete(id string) error     { return manager.store.Delete(strings.TrimSpace(id)) }
 
 func (manager *Manager) activate(profileID string, cancel context.CancelFunc) error {
 	profileID = strings.TrimSpace(profileID)

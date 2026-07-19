@@ -152,19 +152,19 @@ func validProbeSet() ProbeSet {
 func validRun(now time.Time) Run {
 	completed := now.Add(time.Second)
 	return Run{
-		SchemaVersion: SchemaVersion,
-		ID:            "netev-0123456789abcdef0123456789abcdef",
-		EvidenceRunID: "evidence-a",
-		ProfileID:     "profile-a",
-		ProviderID:    "reviewed-a",
-		ProviderRevision: 1,
-		BrowserVersion: "148.0.0",
-		OperatingSystem: "windows",
-		Architecture: "amd64",
-		BinaryIdentityDigest: strings.Repeat("a", 64),
+		SchemaVersion:          SchemaVersion,
+		ID:                     "netev-0123456789abcdef0123456789abcdef",
+		EvidenceRunID:          "evidence-a",
+		ProfileID:              "profile-a",
+		ProviderID:             "reviewed-a",
+		ProviderRevision:       1,
+		BrowserVersion:         "148.0.0",
+		OperatingSystem:        "windows",
+		Architecture:           "amd64",
+		BinaryIdentityDigest:   strings.Repeat("a", 64),
 		ConsistencyInputDigest: strings.Repeat("b", 64),
-		Route: RouteIdentity{Kind: RouteDirect, Scheme: "direct", Digest: strings.Repeat("c", 64)},
-		ProbeSetID: "local-test-probes", ProbeSetRevision: 1,
+		Route:                  RouteIdentity{Kind: RouteDirect, Scheme: "direct", Digest: strings.Repeat("c", 64)},
+		ProbeSetID:             "local-test-probes", ProbeSetRevision: 1,
 		Status: RunPassed, StartedAt: now, CompletedAt: &completed, ExpiresAt: now.Add(24 * time.Hour),
 		Observations: []Observation{
 			{
@@ -187,7 +187,7 @@ func validCompatibilityEntry(reviewedAt time.Time) CompatibilityEntry {
 	expires := reviewedAt.Add(24 * time.Hour)
 	return CompatibilityEntry{
 		SchemaVersion: MatrixSchemaVersion,
-		ProviderID: "reviewed-a", ProviderRevision: 1, ProviderTrust: fingerprint.TrustReviewed,
+		ProviderID:    "reviewed-a", ProviderRevision: 1, ProviderTrust: fingerprint.TrustReviewed,
 		BrowserVersion: "148.0.0", OperatingSystem: "windows", Architecture: "amd64",
 		BinaryIdentityDigest: strings.Repeat("d", 64), CapabilityID: "network.route",
 		Status: CompatibilityVerified, ProbeSetID: "local-test-probes", ProbeSetRevision: 1,
