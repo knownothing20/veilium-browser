@@ -2,11 +2,11 @@
 
 Last updated: 2026-07-19
 Application version: 0.14.0-dev
-Main baseline SHA: 139907936179ee61d4fcd82b19125c1535bb8e2a
+Main baseline SHA: dcfcee9e4c8b8587ae0c8c44a63103cb0c5c5d6c
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
 Current milestone: M4.4 — Live Browser Network Evidence and Compatibility Matrix
-Current task: Implement Issue #25 as the single authorized Phase 4 product task
+Current task: Implement Issue #25 on `agent/m4-4-network-evidence`
 
 ## Operational rule
 
@@ -29,31 +29,35 @@ No production browser Provider is marked reviewed solely by these milestones.
 ### M4.4 — Live Browser Network Evidence and Compatibility Matrix
 
 Current implementation issue: #25
+Current implementation branch: `agent/m4-4-network-evidence`
 
-M4.4 owns:
+The first M4.4 batch establishes:
 
-- browser-observed exit-route evidence;
-- controlled WebRTC/STUN and delegated-DNS route checks;
-- classification of Direct, built-in bridge, Xray, and sing-box routes;
-- health integration so route mismatch or leak cannot be healthy;
-- replaceable or self-hostable probe definitions;
-- exact Provider/version/OS/architecture/capability compatibility records;
-- generated compatibility documentation;
-- Phase 4 completion handoff.
+- independent versioned Network Evidence records tied to existing Evidence Runs;
+- explicit run, observation, probe, route, and compatibility states;
+- probe sets with no hidden default third-party endpoint;
+- HTTPS or loopback-only exit-IP definitions;
+- explicit STUN and delegated-DNS definitions;
+- mandatory replaceable or self-hostable probe policy;
+- route classification and SHA-256 route identity without storing the original route;
+- exact Provider/version/OS/architecture/binary/capability compatibility entries;
+- trust rules preventing custom or legacy Providers from producing verified matrix entries;
+- automatic conversion of expired accepted evidence to stale;
+- contract, privacy, route, and matrix tests.
 
-## Exact next action
+This batch does not yet execute browser probes or change Profile health.
 
-Read Issue #25 and audit:
+## Remaining M4.4 work
 
-1. `internal/evidence` contracts and lifecycle;
-2. current proxy diagnostics and route classification;
-3. proxy bridge and adapter runtime lifecycle;
-4. controlled browser page and Target flow;
-5. consistency health integration;
-6. desktop Evidence report UI;
-7. Windows/Linux controlled Chromium fixtures.
-
-Create one scoped Draft PR for M4.4 only.
+1. open one scoped Draft PR for Issue #25;
+2. add private Network Evidence storage and lifecycle management;
+3. extend the controlled browser page for explicit exit-IP, STUN, and delegated-DNS probes;
+4. bind collection to the selected managed session and route;
+5. integrate route evidence with Profile health;
+6. add desktop report and probe-configuration surfaces;
+7. generate compatibility records and repository documentation;
+8. add controlled Windows/Linux real-browser probe fixtures;
+9. complete Phase 4 closing-review handoff.
 
 ## Active prohibitions
 
@@ -87,4 +91,4 @@ The M4.4 PR must also pass protected Windows, Linux, frontend, Wails, official-a
 
 ## Handoff
 
-The next development session must work only on Issue #25. After M4.4 merges, create a separate Phase 4 closing-review PR; do not silently enter Phase 5.
+Continue only on Issue #25 and its single Draft PR. After M4.4 merges, create a separate Phase 4 closing-review PR; do not silently enter Phase 5.
