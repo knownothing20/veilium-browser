@@ -3,6 +3,7 @@ import { isRuntimeActive, runtimeStateLabel, sessionForProfile } from '../lib/ru
 import type { Profile, RuntimeSession } from '../types'
 import { ConsistencyAction } from './ConsistencyAction'
 import { EvidenceAction } from './EvidenceAction'
+import { NetworkEvidenceAction } from './NetworkEvidenceAction'
 import { ProxyDiagnosticAction } from './ProxyDiagnosticAction'
 
 export function ProfileTable({
@@ -85,6 +86,7 @@ export function ProfileTable({
                       : <button title={nativeMode ? 'Start browser' : 'Desktop runtime required'} disabled={!nativeMode || !profile.kernel.id || busyProfileID === profile.id} onClick={() => onStart(profile)}>▶</button>}
                     <ProxyDiagnosticAction profile={profile} nativeMode={nativeMode} />
                     <EvidenceAction profile={profile} session={session} nativeMode={nativeMode} />
+                    <NetworkEvidenceAction profile={profile} session={session} nativeMode={nativeMode} />
                     <ConsistencyAction profile={profile} nativeMode={nativeMode} />
                     <button title="Review launch plan" onClick={() => onPlan(profile)}>≡</button>
                     <button title={active ? 'Stop browser before editing' : 'Edit'} disabled={active} onClick={() => onEdit(profile)}>✎</button>
