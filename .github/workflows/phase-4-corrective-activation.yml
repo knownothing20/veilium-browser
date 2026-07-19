@@ -1,0 +1,103 @@
+name: Phase 4 Corrective Activation
+
+on:
+  push:
+    branches: [agent/activate-reviewed-provider-corrective]
+
+permissions:
+  contents: write
+
+jobs:
+  activate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/activate-reviewed-provider-corrective
+          fetch-depth: 0
+      - name: Synchronize corrective Phase 4 status
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          phase = Path('docs/PHASE_04.md')
+          text = phase.read_text()
+          text = text.replace('Status: Closing', 'Status: Active', 1)
+          text = text.replace('Product implementation allowed: No', 'Product implementation allowed: Yes', 1)
+          marker = '## Current authorized work\n\n'
+          start = text.index(marker) + len(marker)
+          text = text[:start] + '''The only authorized product implementation task is Issue #30, **first reviewed official Chromium Provider path**.\n\nThis corrective task may add exactly one pinned official Windows x64 Chromium Snapshot Provider, its manifest/installer/verifier, exact Evidence chain, compatibility records, tests, and documentation. M4.1–M4.4 must not be reopened for unrelated work. Phase 5 remains blocked.\n'''
+          phase.write_text(text)
+
+          roadmap = Path('docs/ROADMAP.md')
+          text = roadmap.read_text()
+          text = text.replace('Current phase status: Closing', 'Current phase status: Active', 1)
+          text = text.replace('| Phase 4 | Reviewed browser-provider contracts plus real-browser identity, consistency, and network evidence with truthful compatibility states | Closing |', '| Phase 4 | Reviewed browser-provider contracts plus real-browser identity, consistency, and network evidence with truthful compatibility states | Active |', 1)
+          roadmap.write_text(text)
+
+          status = Path('docs/STATUS.md')
+          status.write_text('''# Current Project Status
+
+Last updated: 2026-07-19
+Application version: 0.15.0-dev
+Main baseline SHA: 7d48e6a409d9a559eae2408c808adfdc6051dd47
+Current phase: Phase 4
+Current phase document: docs/PHASE_04.md
+Current milestone: Corrective — First Exact Reviewed Provider Path
+Current task: Implement Issue #30 after activation PR merge
+
+## Operational rule
+
+Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`. Work only on Issue #30.
+
+Phase 4 is `Active` only for the narrow reviewed-Provider corrective task. Phase 5 planning and implementation remain blocked.
+
+## Closing review result
+
+Issue #28 concluded **Blocked** because M4.1–M4.4 are complete but the Provider catalog contains no exact `reviewed` Provider. Hosted Chrome/Chromium CI proves the Evidence harness and cannot be silently promoted.
+
+## Authorized corrective scope
+
+- one pinned official Chromium Snapshot for Windows x64;
+- exact Revision, source URL, archive size/SHA-256, browser version, executable path/size/SHA-256, license/provenance, limitations, and review time;
+- fail-closed install/import and verification;
+- no moving latest lookup, bundling, or silent update;
+- exact M4.2 identity, M4.3 window/consistency, and M4.4 Network Evidence on the same binary;
+- exact compatibility output and rollback/failure tests;
+- return to Phase 4 Closing Review after merge.
+
+## Active prohibitions
+
+Do not begin Phase 5, add another Provider/platform, build or patch Chromium, broaden fingerprint controls, expand proxies, add cookies/extensions/migration/API/MCP/sync/release work, or include unrelated refactors.
+
+## Required validation
+
+```bash
+python scripts/check_project_governance.py
+make check
+```
+
+## Handoff
+
+After this activation PR merges, Issue #30 is the only authorized task. After Issue #30 merges, return Phase 4 to `Closing` and rerun the exit review.
+''')
+
+          review = Path('docs/PHASE_04_CLOSING_REVIEW.md')
+          text = review.read_text()
+          text = text.replace('Overall decision: Pending', 'Overall decision: Blocked', 1)
+          text = text.replace('The review has not yet recorded Pass or Blocked.', 'The review is Blocked because no exact reviewed Provider exists. Corrective Issue #30 is the only authorized implementation task.', 1)
+          review.write_text(text)
+          PY
+      - name: Validate governance
+        run: python scripts/check_project_governance.py
+      - name: Commit corrective activation
+        shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'veilium-governance-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add docs/PHASE_04.md docs/ROADMAP.md docs/STATUS.md docs/PHASE_04_CLOSING_REVIEW.md
+          git commit -m 'docs: activate reviewed-provider corrective task'
+          git push origin HEAD:agent/activate-reviewed-provider-corrective
