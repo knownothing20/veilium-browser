@@ -16,6 +16,47 @@ export interface KernelRecord {
   status: 'verified' | 'modified' | 'missing'
   importedAt: string
   verifiedAt: string
+  packageRoot?: string
+  packageTreeSha256?: string
+  packageFileCount?: number
+  packageSizeBytes?: number
+  snapshotRevision?: number
+  archiveSha256?: string
+}
+
+export interface KernelReleasePin {
+  providerId: string
+  providerRevision: number
+  name: string
+  browserVersion: string
+  snapshotRevision: number
+  sourceProject: string
+  sourcePageUrl: string
+  licenseSpdx: string
+  licenseUrl: string
+  thirdPartyNoticesUrl: string
+  reviewedAt: string
+  platform: string
+  arch: string
+  archiveName: string
+  archiveUrl: string
+  archiveSizeBytes: number
+  archiveSha256: string
+  archiveEntryCount: number
+  archiveRoot: string
+  executablePath: string
+  executableSizeBytes: number
+  executableSha256: string
+  packageFileCount: number
+  expandedSizeBytes: number
+  packageTreeSha256: string
+  limitations: string[]
+}
+
+export interface KernelInstallRequest {
+  providerId: string
+  version: string
+  licenseAccepted: boolean
 }
 
 export interface KernelImportRequest {
@@ -253,6 +294,7 @@ export interface Bootstrap {
   credentials: CredentialRecord[]
   credentialProvider: string
   adapterPins: AdapterReleasePin[]
+  kernelPins: KernelReleasePin[]
   runtimePlatform: string
   runtimeArch: string
 }
@@ -272,6 +314,12 @@ export interface ProviderBinaryIdentity {
   executablePath: string
   executableSize: number
   executableSha256: string
+  packageRoot?: string
+  packageTreeSha256?: string
+  packageFileCount?: number
+  packageSizeBytes?: number
+  snapshotRevision?: number
+  archiveSha256?: string
   integrityStatus: string
   verificationTimestamp?: string
   provenance: string
