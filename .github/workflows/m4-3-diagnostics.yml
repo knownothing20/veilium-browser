@@ -1,0 +1,87 @@
+name: M4.3 Diagnostics
+
+on:
+  push:
+    branches: [agent/m4-3-identity-window-consistency]
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Capture formatting
+        shell: bash
+        run: gofmt -l . > gofmt.log
+      - name: Build static evidence test
+        shell: bash
+        run: CGO_ENABLED=0 go test -c -o "$RUNNER_TEMP/veilium-evidence.test" ./internal/evidence
+      - name: Capture Linux Chromium test
+        shell: bash
+        run: |
+          set +e
+          docker run --rm \
+            -v "$RUNNER_TEMP/veilium-evidence.test:/tmp/veilium-evidence.test:ro" \
+            debian:13-slim \
+            bash -lc '
+              apt-get update >/dev/null
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends chromium ca-certificates >/dev/null
+              chromium --version
+              VEILIUM_CHROMIUM_BINARY=/usr/bin/chromium /tmp/veilium-evidence.test -test.v -test.run "^TestRealChromiumEvidenceCollector$"
+            ' > linux-browser.log 2>&1
+          echo $? > linux-browser.status
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m4-3-linux-diagnostics
+          path: |
+            gofmt.log
+            linux-browser.log
+            linux-browser.status
+          retention-days: 1
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Capture Windows Chrome test
+        shell: pwsh
+        run: |
+          $candidates = @(
+            "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
+            "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
+            "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
+          )
+          $chrome = $candidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+          if (-not $chrome) {
+            $command = Get-Command chrome.exe -ErrorAction SilentlyContinue
+            if ($command) { $chrome = $command.Source }
+          }
+          if (-not $chrome) { throw 'Hosted Chrome was not found' }
+          $env:VEILIUM_CHROMIUM_BINARY = $chrome
+          $output = & go test -v -run '^TestRealChromiumEvidenceCollector$' ./internal/evidence 2>&1
+          $status = $LASTEXITCODE
+          $output | Set-Content windows-browser.log
+          Set-Content windows-browser.status $status
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: m4-3-windows-diagnostics
+          path: |
+            windows-browser.log
+            windows-browser.status
+          retention-days: 1
+          if-no-files-found: error
