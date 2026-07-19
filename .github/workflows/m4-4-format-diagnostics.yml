@@ -1,0 +1,48 @@
+name: M4.4 Format Diagnostics
+
+on:
+  push:
+    branches: [agent/m4-4-network-evidence]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  format-and-test:
+    if: github.ref_name == 'agent/m4-4-network-evidence' || github.head_ref == 'agent/m4-4-network-evidence'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/m4-4-network-evidence
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Apply local compile fix and format
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('internal/networkevidence/store.go')
+          text = path.read_text()
+          if '"encoding/hex"' not in text:
+              text = text.replace('import (\n', 'import (\n\t"encoding/hex"\n', 1)
+          path.write_text(text)
+          PY
+          gofmt -w internal/networkevidence
+      - name: Run network evidence tests
+        shell: bash
+        run: go test ./internal/networkevidence 2>&1 | tee networkevidence-test.log
+      - name: Upload formatted sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-4-formatted-networkevidence
+          path: |
+            internal/networkevidence
+            networkevidence-test.log
+          retention-days: 1
+          if-no-files-found: error
