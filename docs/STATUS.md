@@ -1,12 +1,12 @@
 # Current Project Status
 
-Last updated: 2026-07-19
+Last updated: 2026-07-20
 Application version: 0.15.0-dev
-Main baseline SHA: 7d48e6a409d9a559eae2408c808adfdc6051dd47
+Main baseline SHA: 63c05cc7f52233939b94a1d7b88efd79ed6b6c3c
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
 Current milestone: Corrective — First Exact Reviewed Provider Path
-Current task: Implement Issue #30 after activation PR merge
+Current task: Complete PR #34 exact reviewed Chromium installation and protected Evidence exit gates
 
 ## Operational rule
 
@@ -28,6 +28,13 @@ Issue #28 concluded **Blocked** because M4.1–M4.4 are complete but the Provide
 - exact compatibility output and rollback/failure tests;
 - return to Phase 4 Closing Review after merge.
 
+## PR #34 implementation status
+
+- the exact Provider contract, release pin, complete-package Store, installer, desktop binding, installation card, and tamper tests are present;
+- frontend typecheck/tests/build and Windows/Linux Wails builds pass;
+- the protected Windows package-tree identity and same-binary Evidence chain remain blocked and must pass before merge;
+- the PR remains Draft and must not broaden beyond Issue #30.
+
 ## Active prohibitions
 
 Do not begin Phase 5, add another Provider/platform, build or patch Chromium, broaden fingerprint controls, expand proxies, add cookies/extensions/migration/API/MCP/sync/release work, or include unrelated refactors.
@@ -41,4 +48,4 @@ make check
 
 ## Handoff
 
-After this activation PR merges, Issue #30 is the only authorized task. After Issue #30 merges, return Phase 4 to `Closing` and rerun the exit review.
+After PR #34 merges, return Phase 4 to `Closing` and rerun the closing review. Phase 5 remains blocked.
