@@ -2,89 +2,78 @@
 
 Last updated: 2026-07-19
 Application version: 0.14.0-dev
-Main baseline SHA: 7306215085b578755d4980180edb9f451e5a9f14
+Main baseline SHA: 139907936179ee61d4fcd82b19125c1535bb8e2a
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
-Current milestone: M4.3 — Identity and Window Consistency
-Current task: Finish review and merge of Issue #22 in Draft PR #24
+Current milestone: M4.4 — Live Browser Network Evidence and Compatibility Matrix
+Current task: Implement Issue #25 as the single authorized Phase 4 product task
 
 ## Operational rule
 
-Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`. Work only on the current issue and milestone.
+Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`. Work only on Issue #25 and M4.4.
 
-M4.4 Issue #25 exists only as a blocked handoff. It must not begin until PR #24 is merged and Issue #25 is explicitly activated.
+M4.4 is the final implementation milestone before a separate Phase 4 closing review.
 
 ## Delivered baseline
 
-M4.1 and M4.2 are complete.
+M4.1, M4.2, and M4.3 are complete.
 
-M4.1 established Provider Contract v2, explicit trust and capability states, legacy compatibility, managed binary identity, and fail-closed advanced configuration.
+- M4.1 PR #19 established Provider Contract v2, exact managed binary identity, explicit trust/capability states, and fail-closed legacy compatibility.
+- M4.2 PR #21, merged as `094fea4f03c5a87e37f69a4868fd26e609673c6e`, established controlled local real-browser Evidence, private reports, desktop inspection, and Windows/Linux fixtures.
+- M4.3 PR #24, merged as `139907936179ee61d4fcd82b19125c1535bb8e2a`, established versioned consistency rules, Evidence freshness, managed browser windows, derived Profile health, desktop controls, and Windows/Linux real-window validation.
 
-M4.2 was delivered by Issue #20 and PR #21, squash-merged as `094fea4f03c5a87e37f69a4868fd26e609673c6e`. It added controlled loopback real-browser evidence, private bounded reports, desktop report views, and Required Windows/Linux collection checks.
-
-M4.2 does not grant reviewed status to a production browser Provider.
+No production browser Provider is marked reviewed solely by these milestones.
 
 ## Current milestone
 
-### M4.3 — Identity and Window Consistency
+### M4.4 — Live Browser Network Evidence and Compatibility Matrix
 
-Current implementation issue: #22
-Current Draft PR: #24
+Current implementation issue: #25
 
-The Draft branch now contains:
+M4.4 owns:
 
-- optional explicit `windowWidth`, `windowHeight`, and `deviceScaleFactor` fields;
-- backward-compatible screen-to-window fallback without rewriting existing profiles;
-- versioned WindowPlan, observed WindowState, consistency Result, Check, Health, WindowSource, and EvidenceInput contracts;
-- shared preflight enforcement for profile create/update, launch-plan generation, and runtime start;
-- effective WindowPlan launch arguments rather than treating screen size as the browser window contract;
-- deterministic consistency input digests stored on new Evidence Runs;
-- conservative freshness invalidation for profile, Provider, binary, runtime, harness, and rules changes;
-- evidence-derived `healthy`, `degraded`, `blocked`, and `unknown` profile health;
-- a read-only desktop health service and Profile-row report view;
-- explicit user-controlled window width, height, and DPR editing through the normal profile update path;
-- a bounded loopback CDP window controller that permits only get-window, set-bounds, and readback commands;
-- one Runtime Supervisor wrapper shared by Direct, built-in bridge, Xray, and sing-box launch paths;
-- fail-closed browser shutdown when managed-window application fails;
-- observed-window cleanup on stop and application shutdown;
-- unit, desktop, lifecycle, frontend, Windows, Linux, and real-Chromium controlled-window tests;
-- `docs/IDENTITY_WINDOW_CONSISTENCY.md`.
+- browser-observed exit-route evidence;
+- controlled WebRTC/STUN and delegated-DNS route checks;
+- classification of Direct, built-in bridge, Xray, and sing-box routes;
+- health integration so route mismatch or leak cannot be healthy;
+- replaceable or self-hostable probe definitions;
+- exact Provider/version/OS/architecture/capability compatibility records;
+- generated compatibility documentation;
+- Phase 4 completion handoff.
 
-## Remaining M4.3 merge gates
+## Exact next action
 
-1. obtain passing final Governance and all protected CI checks;
-2. remove the temporary read-only M4.3 diagnostic workflow;
-3. verify the final compare contains no diagnostic or autofix workflow;
-4. confirm no unresolved review thread;
-5. update PR #24 to the final delivery description;
-6. mark PR #24 ready and complete a protected squash merge.
+Read Issue #25 and audit:
 
-## Next milestone — blocked
+1. `internal/evidence` contracts and lifecycle;
+2. current proxy diagnostics and route classification;
+3. proxy bridge and adapter runtime lifecycle;
+4. controlled browser page and Target flow;
+5. consistency health integration;
+6. desktop Evidence report UI;
+7. Windows/Linux controlled Chromium fixtures.
 
-Issue #25 defines M4.4 — Live Browser Network Evidence and Compatibility Matrix.
-
-It remains blocked until PR #24 merges. After activation, M4.4 owns browser-observed exit IP, controlled WebRTC/STUN and delegated DNS route evidence, route-health integration, and generated exact-combination compatibility records.
+Create one scoped Draft PR for M4.4 only.
 
 ## Active prohibitions
 
 Do not:
 
-- begin M4.4 external network evidence before PR #24 merges;
-- claim reviewed Provider status without exact applicable evidence;
-- silently rewrite or auto-correct profiles;
-- add new proxy protocols or pool operations;
-- begin cookie, extension, migration, public API, MCP, sync, or release work;
-- copy code from reference browsers or kernels;
-- expose browser control beyond the existing local safety boundary;
+- begin Phase 5 work;
+- silently change Profile or route configuration;
+- grant reviewed Provider status from network evidence alone;
+- add new proxy protocols, pool rotation, or batch operations;
+- begin public API, MCP, sync, cookie, extension, migration, or release work;
+- rely on a single non-replaceable probe;
+- claim macOS support without real validation;
 - include unrelated refactors or broad UI redesign.
 
 ## Known risks
 
-- no production browser Provider is reviewed yet;
-- hosted headless/window fixtures prove only their exact controlled environments, not general desktop compatibility;
-- Windows and Linux decorations and display scaling require bounded platform-aware tolerances;
-- freshness invalidation must remain conservative;
-- existing profiles and M4.2 Evidence reports must remain readable;
+- different network probes observe different layers and may disagree;
+- probe unavailability must remain explicit rather than optimistic;
+- CI proves only exact tested combinations;
+- custom and legacy Provider trust remains conservative;
 - macOS remains unclaimed.
 
 ## Required validation
@@ -94,8 +83,8 @@ python scripts/check_project_governance.py
 make check
 ```
 
-The M4.3 PR must also pass the protected Windows, Linux, frontend, Wails, official-adapter, and controlled real-browser window checks.
+The M4.4 PR must also pass protected Windows, Linux, frontend, Wails, official-adapter, controlled-probe, privacy, and relevant real-browser checks.
 
 ## Handoff
 
-Until PR #24 merges, continue only in Issue #22 and Draft PR #24. After merge, activate Issue #25 and make it the single authorized product task.
+The next development session must work only on Issue #25. After M4.4 merges, create a separate Phase 4 closing-review PR; do not silently enter Phase 5.
