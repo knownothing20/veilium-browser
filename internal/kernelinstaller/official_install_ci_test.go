@@ -86,6 +86,16 @@ func TestReviewedChromiumInstallForCI(t *testing.T) {
 		FileCount: release.PackageFileCount,
 		SizeBytes: release.ExpandedSizeBytes,
 	}
+	diagnostic, err := json.MarshalIndent(map[string]kernel.PackageTreeIdentity{
+		"actualArchiveTree": archiveTree,
+		"expectedPin":       expectedTree,
+	}, "", "  ")
+	if err != nil {
+		t.Fatalf("encode reviewed Chromium tree diagnostic: %v", err)
+	}
+	if err := os.WriteFile(resultPath, diagnostic, 0o600); err != nil {
+		t.Fatalf("write reviewed Chromium tree diagnostic: %v", err)
+	}
 	if archiveTree != expectedTree {
 		t.Fatalf("reviewed Chromium archive package tree mismatch: actual=%#v expected=%#v", archiveTree, expectedTree)
 	}
