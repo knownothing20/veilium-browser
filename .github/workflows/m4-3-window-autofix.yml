@@ -94,3 +94,6 @@ jobs:
             desktop_evidence.go
           git commit -m 'feat: apply managed browser window through bounded CDP'
           git push origin HEAD:agent/m4-3-identity-window-consistency
+      - name: Preserve failure diagnostics
+        if: failure()
+        run: go test ./internal/windowcontrol ./internal/desktop ./internal/supervisor ./internal/consistency ./internal/evidence ./internal/launch ./internal/fingerprint
