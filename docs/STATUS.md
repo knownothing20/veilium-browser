@@ -2,48 +2,62 @@
 
 Last updated: 2026-07-20
 Application version: 0.15.0-dev
-Main baseline SHA: 63c05cc7f52233939b94a1d7b88efd79ed6b6c3c
+Main baseline SHA: 49ae2de6cb652d789c97aa961c0007513362bb6f
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
-Current milestone: Corrective — First Exact Reviewed Provider Path
-Current task: Finalize Draft PR #34 and confirm protected checks on the closing head
+Current milestone: Final Phase 4 Closing Review
+Current task: Rerun all Phase 4 exit gates in Issue #35 and record a Pass or Blocked decision
 
 ## Operational rule
 
-Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`. Work only on Issue #30.
+Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`. Work only on Issue #35 and `docs/PHASE_04_CLOSING_REVIEW.md`.
 
-Phase 4 is `Active` only for the narrow reviewed-Provider corrective task. Phase 5 planning and implementation remain blocked.
+Phase 4 is `Closing`. Product implementation is blocked. Phase 5 planning implementation and product implementation remain blocked.
 
-## Closing review result
+## Merged implementation baseline
 
-Issue #28 concluded **Blocked** because M4.1–M4.4 were complete but the Provider catalog contained no exact `reviewed` browser Provider. Hosted Chrome/Chromium CI proved the Evidence harness and could not be silently promoted.
+- M4.1 Provider Contract v2 — PR #19;
+- M4.2 Real-Browser Evidence Harness — PR #21;
+- M4.3 Identity and Window Consistency — PR #24;
+- M4.4 Network Evidence and Compatibility Matrix — PR #27;
+- First Exact Reviewed Provider Path — PR #34, squash commit `49ae2de6cb652d789c97aa961c0007513362bb6f`.
 
-## Authorized corrective scope
+## Corrective result now available
 
-- one pinned official Chromium Snapshot for Windows x64;
-- exact Revision, source URL, archive size/SHA-256, browser version, executable path/size/SHA-256, complete Package Tree, license/provenance, limitations, and review time;
-- fail-closed install/import and verification;
-- no moving latest lookup, bundling, or silent update;
-- exact M4.2 identity, M4.3 window/consistency, and M4.4 Network Evidence on the same binary;
-- compatibility output restricted to the exact Provider revision/version/platform/binary combination;
-- rollback, missing, modified, incompatible, traversal, link, and dependency-tamper tests;
-- return to Phase 4 Closing Review after merge.
+The blocker recorded by Issue #28 has been addressed in the merged baseline:
 
-## PR #34 implementation status
+- one exact reviewed official Chromium Snapshot Provider exists for Windows amd64;
+- Chromium `152.0.7960.0`, Snapshot revision `1664436`, archive identity, `chrome.exe` identity, and the complete 261-file Package Tree identity are embedded and immutable;
+- installation is explicit, license-acknowledged, bounded, fail-closed, atomic, and non-updating;
+- reviewed Providers cannot use the generic single-file import path;
+- the same managed binary passed identity/window Evidence and controlled Network Evidence in protected Windows CI;
+- changing a package dependency downgrades the package to `modified`;
+- compatibility rejects nearby versions, Linux, arm64, custom trust, and other non-exact combinations;
+- unsupported stock Chromium advanced fingerprint controls remain unsupported.
 
-- the exact reviewed Provider contract and immutable release manifest are present;
-- the installer verifies the archive, `chrome.exe`, and all 261 extracted package files before atomic activation;
-- reviewed Providers cannot use generic single-file import;
-- the desktop Kernel registry exposes an explicit license acknowledgement and Windows amd64 installation action;
-- Windows Required CI has installed the fixed package and passed identity/window Evidence, controlled Network Evidence, and dependency-tamper fail-closed verification on the same managed `chrome.exe`;
-- frontend typecheck/tests/build, Go quality, official adapter checks, Linux browser/adapter tests, and Windows/Linux Wails builds have passed on the implementation head;
-- compatibility validation rejects the reviewed Provider outside its exact embedded revision, browser version, operating system, architecture, and trust boundary;
-- Provider, licensing, installation, package-integrity, compatibility, and current-status documentation are included;
-- the PR remains Draft until every protected check passes on its final closing head.
+This evidence makes the final closing review ready; it does not by itself mark Phase 4 `Done`.
 
-## Active prohibitions
+## Closing Review scope
 
-Do not begin Phase 5, add another Provider/platform, build or patch Chromium, broaden fingerprint controls, expand proxies, add cookies/extensions/migration/API/MCP/sync/release work, or include unrelated refactors.
+Issue #35 must verify:
+
+1. every Phase 4 exit criterion against the merged baseline;
+2. all protected Governance, Go, frontend, Windows/Linux Wails, official adapter, exact reviewed-browser, generic Linux-browser, and failure-path checks;
+3. privacy, secret-isolation, licensing, clean-room, rollback, and platform boundaries;
+4. unresolved risks and explicitly deferred work;
+5. whether the result is Pass or Blocked.
+
+No product code, phase-scope expansion, or later-phase implementation is authorized during this review.
+
+## Known limitations to retain
+
+- reviewed browser trust covers only the exact Windows amd64 Snapshot package;
+- Linux browser CI validates the generic Evidence harness, not a reviewed Linux Provider;
+- macOS and other architectures are unclaimed;
+- controlled Network Evidence proves the collection path for a synthetic direct route, not every proxy, STUN service, delegated DNS zone, or user network;
+- Chromium Snapshot provenance and SHA-256 pins do not provide publisher signing, transparency logs, or reproducible-build proof;
+- stock Chromium advanced fingerprint overrides remain unsupported;
+- Phase 5 and Phase 6 deferrals remain unplanned until their dedicated planning work.
 
 ## Required validation
 
@@ -52,8 +66,9 @@ python scripts/check_project_governance.py
 make check
 ```
 
-Protected Windows CI must additionally use the pinned product installer and the same resulting binary for identity, window/consistency, Network Evidence, and package-tamper gates.
+The Closing Review must also inspect the protected PR #34 Windows Evidence packet and the final required-check results on commit `3124ad95b5cf540da07a0571bac10cafadcb003f`, which produced merged baseline `49ae2de6cb652d789c97aa961c0007513362bb6f`.
 
-## Handoff
+## Decision handoff
 
-After PR #34 merges, return Phase 4 to `Closing` and rerun the closing review. Phase 5 remains blocked.
+- **Pass:** create a dedicated Phase 4 closure PR that marks Phase 4 `Done`, updates ROADMAP and STATUS, records the final review, and identifies the first Phase 5 planning task. Phase 5 product implementation remains blocked until a separate planning/activation PR.
+- **Blocked:** keep Phase 4 in `Closing`, create one narrow corrective issue, and do not authorize Phase 5.
