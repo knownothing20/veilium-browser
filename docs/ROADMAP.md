@@ -1,15 +1,15 @@
 # Veilium Roadmap
 
 Last updated: 2026-07-20
-Current phase: Phase 4
-Current phase document: docs/PHASE_04.md
-Current phase status: Done
+Current phase: Phase 5
+Current phase document: docs/PHASE_05.md
+Current phase status: Planning
 
 ## How to use this roadmap
 
-This file controls phase order and phase status. It does not authorize an individual implementation task by itself. Detailed scope and exit criteria live in the current phase document, while the single current task lives in `docs/STATUS.md`.
+This file controls phase order and phase status. It does not authorize an implementation task by itself. Detailed scope and exit criteria live in the current phase document, while the single current task lives in `docs/STATUS.md`.
 
-A later phase must not begin before the current phase closes through a dedicated phase-closure pull request. Changing phase order, user outcome, milestone sequence, or phase goals requires a planning issue and reviewed planning pull request.
+A phase becomes implementable only through a reviewed activation decision. `Planning`, `Closing`, `Done`, and `Planned` block ordinary product implementation.
 
 ## Six-phase plan
 
@@ -18,111 +18,127 @@ A later phase must not begin before the current phase closes through a dedicated
 | Phase 1 | Clean-room core contracts, local persistence, policy validation, and secure local API foundation | Done | Historical PR and module documents |
 | Phase 2 | Wails and React desktop profile workspace with capability-driven configuration | Done | Historical PR and module documents |
 | Phase 3 | Verified local kernels, supervised browser runtime, credential vault, proxy bridges, diagnostics, and reviewed Xray/sing-box adapters | Done | Historical PR and module documents |
-| Phase 4 | Reviewed browser-provider contracts plus real-browser identity, consistency, and network evidence with truthful compatibility states | Done | `docs/PHASE_04.md` |
-| Phase 5 | Profile lifecycle and scalable day-to-day operations; final scope must be defined by Issue #37 | Planned | To be created during Phase 5 planning |
+| Phase 4 | Reviewed browser-provider contracts plus real-browser identity, consistency, and network Evidence with truthful compatibility states | Done | `docs/PHASE_04.md` |
+| Phase 5 | Recoverable Profile lifecycle, truthful local snapshots and portable definitions, templates, and bounded day-to-day operations | Planning | `docs/PHASE_05.md` |
 | Phase 6 | Controlled automation, migration/sync options, and production release hardening; final scope depends on prior phases | Planned | To be created during Phase 6 planning |
 
-## Delivered baseline through Phase 3
+## Delivered baseline through Phase 4
 
-The baseline includes:
+The frozen baseline includes:
 
-- version-aware fingerprint provider capabilities and consistency validation;
-- atomic local profile persistence and authenticated loopback REST service;
-- desktop profile list, create/edit, groups, tags, search, and clone;
-- verified local Chromium kernel imports with SHA-256 re-verification;
-- supervised browser lifecycle, Chromium-assigned CDP discovery, readiness checks, logs, and process-tree cleanup;
-- operating-system credential storage without plaintext fallback;
-- authenticated HTTP, HTTPS, and SOCKS5 loopback bridges;
-- proxy connectivity, latency, exit-IP, DNS-route, and WebRTC-policy diagnostics;
-- managed Xray and sing-box binaries with provenance, license, integrity, and in-use controls;
-- supervised reviewed protocol subsets through private per-session configurations;
-- pinned official adapter manifests, native configuration checks, Chromium smoke tests, and explicit verified installation;
-- Linux and Windows Go, frontend, desktop-build, and adapter-validation CI;
-- repository governance, required pull requests, status checks, phase gates, and SSOT documents.
+- atomic Profile metadata persistence and Veilium-managed browser directories;
+- searchable desktop Profile workspace with create, edit, clone, groups, tags, and dry-run launch plans;
+- operating-system credential vault without plaintext fallback;
+- verified Kernel and adapter registries with integrity, provenance, license, and in-use controls;
+- supervised browser, authenticated proxy bridge, Xray, and sing-box runtimes;
+- Provider Contract v2 with reviewed, custom, legacy, disabled, and invalid trust states;
+- real-browser identity, managed-window/consistency, Network Evidence, Profile health, and exact compatibility contracts;
+- one exact reviewed official Chromium Snapshot Provider for Windows amd64;
+- archive, executable, and complete 261-file Package Tree verification;
+- dependency-tamper failure, exact-combination compatibility, and protected Windows/Linux CI;
+- repository governance, phase gates, and source-of-truth documents.
 
-## Delivered Phase 4 sequence
+Phase 4 is frozen as `Done`. Its support claims and contracts cannot be broadened by Phase 5 import, restore, or migration metadata.
 
-Phase 4 was delivered in this dependency order:
+## Phase 5 planning proposal
 
-1. **M4.1 — Kernel Provider Contract v2**
-   - reviewed versus custom provider trust;
-   - versioned provider, provenance, license, binary identity, and capability contracts;
-   - compatibility for existing kernel and profile records;
-   - unsupported and unverified states fail closed.
-2. **M4.2 — Real-Browser Evidence Harness**
-   - observe real browser behavior across controlled contexts;
-   - create local, structured, redacted Evidence reports;
-   - derive capability states from exact Provider Evidence.
-3. **M4.3 — Identity and Window Consistency**
-   - enforce coherent OS, browser, language, timezone, CPU, screen, window, viewport, DPR, and supported GPU behavior;
-   - derive understandable Profile health from Evidence.
-4. **M4.4 — Live Browser Network Evidence and Compatibility Matrix**
-   - verify browser-observed route, Exit IP, WebRTC/STUN, and DNS behavior;
-   - generate reviewed Provider/version/OS/capability compatibility states.
-5. **Corrective — First Exact Reviewed Provider Path**
-   - add one pinned official Windows amd64 Chromium Snapshot Provider;
-   - freeze archive, executable, and complete Package Tree identity, source, license/provenance, limitations, and rollback rules;
-   - run the same exact managed binary through M4.2, M4.3, and M4.4 Evidence;
-   - restrict compatibility to the exact reviewed combination.
+Issue #37 and Draft PR #39 define the Phase 5 plan. Product implementation remains blocked.
 
-The full scope, non-scope, platform policy, acceptance criteria, rollback rules, and exit gates are defined in `docs/PHASE_04.md`. Logical contracts are defined in `docs/PHASE_04_CONTRACTS.md`. The reviewed Provider boundary is documented in `docs/OFFICIAL_CHROMIUM_PROVIDER.md` and `docs/PHASE_04_CORRECTIVE_PLAN.md`.
+### Proposed user outcome
 
-## Phase 4 closure result
+A user can preserve, recover, move, template, archive, and manage Veilium Profiles without silently copying secrets, weakening Provider trust, reusing identities unintentionally, or losing browser data during interrupted operations.
 
-Issue #35 recorded **Pass** after reviewing merged implementation baseline `49ae2de6cb652d789c97aa961c0007513362bb6f` and Closing-state baseline `759dd7ab6689c244e28ce9d09b63e9f2bac1878c`.
+### Proposed milestone sequence
 
-The final review confirmed:
+1. **M5.1 — Lifecycle Contract, Inventory, and Operation Journal**
+   - versioned lifecycle states separate from runtime and health;
+   - durable operation records, per-item results, locks, cancellation, inventory, and startup reconciliation;
+   - conservative compatibility for existing Profiles.
+2. **M5.2 — Safe Local Snapshot, Restore, Archive, and Trash**
+   - same-machine full snapshots of Profile metadata and opaque managed browser data;
+   - deterministic tree identity, bounds, staging, atomic activation, rollback, and disk-space checks;
+   - archive, recoverable trash, retention, restore, and explicit permanent deletion.
+3. **M5.3 — Portable Profile Definitions and Templates**
+   - configuration-only packages without secrets, browser data, local paths, binaries, runtime state, or Evidence;
+   - dependency requirements and explicit local remapping;
+   - new-identity default, explicit preserve-identity mode, and stale Evidence handling;
+   - templates that always create a new Profile ID, directory, and fingerprint seed.
+4. **M5.4 — Bounded Multi-profile Operations and Storage Management**
+   - bulk tags/groups, lifecycle actions, definition export, health/integrity refresh, and explicit stop operations;
+   - bounded concurrency, preflight, cancellation, per-item results, storage inventory, and non-destructive repair plans;
+   - no bulk start, scheduling, proxy rotation, or general automation.
 
-- Provider Contract v2 and legacy compatibility are frozen;
-- one exact reviewed Windows amd64 Chromium Snapshot Provider exists;
-- custom and legacy Providers cannot inherit reviewed claims;
-- archive, executable, and complete-package identities are immutable and fail closed;
-- the same exact managed binary passes identity, managed-window/consistency, and controlled Network Evidence;
-- capability and compatibility states remain Provider-, platform-, binary-, and Evidence-derived;
-- unsafe, unsupported, modified, missing, stale, contradictory, and incompatible states remain explicit;
-- privacy, licensing, rollback, platform, governance, and technical validation gates pass;
-- unresolved risks and deferred work are recorded in `docs/PHASE_04_CLOSING_REVIEW.md`.
+The complete proposal is in `docs/PHASE_05.md`; logical state and artifact contracts are in `docs/PHASE_05_CONTRACTS.md`.
 
-A first Closing-state Windows Evidence attempt hit a GitHub Runner temporary-directory Chromium Sandbox access denial after successful package installation. The identical Job passed on a fresh Runner without changing code, binary, assertions, or flags. This is retained as a non-blocking CI-environment reliability risk.
+## Phase 5 planning boundaries
 
-Phase 4 is now frozen as `Done`. Later changes to its contracts or support claims require a dedicated issue and reviewed planning change.
+### Data classes
 
-## Phase 4 explicit deferrals
+The plan keeps these classes separate:
 
-The following work is not part of Phase 4 and gains no implementation authority from closure:
+- portable Profile metadata and validated non-secret configuration;
+- local/machine-bound browser user data and OS-vault secrets;
+- managed Kernel and adapter binaries with independent identities;
+- Provider-, binary-, platform-, route-, and Evidence-bound claims;
+- operational logs, staging, quarantine, and runtime state.
 
-### Profile lifecycle and operations
+A local full snapshot is not automatically a cross-machine migration package. A portable definition is not a copy of browser state.
 
-- cookie import, export, or editing;
+### Platform policy
+
+- Windows and Linux are the proposed implementation and CI targets;
+- full local snapshot/restore requires real filesystem integration tests on each claimed platform;
+- the reviewed browser Provider remains Windows amd64 only;
+- Linux lifecycle support does not create a reviewed Linux browser Provider;
+- macOS and cross-platform full browser-state migration remain unclaimed.
+
+### Explicit Phase 5 non-goals
+
+- Cookie import, export, or editing as a separate product surface;
 - extension package management;
-- complete profile backup, restore, or cross-device migration;
-- profile templates and broad batch operations;
-- bounded crash-restart policy unless separately planned.
+- exporting operating-system vault secrets;
+- bundling or updating Chromium, Xray, or sing-box inside Profile artifacts;
+- a second reviewed browser Provider, revision, platform, or architecture;
+- new fingerprint controls or optimistic compatibility claims;
+- proxy expansion, pools, rotation, or scheduled health actions;
+- bulk Profile start, account farming, general browser automation, public API, MCP, or cloud sync;
+- release signing, auto-update, SBOM, or reproducible application release work;
+- unrelated broad UI redesign.
 
-### Proxy platform expansion
+Those items remain deferred to later dedicated planning. Phase 5 prioritizes lifecycle safety and recoverability.
 
-- broader share-link compatibility and ecosystem aliases;
-- additional Xray, sing-box, or Mihomo protocols, transports, and options;
-- proxy import, tagging, batch testing, rotation, or scheduled health operations;
-- unrelated proxy UI expansion.
+## Planning and activation gate
 
-### Automation, sync, and release
+The current planning pull request must:
 
-- stable public Launch API and unified CDP gateway;
-- MCP server and broad automation-script platform;
-- cloud sync;
-- application release signing, auto-update, SBOM, and full reproducible application builds;
-- broad UI redesign unrelated to Provider, capability, Evidence, or health states.
+- remain documentation-only;
+- define the user outcome and non-goals;
+- freeze dependency-ordered milestones;
+- define lifecycle, snapshot, portable package, template, operation, migration, security, and platform contracts;
+- define the validation matrix and phase exit criteria;
+- keep `Product implementation allowed: No`.
 
-These are candidates for Phase 5 or Phase 6 planning only. They must be prioritized through the next phase planning process rather than inferred from this backlog.
+After the planning packet is reviewed, a separate activation decision must:
 
-## Next planning task
+1. approve the plan;
+2. set Phase 5 status to `Active`;
+3. set `Product implementation allowed: Yes`;
+4. create or identify exactly one M5.1 implementation issue;
+5. update ROADMAP and STATUS in the same activation pull request.
 
-Issue #37, **define Phase 5 profile lifecycle and operations scope**, is the only next authorized planning task.
+Issue #37 and PR #39 do not activate Phase 5 by themselves.
 
-It must create a dedicated `docs/PHASE_05.md` in `Planning`, define one explicit user outcome, non-goals, dependency-ordered milestones, data and migration contracts, security/privacy/platform boundaries, validation, and exit gates, and update ROADMAP and STATUS in one reviewed planning pull request.
+## Phase 6 remains deferred
 
-Issue #37 does not activate Phase 5. Phase 5 remains `Planned`, and all product implementation is blocked until the planning pull request is reviewed and a separate activation decision explicitly permits implementation.
+Phase 6 may later plan:
+
+- controlled local automation and audited session control;
+- public Launch API, bounded CDP gateway, or MCP;
+- cloud or cross-device synchronization;
+- release signing, auto-update, SBOM, and reproducible builds;
+- other production-hardening work.
+
+It gains no implementation authority from Phase 5 planning.
 
 ## Phase status rules
 
@@ -130,8 +146,8 @@ Allowed phase states are:
 
 - `Planning` — scope is being decided; product implementation is blocked;
 - `Active` — milestones and exit criteria are approved;
-- `Closing` — implementation is complete and closure evidence is being reviewed;
+- `Closing` — implementation is complete and closure Evidence is being reviewed;
 - `Done` — exit criteria passed and the phase is frozen;
 - `Planned` — a later phase placeholder without implementation authority.
 
-The current phase document and `docs/STATUS.md` must agree with the metadata at the top of this file. CI validates that relationship.
+The current phase document and `docs/STATUS.md` must agree with the metadata at the top of this file. Governance CI validates that relationship.
