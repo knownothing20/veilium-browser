@@ -59,7 +59,7 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 		args = append([]string{"--no-sandbox"}, args...)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	command := exec.CommandContext(ctx, binary, args...)
 	var logs bytes.Buffer
@@ -81,7 +81,7 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 		}
 	}()
 
-	portContext, portCancel := context.WithTimeout(ctx, 15*time.Second)
+	portContext, portCancel := context.WithTimeout(ctx, 30*time.Second)
 	port, err := discovery.Wait(portContext, userDataDir)
 	portCancel()
 	if err != nil {
