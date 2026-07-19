@@ -108,7 +108,7 @@ func (c *Controller) Apply(ctx context.Context, cdpPort int, browserWebSocket st
 	if err != nil {
 		return domain.WindowState{}, err
 	}
-	connection, response, err := c.dialer.DialContext(ctx, browserWebSocket, http.Header{"Origin": []string{"http://127.0.0.1"}})
+	connection, response, err := c.dialer.DialContext(ctx, browserWebSocket, nil)
 	if err != nil {
 		if response != nil && response.Body != nil {
 			_ = response.Body.Close()
