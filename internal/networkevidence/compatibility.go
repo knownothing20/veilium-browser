@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/knownothing20/veilium-browser/internal/fingerprint"
+	"github.com/knownothing20/veilium-browser/internal/kernelrelease"
 )
 
 type CompatibilityStatus string
@@ -63,6 +64,12 @@ func (entry CompatibilityEntry) Validate() error {
 	}
 	if !validSHA256(entry.BinaryIdentityDigest) {
 		return fmt.Errorf("compatibility binary identity digest is invalid")
+	}
+	if entry.ProviderID == kernelrelease.ProviderID {
+		release, ok := kernelrelease.Find(entry.ProviderID, entry.BrowserVersion, strings.ToLower(entry.OperatingSystem), strings.ToLower(entry.Architecture))
+		if !ok || entry.ProviderRevision != release.ProviderRevision || entry.ProviderTrust != fingerprint.TrustReviewed {
+			return fmt.Errorf("reviewed Chromium compatibility must match the exact embedded release identity")
+		}
 	}
 	if len(entry.NetworkEvidenceIDs) > 32 || len(entry.Limitations) > 64 {
 		return fmt.Errorf("compatibility entry exceeds bounded lists")
