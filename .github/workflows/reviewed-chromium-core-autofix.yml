@@ -3,12 +3,15 @@ name: Reviewed Chromium Core Autofix
 on:
   push:
     branches: [agent/reviewed-official-chromium-provider]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   patch-and-test:
+    if: github.ref_name == 'agent/reviewed-official-chromium-provider' || github.head_ref == 'agent/reviewed-official-chromium-provider'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -29,35 +32,35 @@ jobs:
           path = Path('internal/kernel/store.go')
           text = path.read_text()
           old = '''type Record struct {
-\tID         string    `json:"id"`
-\tName       string    `json:"name"`
-\tProvider   string    `json:"provider"`
-\tVersion    string    `json:"version"`
-\tExecutable string    `json:"executable"`
-\tSHA256     string    `json:"sha256"`
-\tSizeBytes  int64     `json:"sizeBytes"`
-\tStatus     string    `json:"status"`
-\tImportedAt time.Time `json:"importedAt"`
-\tVerifiedAt time.Time `json:"verifiedAt"`
-}'''
+          \tID         string    `json:"id"`
+          \tName       string    `json:"name"`
+          \tProvider   string    `json:"provider"`
+          \tVersion    string    `json:"version"`
+          \tExecutable string    `json:"executable"`
+          \tSHA256     string    `json:"sha256"`
+          \tSizeBytes  int64     `json:"sizeBytes"`
+          \tStatus     string    `json:"status"`
+          \tImportedAt time.Time `json:"importedAt"`
+          \tVerifiedAt time.Time `json:"verifiedAt"`
+          }'''.replace('          ', '')
           new = '''type Record struct {
-\tID                string    `json:"id"`
-\tName              string    `json:"name"`
-\tProvider          string    `json:"provider"`
-\tVersion           string    `json:"version"`
-\tExecutable        string    `json:"executable"`
-\tSHA256            string    `json:"sha256"`
-\tSizeBytes         int64     `json:"sizeBytes"`
-\tStatus            string    `json:"status"`
-\tImportedAt        time.Time `json:"importedAt"`
-\tVerifiedAt        time.Time `json:"verifiedAt"`
-\tPackageRoot       string    `json:"packageRoot,omitempty"`
-\tPackageTreeSHA256 string    `json:"packageTreeSha256,omitempty"`
-\tPackageFileCount  int       `json:"packageFileCount,omitempty"`
-\tPackageSizeBytes  int64     `json:"packageSizeBytes,omitempty"`
-\tSnapshotRevision  int64     `json:"snapshotRevision,omitempty"`
-\tArchiveSHA256     string    `json:"archiveSha256,omitempty"`
-}'''
+          \tID                string    `json:"id"`
+          \tName              string    `json:"name"`
+          \tProvider          string    `json:"provider"`
+          \tVersion           string    `json:"version"`
+          \tExecutable        string    `json:"executable"`
+          \tSHA256            string    `json:"sha256"`
+          \tSizeBytes         int64     `json:"sizeBytes"`
+          \tStatus            string    `json:"status"`
+          \tImportedAt        time.Time `json:"importedAt"`
+          \tVerifiedAt        time.Time `json:"verifiedAt"`
+          \tPackageRoot       string    `json:"packageRoot,omitempty"`
+          \tPackageTreeSHA256 string    `json:"packageTreeSha256,omitempty"`
+          \tPackageFileCount  int       `json:"packageFileCount,omitempty"`
+          \tPackageSizeBytes  int64     `json:"packageSizeBytes,omitempty"`
+          \tSnapshotRevision  int64     `json:"snapshotRevision,omitempty"`
+          \tArchiveSHA256     string    `json:"archiveSha256,omitempty"`
+          }'''.replace('          ', '')
           if new not in text:
               if old not in text: raise SystemExit('Record marker missing')
               text = text.replace(old, new, 1)
@@ -142,6 +145,7 @@ jobs:
       - name: Run core tests
         run: go test ./internal/kernelrelease ./internal/fingerprint ./internal/kernel
       - name: Commit scoped core changes
+        if: github.event_name == 'push'
         shell: bash
         run: |
           if git diff --quiet; then exit 0; fi
