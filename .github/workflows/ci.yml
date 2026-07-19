@@ -88,7 +88,7 @@ jobs:
   windows:
     name: Windows Go tests
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -102,35 +102,69 @@ jobs:
       - name: Unit tests
         run: go test ./cmd/... ./internal/...
 
-      - name: Locate hosted Chrome
-        id: chromium
+      - name: Cache exact reviewed Chromium archive
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}\veilium-reviewed-chromium-1664436\chrome-win.zip
+          key: reviewed-chromium-win64-d224019b7cbc115951b0f5dce8cf232c37244881a3eb969c010e457aa369332f
+
+      - name: Fetch and verify exact reviewed Chromium archive
         shell: pwsh
         run: |
-          $candidates = @(
-            "$env:ProgramFiles\Google\Chrome\Application\chrome.exe",
-            "${env:ProgramFiles(x86)}\Google\Chrome\Application\chrome.exe",
-            "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe"
-          )
-          $chrome = $candidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
-          if (-not $chrome) {
-            $command = Get-Command chrome.exe -ErrorAction SilentlyContinue
-            if ($command) { $chrome = $command.Source }
+          $ErrorActionPreference = 'Stop'
+          $directory = Join-Path $env:RUNNER_TEMP 'veilium-reviewed-chromium-1664436'
+          $archive = Join-Path $directory 'chrome-win.zip'
+          New-Item -ItemType Directory -Path $directory -Force | Out-Null
+          if (-not (Test-Path $archive)) {
+            Invoke-WebRequest -Uri 'https://commondatastorage.googleapis.com/chromium-browser-snapshots/Win_x64/1664436/chrome-win.zip' -OutFile $archive -MaximumRedirection 3
           }
-          if (-not $chrome) { throw 'Hosted Chrome was not found' }
-          "path=$chrome" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          & $chrome --version
+          $file = Get-Item $archive
+          if ($file.Length -ne 343585547) { throw "Unexpected reviewed Chromium archive size: $($file.Length)" }
+          $hash = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
+          if ($hash -ne 'd224019b7cbc115951b0f5dce8cf232c37244881a3eb969c010e457aa369332f') { throw "Unexpected reviewed Chromium archive digest: $hash" }
 
-      - name: Exercise real-browser evidence collector
+      - name: Install exact reviewed Chromium package
+        id: reviewed_chromium
         shell: pwsh
         env:
-          VEILIUM_CHROMIUM_BINARY: ${{ steps.chromium.outputs.path }}
+          VEILIUM_REVIEWED_CHROMIUM_ARCHIVE: ${{ runner.temp }}\veilium-reviewed-chromium-1664436\chrome-win.zip
+          VEILIUM_REVIEWED_CHROMIUM_WORKDIR: ${{ runner.temp }}\veilium-reviewed-chromium-install
+          VEILIUM_REVIEWED_CHROMIUM_RESULT: ${{ runner.temp }}\reviewed-chromium-evidence-packet.json
+        run: |
+          go test -v -run '^TestReviewedChromiumInstallForCI$' ./internal/kernelinstaller
+          $packet = Get-Content $env:VEILIUM_REVIEWED_CHROMIUM_RESULT -Raw | ConvertFrom-Json
+          if (-not $packet.executable -or -not (Test-Path $packet.executable)) { throw 'Reviewed Chromium installer did not produce an executable' }
+          "path=$($packet.executable)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "packet=$env:VEILIUM_REVIEWED_CHROMIUM_RESULT" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "workdir=$env:VEILIUM_REVIEWED_CHROMIUM_WORKDIR" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Exercise exact reviewed identity and managed-window Evidence
+        shell: pwsh
+        env:
+          VEILIUM_CHROMIUM_BINARY: ${{ steps.reviewed_chromium.outputs.path }}
         run: go test -v -run '^TestRealChromiumEvidenceCollector$' ./internal/evidence
 
-      - name: Exercise real-browser network evidence
+      - name: Exercise exact reviewed browser Network Evidence
         shell: pwsh
         env:
-          VEILIUM_CHROMIUM_BINARY: ${{ steps.chromium.outputs.path }}
+          VEILIUM_CHROMIUM_BINARY: ${{ steps.reviewed_chromium.outputs.path }}
         run: go test -v -run '^TestRealChromiumNetworkEvidence$' ./internal/networkevidence
+
+      - name: Verify reviewed package tamper fails closed
+        shell: pwsh
+        env:
+          VEILIUM_REVIEWED_CHROMIUM_WORKDIR: ${{ steps.reviewed_chromium.outputs.workdir }}
+          VEILIUM_REVIEWED_CHROMIUM_RESULT: ${{ steps.reviewed_chromium.outputs.packet }}
+        run: go test -v -run '^TestReviewedChromiumPackageTamperForCI$' ./internal/kernelinstaller
+
+      - name: Upload exact reviewed Provider evidence packet
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reviewed-chromium-win64-evidence
+          path: ${{ steps.reviewed_chromium.outputs.packet }}
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Build headless packages
         run: go build ./cmd/... ./internal/...
