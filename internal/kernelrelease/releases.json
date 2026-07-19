@@ -26,7 +26,7 @@
       "executableSha256": "5093988c8fdf969494f921deb32c177dbe5ed88cc101346852d93e760041e5c9",
       "packageFileCount": 261,
       "expandedSizeBytes": 814120936,
-      "packageTreeSha256": "2c2c4df75cc994b51f24028029057296d3213de4edcada6e698842bd24886e4c",
+      "packageTreeSha256": "312cb62d6bfab56ecfa52c4e8047dd33c05a1c17c7e44bc2afd9be436854a8dc",
       "limitations": [
         "Chromium snapshots are best-effort builds from arbitrary source revisions and do not necessarily map to user-facing stable Chrome releases.",
         "Reviewed status applies only to this exact revision, Windows amd64 archive, extracted package tree, executable identity, and recorded Evidence chain.",
