@@ -35,6 +35,7 @@ interface ConsistencyResult {
 
 type ConsistencyAPI = {
   ProfileConsistency: (profileId: string) => Promise<ConsistencyResult>
+  UpdateProfile: (profile: Profile) => Promise<Profile>
 }
 
 function api(): ConsistencyAPI | undefined {
@@ -47,13 +48,20 @@ function api(): ConsistencyAPI | undefined {
 export function ConsistencyAction({ profile, nativeMode }: { profile: Profile; nativeMode: boolean }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState<ConsistencyResult>()
+  const [windowWidth, setWindowWidth] = useState(profile.fingerprint.windowWidth || 0)
+  const [windowHeight, setWindowHeight] = useState(profile.fingerprint.windowHeight || 0)
+  const [deviceScaleFactor, setDeviceScaleFactor] = useState(profile.fingerprint.deviceScaleFactor || 0)
 
   async function inspect() {
     setOpen(true)
     setLoading(true)
     setError('')
+    setWindowWidth(profile.fingerprint.windowWidth || 0)
+    setWindowHeight(profile.fingerprint.windowHeight || 0)
+    setDeviceScaleFactor(profile.fingerprint.deviceScaleFactor || 0)
     try {
       const desktop = api()
       if (!desktop) throw new Error('Profile consistency is available only in the desktop application')
@@ -64,6 +72,39 @@ export function ConsistencyAction({ profile, nativeMode }: { profile: Profile; n
     } finally {
       setLoading(false)
     }
+  }
+
+  async function saveWindowPlan() {
+    const desktop = api()
+    if (!desktop) {
+      setError('Profile consistency is available only in the desktop application')
+      return
+    }
+    setSaving(true)
+    setError('')
+    try {
+      const next: Profile = {
+        ...profile,
+        fingerprint: {
+          ...profile.fingerprint,
+          windowWidth,
+          windowHeight,
+          deviceScaleFactor,
+        },
+      }
+      await desktop.UpdateProfile(next)
+      setResult(await desktop.ProfileConsistency(profile.id))
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function useLegacyFallback() {
+    setWindowWidth(0)
+    setWindowHeight(0)
+    setDeviceScaleFactor(0)
   }
 
   return (
@@ -100,6 +141,30 @@ export function ConsistencyAction({ profile, nativeMode }: { profile: Profile; n
                     <strong>{result.window.source === 'explicit' ? 'Explicit window plan' : 'Legacy compatibility fallback'}</strong>
                     <p>Rules {result.rulesRevision} · generated {new Date(result.generatedAt).toLocaleString()}</p>
                   </div>
+                  <section className="form-section">
+                    <div className="section-heading">
+                      <span>W</span>
+                      <div>
+                        <h3>Managed window plan</h3>
+                        <p>Use explicit dimensions for stable relaunches. Set all three values to 0 to use the existing screen-size fallback.</p>
+                      </div>
+                    </div>
+                    <div className="form-grid three">
+                      <label>
+                        Window width
+                        <input type="number" min="0" max="16384" value={windowWidth} onChange={(event) => setWindowWidth(Number(event.target.value))} />
+                      </label>
+                      <label>
+                        Window height
+                        <input type="number" min="0" max="16384" value={windowHeight} onChange={(event) => setWindowHeight(Number(event.target.value))} />
+                      </label>
+                      <label>
+                        Device scale factor
+                        <input type="number" min="0" max="8" step="0.05" value={deviceScaleFactor} onChange={(event) => setDeviceScaleFactor(Number(event.target.value))} />
+                      </label>
+                    </div>
+                    <button type="button" className="text-button" onClick={useLegacyFallback}>Use legacy screen fallback</button>
+                  </section>
                   {(result.blockingReasons?.length || 0) > 0 && (
                     <div className="form-error">
                       <strong>Launch-blocking reasons</strong>
@@ -133,7 +198,8 @@ export function ConsistencyAction({ profile, nativeMode }: { profile: Profile; n
               )}
             </div>
             <footer className="editor-footer">
-              <button type="button" className="button secondary" onClick={() => void inspect()} disabled={loading}>Refresh</button>
+              <button type="button" className="button secondary" onClick={() => void inspect()} disabled={loading || saving}>Refresh</button>
+              <button type="button" className="button secondary" onClick={() => void saveWindowPlan()} disabled={loading || saving}>{saving ? 'Saving…' : 'Save window plan'}</button>
               <button type="button" className="button primary" onClick={() => setOpen(false)}>Close</button>
             </footer>
           </section>
