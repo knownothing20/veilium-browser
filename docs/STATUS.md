@@ -6,11 +6,13 @@ Main baseline SHA: 7306215085b578755d4980180edb9f451e5a9f14
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
 Current milestone: M4.3 — Identity and Window Consistency
-Current task: Complete Issue #22 in Draft PR #24
+Current task: Finish review and merge of Issue #22 in Draft PR #24
 
 ## Operational rule
 
 Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`. Work only on the current issue and milestone.
+
+M4.4 Issue #25 exists only as a blocked handoff. It must not begin until PR #24 is merged and Issue #25 is explicitly activated.
 
 ## Delivered baseline
 
@@ -29,36 +31,45 @@ M4.2 does not grant reviewed status to a production browser Provider.
 Current implementation issue: #22
 Current Draft PR: #24
 
-Implemented in the Draft branch so far:
+The Draft branch now contains:
 
 - optional explicit `windowWidth`, `windowHeight`, and `deviceScaleFactor` fields;
-- backward-compatible fallback to existing screen dimensions without rewriting profiles;
-- WindowPlan and observed WindowState contracts;
-- versioned consistency Result, Check, Health, WindowSource, and EvidenceInput contracts;
-- pre-launch Provider, platform, screen, window, and DPR checks;
-- deterministic consistency input digests for evidence freshness;
-- observed window parsing and initial controlled tolerances;
-- evidence-backed `healthy`, `degraded`, `blocked`, and `unknown` derivation;
-- initial compatibility, mismatch, stale-evidence, and reviewed-evidence tests.
+- backward-compatible screen-to-window fallback without rewriting existing profiles;
+- versioned WindowPlan, observed WindowState, consistency Result, Check, Health, WindowSource, and EvidenceInput contracts;
+- shared preflight enforcement for profile create/update, launch-plan generation, and runtime start;
+- effective WindowPlan launch arguments rather than treating screen size as the browser window contract;
+- deterministic consistency input digests stored on new Evidence Runs;
+- conservative freshness invalidation for profile, Provider, binary, runtime, harness, and rules changes;
+- evidence-derived `healthy`, `degraded`, `blocked`, and `unknown` profile health;
+- a read-only desktop health service and Profile-row report view;
+- explicit user-controlled window width, height, and DPR editing through the normal profile update path;
+- a bounded loopback CDP window controller that permits only get-window, set-bounds, and readback commands;
+- one Runtime Supervisor wrapper shared by Direct, built-in bridge, Xray, and sing-box launch paths;
+- fail-closed browser shutdown when managed-window application fails;
+- observed-window cleanup on stop and application shutdown;
+- unit, desktop, lifecycle, frontend, Windows, Linux, and real-Chromium controlled-window tests;
+- `docs/IDENTITY_WINDOW_CONSISTENCY.md`.
 
-Work still required before M4.3 can merge:
+## Remaining M4.3 merge gates
 
-1. integrate preflight into profile save, launch-plan generation, and runtime start;
-2. make launch arguments and LaunchPlan use the effective window rather than screen dimensions;
-3. add bounded loopback CDP window apply/readback behavior;
-4. record consistency input digests on new Evidence runs and keep old reports readable but stale;
-5. move final screen/window/viewport/DPR policy into M4.3 health evaluation;
-6. expose current profile health and readable reasons through desktop and frontend layers;
-7. add Windows/Linux controlled-window fixtures and tolerance documentation;
-8. create the M4.4 handoff issue and update this file;
-9. make Governance and every Required CI job pass;
-10. complete review and protected squash merge.
+1. obtain passing final Governance and all protected CI checks;
+2. remove the temporary read-only M4.3 diagnostic workflow;
+3. verify the final compare contains no diagnostic or autofix workflow;
+4. confirm no unresolved review thread;
+5. update PR #24 to the final delivery description;
+6. mark PR #24 ready and complete a protected squash merge.
+
+## Next milestone — blocked
+
+Issue #25 defines M4.4 — Live Browser Network Evidence and Compatibility Matrix.
+
+It remains blocked until PR #24 merges. After activation, M4.4 owns browser-observed exit IP, controlled WebRTC/STUN and delegated DNS route evidence, route-health integration, and generated exact-combination compatibility records.
 
 ## Active prohibitions
 
 Do not:
 
-- begin M4.4 external network evidence;
+- begin M4.4 external network evidence before PR #24 merges;
 - claim reviewed Provider status without exact applicable evidence;
 - silently rewrite or auto-correct profiles;
 - add new proxy protocols or pool operations;
@@ -70,10 +81,10 @@ Do not:
 ## Known risks
 
 - no production browser Provider is reviewed yet;
-- Windows and Linux window decoration and scaling need separate tolerances;
-- headless CI does not prove real desktop-window support;
-- freshness invalidation must be conservative;
-- existing profiles must remain readable;
+- hosted headless/window fixtures prove only their exact controlled environments, not general desktop compatibility;
+- Windows and Linux decorations and display scaling require bounded platform-aware tolerances;
+- freshness invalidation must remain conservative;
+- existing profiles and M4.2 Evidence reports must remain readable;
 - macOS remains unclaimed.
 
 ## Required validation
@@ -83,8 +94,8 @@ python scripts/check_project_governance.py
 make check
 ```
 
-The M4.3 PR must also pass the protected Windows, Linux, frontend, Wails, official-adapter, and applicable controlled-window checks.
+The M4.3 PR must also pass the protected Windows, Linux, frontend, Wails, official-adapter, and controlled real-browser window checks.
 
 ## Handoff
 
-Continue only in Issue #22 and Draft PR #24. Out-of-scope findings become separate issues.
+Until PR #24 merges, continue only in Issue #22 and Draft PR #24. After merge, activate Issue #25 and make it the single authorized product task.
