@@ -3,12 +3,15 @@ name: Phase 4 Corrective Activation
 on:
   push:
     branches: [agent/activate-reviewed-provider-corrective]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
 
 jobs:
   activate:
+    if: github.ref_name == 'agent/activate-reviewed-provider-corrective' || github.head_ref == 'agent/activate-reviewed-provider-corrective'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -85,14 +88,67 @@ After this activation PR merges, Issue #30 is the only authorized task. After Is
 ''')
 
           review = Path('docs/PHASE_04_CLOSING_REVIEW.md')
-          text = review.read_text()
-          text = text.replace('Overall decision: Pending', 'Overall decision: Blocked', 1)
-          text = text.replace('The review has not yet recorded Pass or Blocked.', 'The review is Blocked because no exact reviewed Provider exists. Corrective Issue #30 is the only authorized implementation task.', 1)
-          review.write_text(text)
+          review.write_text('''# Phase 4 Closing Review
+
+Status: Blocked
+Issue: #28
+Implementation baseline: `35a05bcf512a17511cd9b57303724eb0a25d34d5`
+Corrective issue: #30
+
+## Decision
+
+Phase 4 is blocked by one unmet exit gate: the repository has no exact reviewed Provider path.
+
+M4.1 through M4.4 and their protected validation passed. Hosted Chrome and Chromium fixtures prove the Evidence harness only and cannot be silently promoted to reviewed product support.
+
+## Exit-gate result
+
+| Gate | Result |
+| --- | --- |
+| Provider Contract v2 and legacy compatibility | Passed |
+| Custom and legacy Providers cannot inherit reviewed claims | Passed |
+| Real-browser identity Evidence | Passed |
+| Consistency, managed-window, and health behavior | Passed |
+| Browser Network Evidence and compatibility contracts | Passed |
+| Failure, privacy, platform, and governance boundaries | Passed |
+| At least one exact reviewed Provider path | Blocked |
+
+## Required corrective packet
+
+Issue #30 must produce one exact Windows amd64 packet containing:
+
+- Provider ID and revision;
+- official source, license/provenance, and review notes;
+- pinned Chromium Snapshot Revision and archive identity;
+- browser version and executable identity;
+- M4.2 identity Evidence;
+- M4.3 consistency/window Evidence;
+- M4.4 Network Evidence and ProbeSet revision;
+- exact compatibility entries, limitations, review time, and rollback rules.
+
+No moving latest lookup, other revision, other platform, filename match, launch success, or hosted browser may inherit this reviewed result.
+
+## Next action
+
+Phase 4 returns to `Active` only for Issue #30. After it merges, Phase 4 returns to `Closing` and this review is rerun. Phase 5 remains blocked.
+''')
           PY
       - name: Validate governance
         run: python scripts/check_project_governance.py
+      - name: Upload synchronized documents
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase-4-corrective-activation-docs
+          path: |
+            docs/PHASE_04.md
+            docs/ROADMAP.md
+            docs/STATUS.md
+            docs/PHASE_04_CLOSING_REVIEW.md
+          retention-days: 1
+          if-no-files-found: error
       - name: Commit corrective activation
+        if: github.event_name == 'push'
         shell: bash
         run: |
           if git diff --quiet; then exit 0; fi
