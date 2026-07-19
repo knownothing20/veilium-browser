@@ -142,7 +142,8 @@ func validProbeSet() ProbeSet {
 			},
 			{
 				SchemaVersion: ProbeSchemaVersion, ID: "dns", Revision: 1, Kind: ProbeDelegatedDNS,
-				DNSZone: "probe.example.invalid", TimeoutSeconds: 10,
+				DNSZone: "probe.example.invalid", DNSResultURL: "https://probe.example.invalid/dns-result",
+				TimeoutSeconds: 10, MaxResponseBytes: 4096,
 				SelfHostable: true, PrivacyNote: "Records only the one-time delegated query result.",
 			},
 		},
