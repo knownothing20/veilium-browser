@@ -35,5 +35,5 @@ func (a *DesktopApp) EvidenceActive(profileID string) bool {
 }
 
 func (a *DesktopApp) ProfileConsistency(profileID string) (consistency.Result, error) {
-	return a.service.ProfileConsistency(profileID)
+	return a.service.ProfileHealth(profileID)
 }

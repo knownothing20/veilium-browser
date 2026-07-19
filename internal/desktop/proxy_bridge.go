@@ -149,6 +149,7 @@ func closeAllProxyBridges(service *Service) error {
 }
 
 func shutdownRuntimeAndBridges(service *Service, ctx context.Context) error {
+	shutdownNetworkEvidenceRuntimes(service)
 	shutdownEvidenceRuntimes(service)
 	runtimeErr := service.supervisor.Shutdown(ctx)
 	bridgeErr := closeAllProxyBridges(service)
