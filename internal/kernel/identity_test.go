@@ -60,7 +60,7 @@ func TestBinaryIdentityRequiresExactReviewedPackageMetadata(t *testing.T) {
 	record := Record{
 		ID: "official-1", Provider: release.ProviderID, Version: release.BrowserVersion,
 		Executable: "/managed/package/chrome-win/chrome.exe",
-		SHA256: release.ExecutableSHA256, SizeBytes: release.ExecutableSizeBytes,
+		SHA256:     release.ExecutableSHA256, SizeBytes: release.ExecutableSizeBytes,
 		Status: StatusVerified, VerifiedAt: time.Now().UTC(),
 		PackageRoot: "/managed/package", PackageTreeSHA256: release.PackageTreeSHA256,
 		PackageFileCount: release.PackageFileCount, PackageSizeBytes: release.ExpandedSizeBytes,

@@ -182,7 +182,7 @@ func buildFixture(t *testing.T, traversal bool) ([]byte, kernelrelease.Release) 
 		ProviderID: "test-reviewed-chromium", ProviderRevision: 1, Name: "Test reviewed Chromium",
 		BrowserVersion: "152.0.0.0", SnapshotRevision: 123,
 		Platform: "windows", Arch: "amd64", ArchiveName: "chrome-win.zip",
-		ArchiveURL: "https://commondatastorage.googleapis.com/chromium-browser-snapshots/Win_x64/123/chrome-win.zip",
+		ArchiveURL:       "https://commondatastorage.googleapis.com/chromium-browser-snapshots/Win_x64/123/chrome-win.zip",
 		ArchiveSizeBytes: int64(len(archive)), ArchiveSHA256: hex.EncodeToString(archiveDigest[:]),
 		PackageFileCount: fileCount, ExpandedSizeBytes: expandedSize, PackageTreeSHA256: tree.SHA256,
 		ExecutablePath: "chrome-win/chrome.exe", ExecutableSizeBytes: int64(len(files["chrome-win/chrome.exe"])), ExecutableSHA256: hex.EncodeToString(executableDigest[:]),
