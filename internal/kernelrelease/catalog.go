@@ -18,11 +18,11 @@ const ProviderID = "official-chromium-snapshot-win64"
 var releaseFiles embed.FS
 
 var (
-	digestPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	digestPattern  = regexp.MustCompile(`^[0-9a-f]{64}$`)
 	versionPattern = regexp.MustCompile(`^\d+\.\d+\.\d+\.\d+$`)
-	loadOnce sync.Once
-	loaded Manifest
-	loadErr error
+	loadOnce       sync.Once
+	loaded         Manifest
+	loadErr        error
 )
 
 type Manifest struct {
@@ -53,6 +53,9 @@ type Release struct {
 	ExecutablePath       string   `json:"executablePath"`
 	ExecutableSizeBytes  int64    `json:"executableSizeBytes"`
 	ExecutableSHA256     string   `json:"executableSha256"`
+	PackageFileCount     int      `json:"packageFileCount"`
+	ExpandedSizeBytes    int64    `json:"expandedSizeBytes"`
+	PackageTreeSHA256    string   `json:"packageTreeSha256"`
 	Limitations          []string `json:"limitations"`
 }
 
@@ -117,6 +120,21 @@ func MatchExecutable(providerID, version, digest string, size int64) (Release, b
 	return Release{}, false
 }
 
+func MatchPackage(providerID, version, executableDigest string, executableSize int64, packageDigest string, packageFiles int, packageSize int64) (Release, bool) {
+	releases, err := Releases()
+	if err != nil {
+		return Release{}, false
+	}
+	executableDigest = strings.ToLower(strings.TrimSpace(executableDigest))
+	packageDigest = strings.ToLower(strings.TrimSpace(packageDigest))
+	for _, release := range releases {
+		if release.ProviderID == strings.TrimSpace(providerID) && release.BrowserVersion == strings.TrimSpace(version) && release.ExecutableSHA256 == executableDigest && release.ExecutableSizeBytes == executableSize && release.PackageTreeSHA256 == packageDigest && release.PackageFileCount == packageFiles && release.ExpandedSizeBytes == packageSize {
+			return cloneRelease(release), true
+		}
+	}
+	return Release{}, false
+}
+
 func validate(manifest Manifest) error {
 	if manifest.SchemaVersion != 1 || len(manifest.Releases) != 1 {
 		return fmt.Errorf("reviewed Chromium manifest must contain exactly one schema-v1 release")
@@ -134,8 +152,11 @@ func validate(manifest Manifest) error {
 	if release.ArchiveName != "chrome-win.zip" || release.ArchiveSizeBytes < 50<<20 || release.ArchiveSizeBytes > 500<<20 || release.ArchiveEntryCount < 1 || release.ArchiveEntryCount > 5000 {
 		return fmt.Errorf("reviewed Chromium archive metadata is invalid")
 	}
-	if !digestPattern.MatchString(release.ArchiveSHA256) || !digestPattern.MatchString(release.ExecutableSHA256) || release.ExecutableSizeBytes < 1 {
+	if !digestPattern.MatchString(release.ArchiveSHA256) || !digestPattern.MatchString(release.ExecutableSHA256) || !digestPattern.MatchString(release.PackageTreeSHA256) || release.ExecutableSizeBytes < 1 {
 		return fmt.Errorf("reviewed Chromium digest metadata is invalid")
+	}
+	if release.PackageFileCount != release.ArchiveEntryCount || release.ExpandedSizeBytes < release.ExecutableSizeBytes {
+		return fmt.Errorf("reviewed Chromium package-tree metadata is invalid")
 	}
 	if release.ArchiveRoot != "chrome-win" || release.ExecutablePath != "chrome-win/chrome.exe" || !safeRelativePath(release.ExecutablePath) {
 		return fmt.Errorf("reviewed Chromium archive layout is invalid")
