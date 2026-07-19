@@ -1,13 +1,19 @@
 package kernelinstaller
 
 import (
+	"archive/zip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -32,6 +38,12 @@ type ciInstallResult struct {
 type ciArchiveTransport struct {
 	path string
 	url  string
+}
+
+type ciArchiveFileIdentity struct {
+	path   string
+	size   int64
+	digest string
 }
 
 func (transport ciArchiveTransport) RoundTrip(request *http.Request) (*http.Response, error) {
@@ -65,6 +77,18 @@ func TestReviewedChromiumInstallForCI(t *testing.T) {
 		t.Fatalf("load reviewed release: %#v %v", releases, err)
 	}
 	release := releases[0]
+	archiveTree, err := inspectCIArchivePackageTree(archive)
+	if err != nil {
+		t.Fatalf("inspect reviewed Chromium archive package tree: %v", err)
+	}
+	expectedTree := kernel.PackageTreeIdentity{
+		SHA256:    release.PackageTreeSHA256,
+		FileCount: release.PackageFileCount,
+		SizeBytes: release.ExpandedSizeBytes,
+	}
+	if archiveTree != expectedTree {
+		t.Fatalf("reviewed Chromium archive package tree mismatch: actual=%#v expected=%#v", archiveTree, expectedTree)
+	}
 	_ = os.RemoveAll(workDir)
 	if err := os.MkdirAll(workDir, 0o700); err != nil {
 		t.Fatal(err)
@@ -101,4 +125,62 @@ func TestReviewedChromiumInstallForCI(t *testing.T) {
 	if err := os.WriteFile(resultPath, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func inspectCIArchivePackageTree(archivePath string) (kernel.PackageTreeIdentity, error) {
+	archive, err := zip.OpenReader(archivePath)
+	if err != nil {
+		return kernel.PackageTreeIdentity{}, err
+	}
+	defer archive.Close()
+
+	files := make([]ciArchiveFileIdentity, 0, len(archive.File))
+	var total int64
+	for _, entry := range archive.File {
+		name, isDirectory, err := validateArchiveEntry(entry)
+		if err != nil {
+			return kernel.PackageTreeIdentity{}, err
+		}
+		if isDirectory {
+			continue
+		}
+		reader, err := entry.Open()
+		if err != nil {
+			return kernel.PackageTreeIdentity{}, err
+		}
+		hasher := sha256.New()
+		size, copyErr := io.Copy(hasher, reader)
+		closeErr := reader.Close()
+		if copyErr != nil {
+			return kernel.PackageTreeIdentity{}, copyErr
+		}
+		if closeErr != nil {
+			return kernel.PackageTreeIdentity{}, closeErr
+		}
+		if size != int64(entry.UncompressedSize64) {
+			return kernel.PackageTreeIdentity{}, fmt.Errorf("archive entry size changed while hashing %q", name)
+		}
+		files = append(files, ciArchiveFileIdentity{
+			path:   name,
+			size:   size,
+			digest: hex.EncodeToString(hasher.Sum(nil)),
+		})
+		total += size
+	}
+
+	sort.Slice(files, func(i, j int) bool { return files[i].path < files[j].path })
+	treeHasher := sha256.New()
+	for _, file := range files {
+		_, _ = io.WriteString(treeHasher, file.path)
+		_, _ = treeHasher.Write([]byte{0})
+		_, _ = io.WriteString(treeHasher, strconv.FormatInt(file.size, 10))
+		_, _ = treeHasher.Write([]byte{0})
+		_, _ = io.WriteString(treeHasher, file.digest)
+		_, _ = treeHasher.Write([]byte{'\n'})
+	}
+	return kernel.PackageTreeIdentity{
+		SHA256:    hex.EncodeToString(treeHasher.Sum(nil)),
+		FileCount: len(files),
+		SizeBytes: total,
+	}, nil
 }
