@@ -1,0 +1,71 @@
+name: Reviewed Chromium Service Autofix
+
+on:
+  push:
+    branches: [agent/reviewed-official-chromium-provider]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-test:
+    if: github.ref_name == 'agent/reviewed-official-chromium-provider' || github.head_ref == 'agent/reviewed-official-chromium-provider'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/reviewed-official-chromium-provider
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Connect official Chromium installer to desktop service
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('internal/desktop/service.go')
+          t=p.read_text()
+          if 'internal/kernelinstaller' not in t:
+              t=t.replace('"github.com/knownothing20/veilium-browser/internal/kernel"\n', '"github.com/knownothing20/veilium-browser/internal/kernel"\n\t"github.com/knownothing20/veilium-browser/internal/kernelinstaller"\n\t"github.com/knownothing20/veilium-browser/internal/kernelrelease"\n',1)
+          if 'type KernelInstaller interface' not in t:
+              t=t.replace('type AdapterInstaller interface {\n\tInstall(context.Context, adapterinstaller.Request) (adapter.Record, error)\n}\n', 'type AdapterInstaller interface {\n\tInstall(context.Context, adapterinstaller.Request) (adapter.Record, error)\n}\n\ntype KernelInstaller interface {\n\tInstall(context.Context, kernelinstaller.Request) (kernel.Record, error)\n}\n',1)
+          if '\tkernelInstaller  KernelInstaller\n' not in t:
+              t=t.replace('\tadapterInstaller AdapterInstaller\n', '\tadapterInstaller AdapterInstaller\n\tkernelInstaller  KernelInstaller\n',1)
+          if 'KernelPins' not in t:
+              t=t.replace('\tAdapterPins        []adapterrelease.Pin `json:"adapterPins"`\n', '\tAdapterPins        []adapterrelease.Pin `json:"adapterPins"`\n\tKernelPins         []kernelrelease.Release `json:"kernelPins"`\n',1)
+          marker='\tofficialInstaller, err := adapterinstaller.New(adapters, filepath.Join(dataRoot, "adapter-installer"))\n\tif err != nil {\n\t\treturn nil, err\n\t}\n'
+          addition=marker+'\tofficialKernelInstaller, err := kernelinstaller.New(kernels, filepath.Join(dataRoot, "kernel-installer"))\n\tif err != nil {\n\t\treturn nil, err\n\t}\n'
+          if 'officialKernelInstaller, err :=' not in t:
+              if marker not in t: raise SystemExit('installer constructor marker missing')
+              t=t.replace(marker, addition, 1)
+          if '\t\tkernelInstaller:  officialKernelInstaller,\n' not in t:
+              t=t.replace('\t\tadapterInstaller: officialInstaller,\n', '\t\tadapterInstaller: officialInstaller,\n\t\tkernelInstaller:  officialKernelInstaller,\n',1)
+          if '\t\tKernelPins:         officialKernelPins(),\n' not in t:
+              t=t.replace('\t\tAdapterPins:        officialAdapterPins(),\n', '\t\tAdapterPins:        officialAdapterPins(),\n\t\tKernelPins:         officialKernelPins(),\n',1)
+          marker='func (s *Service) ImportKernel(request kernel.ImportRequest) (kernel.Record, error) {\n\treturn s.kernels.Import(request)\n}\n'
+          addition=marker+'\nfunc (s *Service) InstallOfficialKernel(ctx context.Context, request kernelinstaller.Request) (kernel.Record, error) {\n\tif s.kernelInstaller == nil {\n\t\treturn kernel.Record{}, fmt.Errorf("official Chromium installer is unavailable")\n\t}\n\treturn s.kernelInstaller.Install(ctx, request)\n}\n'
+          if 'func (s *Service) InstallOfficialKernel' not in t:
+              if marker not in t: raise SystemExit('kernel service marker missing')
+              t=t.replace(marker, addition, 1)
+          if 'func officialKernelPins()' not in t:
+              t=t.replace('func officialAdapterPins() []adapterrelease.Pin {', 'func officialKernelPins() []kernelrelease.Release {\n\treleases, err := kernelrelease.Releases()\n\tif err != nil {\n\t\treturn nil\n\t}\n\treturn releases\n}\n\nfunc officialAdapterPins() []adapterrelease.Pin {',1)
+          p.write_text(t)
+          PY
+          gofmt -w internal/desktop/service.go desktop_app.go
+      - name: Test desktop integration
+        run: go test ./internal/kernelrelease ./internal/fingerprint ./internal/kernel ./internal/kernelinstaller ./internal/desktop
+      - name: Commit scoped service changes
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'veilium-governance-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add internal/desktop/service.go desktop_app.go
+          git commit -m 'feat: expose reviewed Chromium installer in desktop service'
+          git push origin HEAD:agent/reviewed-official-chromium-provider
