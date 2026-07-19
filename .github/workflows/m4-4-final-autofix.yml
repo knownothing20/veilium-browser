@@ -1,0 +1,102 @@
+name: M4.4 Final Autofix
+
+on:
+  push:
+    branches: [agent/m4-4-network-evidence]
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/m4-4-network-evidence
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply scoped final fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          collector = Path('internal/networkevidence/collector.go')
+          text = collector.read_text()
+          text = text.replace('"https://* ."+zone', '"https://*."+zone')
+          collector.write_text(text)
+
+          integration = Path('internal/networkevidence/browser_integration_test.go')
+          text = integration.read_text()
+          text = text.replace(
+              'Client: &http.Client{Timeout: 2 * time.Second}',
+              'Client: &http.Client{Timeout: 2 * time.Second, Transport: &http.Transport{Proxy: nil}}',
+          )
+          integration.write_text(text)
+
+          desktop = Path('internal/desktop/network_evidence.go')
+          text = desktop.read_text()
+          old = '''\tentries := make([]networkevidence.CompatibilityEntry, 0, len(runs)*3)\n\tfor _, run := range runs {\n\t\tcapabilities, err := fingerprint.For(run.ProviderID, run.BrowserVersion)\n\t\tif err != nil {\n\t\t\tcontinue\n\t\t}\n\t\tfor _, capabilityID := range []string{"network.route", "network.webrtc", "network.dns"} {\n\t\t\tentry := compatibilityEntryForRun(run, capabilities.TrustStatus, capabilityID)\n\t\t\tentries = append(entries, entry)\n\t\t}\n\t}\n'''
+          new = '''\tentries := make([]networkevidence.CompatibilityEntry, 0, len(runs)*3)\n\tseen := make(map[string]struct{}, len(runs)*3)\n\tfor _, run := range runs {\n\t\tcapabilities, err := fingerprint.For(run.ProviderID, run.BrowserVersion)\n\t\tif err != nil {\n\t\t\tcontinue\n\t\t}\n\t\tfor _, capabilityID := range []string{"network.route", "network.webrtc", "network.dns"} {\n\t\t\tentry := compatibilityEntryForRun(run, capabilities.TrustStatus, capabilityID)\n\t\t\tkey := fmt.Sprintf("%s|%d|%s|%s|%s|%s|%s", entry.ProviderID, entry.ProviderRevision, entry.BrowserVersion, entry.OperatingSystem, entry.Architecture, entry.BinaryIdentityDigest, entry.CapabilityID)\n\t\t\tif _, exists := seen[key]; exists {\n\t\t\t\tcontinue\n\t\t\t}\n\t\t\tseen[key] = struct{}{}\n\t\t\tentries = append(entries, entry)\n\t\t}\n\t}\n'''
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('compatibility matrix marker not found')
+              text = text.replace(old, new, 1)
+          desktop.write_text(text)
+
+          workflow = Path('.github/workflows/ci.yml')
+          text = workflow.read_text()
+          windows_old = '''      - name: Exercise real-browser evidence collector\n        shell: pwsh\n        env:\n          VEILIUM_CHROMIUM_BINARY: ${{ steps.chromium.outputs.path }}\n        run: go test -v -run '^TestRealChromiumEvidenceCollector$' ./internal/evidence\n'''
+          windows_new = windows_old + '''\n      - name: Exercise real-browser network evidence\n        shell: pwsh\n        env:\n          VEILIUM_CHROMIUM_BINARY: ${{ steps.chromium.outputs.path }}\n        run: go test -v -run '^TestRealChromiumNetworkEvidence$' ./internal/networkevidence\n'''
+          if 'Exercise real-browser network evidence' not in text:
+              if windows_old not in text:
+                  raise SystemExit('Windows evidence CI marker not found')
+              text = text.replace(windows_old, windows_new, 1)
+
+          build_old = '''      - name: Build static evidence integration test\n        shell: bash\n        run: CGO_ENABLED=0 go test -c -o "$RUNNER_TEMP/veilium-evidence.test" ./internal/evidence\n'''
+          build_new = '''      - name: Build static browser integration tests\n        shell: bash\n        run: |\n          CGO_ENABLED=0 go test -c -o "$RUNNER_TEMP/veilium-evidence.test" ./internal/evidence\n          CGO_ENABLED=0 go test -c -o "$RUNNER_TEMP/veilium-network-evidence.test" ./internal/networkevidence\n'''
+          if build_old in text:
+              text = text.replace(build_old, build_new, 1)
+
+          volume_old = '''            -v "$RUNNER_TEMP/veilium-evidence.test:/tmp/veilium-evidence.test:ro" \\\n            debian:13-slim \\\n'''
+          volume_new = '''            -v "$RUNNER_TEMP/veilium-evidence.test:/tmp/veilium-evidence.test:ro" \\\n            -v "$RUNNER_TEMP/veilium-network-evidence.test:/tmp/veilium-network-evidence.test:ro" \\\n            debian:13-slim \\\n'''
+          if 'veilium-network-evidence.test:/tmp/veilium-network-evidence.test' not in text:
+              if volume_old not in text:
+                  raise SystemExit('Linux Docker volume marker not found')
+              text = text.replace(volume_old, volume_new, 1)
+
+          command_old = '''              VEILIUM_CHROMIUM_BINARY=/usr/bin/chromium /tmp/veilium-evidence.test -test.v -test.run "^TestRealChromiumEvidenceCollector$"\n'''
+          command_new = command_old + '''              VEILIUM_CHROMIUM_BINARY=/usr/bin/chromium /tmp/veilium-network-evidence.test -test.v -test.run "^TestRealChromiumNetworkEvidence$"\n'''
+          if '/tmp/veilium-network-evidence.test -test.v' not in text:
+              if command_old not in text:
+                  raise SystemExit('Linux evidence command marker not found')
+              text = text.replace(command_old, command_new, 1)
+          workflow.write_text(text)
+          PY
+          gofmt -w internal/networkevidence internal/desktop/network_evidence.go
+      - name: Run scoped Go tests
+        run: go test ./internal/networkevidence ./internal/desktop
+      - name: Check frontend
+        working-directory: frontend
+        run: |
+          npm install --no-audit --no-fund
+          npm run typecheck
+          npm test
+          npm run build
+      - name: Commit verified final fixes
+        shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'veilium-governance-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add internal/networkevidence internal/desktop/network_evidence.go .github/workflows/ci.yml
+          git commit -m 'test: finalize M4.4 controlled browser validation'
+          git push origin HEAD:agent/m4-4-network-evidence
