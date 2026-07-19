@@ -27,8 +27,10 @@ func OpenProbeStore(path string) (*ProbeStore, error) {
 		return nil, err
 	}
 	store := &ProbeStore{path: path}
-	if _, exists, err := store.Get(); err != nil || !exists {
-		return store, err
+	if _, exists, err := store.Get(); err != nil {
+		return nil, err
+	} else if !exists {
+		return store, nil
 	}
 	return store, nil
 }

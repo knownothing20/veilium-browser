@@ -245,7 +245,7 @@ func (collector *Collector) contentSecurityPolicy() string {
 		if definition.Kind == ProbeDelegatedDNS {
 			zone := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(definition.DNSZone)), ".")
 			if zone != "" {
-				imageSources = append(imageSources, "https://* ."+zone)
+				imageSources = append(imageSources, "https://*."+zone)
 				connectSources = append(connectSources, "https://*."+zone)
 			}
 		}

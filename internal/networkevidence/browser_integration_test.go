@@ -54,7 +54,7 @@ func TestRealChromiumNetworkEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	version, err := (supervisor.HTTPProber{Client: &http.Client{Timeout: 2 * time.Second}, Interval: 50 * time.Millisecond}).Wait(ctx, port)
+	version, err := (supervisor.HTTPProber{Client: &http.Client{Timeout: 2 * time.Second, Transport: &http.Transport{Proxy: nil}}, Interval: 50 * time.Millisecond}).Wait(ctx, port)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,8 +64,8 @@ func TestRealChromiumNetworkEvidence(t *testing.T) {
 	}
 	result, err := (ReconcilingExecutor{Inner: executor}).Execute(ctx, ExecutionRequest{
 		ProfileID: "controlled-network-profile",
-		Session: supervisor.Session{ProfileID: "controlled-network-profile", State: supervisor.StateReady, CDPPort: port, WebSocketDebuggerURL: version.WebSocketDebuggerURL, StartedAt: time.Now().UTC()},
-		Route: RouteIdentity{Kind: RouteDirect, Scheme: "direct", Digest: strings.Repeat("a", 64)}, ProbeSet: set,
+		Session:   supervisor.Session{ProfileID: "controlled-network-profile", State: supervisor.StateReady, CDPPort: port, WebSocketDebuggerURL: version.WebSocketDebuggerURL, StartedAt: time.Now().UTC()},
+		Route:     RouteIdentity{Kind: RouteDirect, Scheme: "direct", Digest: strings.Repeat("a", 64)}, ProbeSet: set,
 	})
 	if err != nil {
 		t.Fatal(err)

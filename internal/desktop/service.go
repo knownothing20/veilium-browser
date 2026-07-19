@@ -27,7 +27,7 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/xrayprovider"
 )
 
-const AppVersion = "0.14.0-dev"
+const AppVersion = "0.15.0-dev"
 
 type RuntimeSupervisor interface {
 	Start(context.Context, string, string, supervisor.PlanBuilder) (supervisor.Session, error)

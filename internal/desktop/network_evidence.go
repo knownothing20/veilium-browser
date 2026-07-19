@@ -324,6 +324,7 @@ func (service *Service) NetworkCompatibilityMatrix() (networkevidence.Compatibil
 		return networkevidence.CompatibilityMatrix{}, err
 	}
 	entries := make([]networkevidence.CompatibilityEntry, 0, len(runs)*3)
+	seen := make(map[string]struct{}, len(runs)*3)
 	for _, run := range runs {
 		capabilities, err := fingerprint.For(run.ProviderID, run.BrowserVersion)
 		if err != nil {
@@ -331,6 +332,11 @@ func (service *Service) NetworkCompatibilityMatrix() (networkevidence.Compatibil
 		}
 		for _, capabilityID := range []string{"network.route", "network.webrtc", "network.dns"} {
 			entry := compatibilityEntryForRun(run, capabilities.TrustStatus, capabilityID)
+			key := fmt.Sprintf("%s|%d|%s|%s|%s|%s|%s", entry.ProviderID, entry.ProviderRevision, entry.BrowserVersion, entry.OperatingSystem, entry.Architecture, entry.BinaryIdentityDigest, entry.CapabilityID)
+			if _, exists := seen[key]; exists {
+				continue
+			}
+			seen[key] = struct{}{}
 			entries = append(entries, entry)
 		}
 	}
