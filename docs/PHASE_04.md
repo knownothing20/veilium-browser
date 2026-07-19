@@ -1,6 +1,6 @@
 # Phase 4 — Verified Browser Capability and Evidence
 
-Status: Closing
+Status: Done
 Phase: Phase 4
 Owner decision required: No
 Product implementation allowed: No
@@ -99,9 +99,9 @@ The reviewed Provider contract and operational boundary are documented in `docs/
 - macOS remains unclaimed.
 - Other revisions, architectures, Providers, and platforms require separate reviewed evidence.
 
-## Explicit non-scope
+## Frozen non-scope
 
-Do not add during Closing Review:
+Phase 4 closure does not authorize:
 
 - a second Provider or platform;
 - Chromium source building or patching;
@@ -109,8 +109,10 @@ Do not add during Closing Review:
 - new fingerprint controls;
 - proxy protocols, pools, rotation, or batch operations;
 - cookies, extensions, backup/migration, public API, MCP, sync, or release work;
-- Phase 5 planning implementation or product implementation;
+- Phase 5 product implementation;
 - broad UI redesign or unrelated refactors.
+
+Any later work requires the governing phase and a separately reviewed issue and pull request.
 
 ## Data, privacy, licensing, and recovery rules
 
@@ -123,18 +125,22 @@ Do not add during Closing Review:
 - Chromium Snapshot provenance and SHA-256 pins do not claim publisher signing, transparency logs, or reproducible-build proof.
 - Stock Chromium advanced fingerprint overrides remain unsupported.
 
-## Required validation
+## Validation completed
+
+The final Phase 4 baseline passed:
 
 ```bash
 python scripts/check_project_governance.py
 make check
 ```
 
-The closure baseline must also pass protected Windows exact-download, archive/executable/Package Tree verification, Provider, identity Evidence, managed-window, Network Evidence, frontend, Wails, privacy, compatibility, and dependency-tamper checks.
+Protected validation also covered Windows exact-download, archive/executable/Package Tree verification, Provider contracts, identity Evidence, managed-window behavior, controlled Network Evidence, frontend, Windows/Linux Wails builds, official adapters, privacy and compatibility contracts, and dependency tamper.
 
-## Phase exit criteria
+The first Windows Closing-state Evidence attempt encountered a GitHub Runner temporary-directory Chromium Sandbox access denial after successful installation. The same Job was rerun unchanged on a fresh Runner and passed every exact-binary Evidence and tamper gate. No product code, binary, assertion, or sandbox flag was changed. This remains a documented CI-environment reliability risk rather than a broadened support claim.
 
-Issue #35 must verify that:
+## Phase exit result
+
+Issue #35 recorded **Pass** after confirming:
 
 - Provider Contract v2 and legacy compatibility are frozen;
 - one exact reviewed Windows amd64 Chromium Snapshot Provider exists;
@@ -147,8 +153,10 @@ Issue #35 must verify that:
 - unresolved risks and deferred work are recorded;
 - the complete governance and technical validation matrix passes on the closure baseline.
 
-Phase 4 becomes `Done` only through a separate closure decision PR after Issue #35 records a Pass result and updates `docs/ROADMAP.md` and `docs/STATUS.md`.
+The final decision and retained limitations are recorded in `docs/PHASE_04_CLOSING_REVIEW.md`.
 
-## Current authorized work
+## Handoff
 
-The only authorized task is Issue #35, **Phase 4 final closing evidence and exit gates**. Product implementation is blocked. Phase 5 remains blocked until a dedicated closure PR marks Phase 4 `Done`; Phase 5 product work then remains blocked until a separate planning and activation PR is reviewed.
+Phase 4 is frozen as `Done`. No further Phase 4 product implementation is authorized.
+
+Issue #37, **define Phase 5 profile lifecycle and operations scope**, is the only next planning task. Phase 5 remains `Planned`, and product implementation remains blocked until a dedicated Phase 5 planning pull request defines its outcome, contracts, milestones, validation, and exit gates and a separate activation decision explicitly permits implementation.

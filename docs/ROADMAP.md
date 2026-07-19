@@ -3,7 +3,7 @@
 Last updated: 2026-07-20
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
-Current phase status: Closing
+Current phase status: Done
 
 ## How to use this roadmap
 
@@ -18,8 +18,8 @@ A later phase must not begin before the current phase closes through a dedicated
 | Phase 1 | Clean-room core contracts, local persistence, policy validation, and secure local API foundation | Done | Historical PR and module documents |
 | Phase 2 | Wails and React desktop profile workspace with capability-driven configuration | Done | Historical PR and module documents |
 | Phase 3 | Verified local kernels, supervised browser runtime, credential vault, proxy bridges, diagnostics, and reviewed Xray/sing-box adapters | Done | Historical PR and module documents |
-| Phase 4 | Reviewed browser-provider contracts plus real-browser identity, consistency, and network evidence with truthful compatibility states | Closing | `docs/PHASE_04.md` |
-| Phase 5 | Profile lifecycle and scalable day-to-day operations; final scope depends on Phase 4 closure | Planned | To be created during Phase 5 planning |
+| Phase 4 | Reviewed browser-provider contracts plus real-browser identity, consistency, and network evidence with truthful compatibility states | Done | `docs/PHASE_04.md` |
+| Phase 5 | Profile lifecycle and scalable day-to-day operations; final scope must be defined by Issue #37 | Planned | To be created during Phase 5 planning |
 | Phase 6 | Controlled automation, migration/sync options, and production release hardening; final scope depends on prior phases | Planned | To be created during Phase 6 planning |
 
 ## Delivered baseline through Phase 3
@@ -67,17 +67,25 @@ Phase 4 was delivered in this dependency order:
 
 The full scope, non-scope, platform policy, acceptance criteria, rollback rules, and exit gates are defined in `docs/PHASE_04.md`. Logical contracts are defined in `docs/PHASE_04_CONTRACTS.md`. The reviewed Provider boundary is documented in `docs/OFFICIAL_CHROMIUM_PROVIDER.md` and `docs/PHASE_04_CORRECTIVE_PLAN.md`.
 
-## Phase 4 Closing Review
+## Phase 4 closure result
 
-Issue #35 is the only authorized task. It reruns every Phase 4 exit gate against merged baseline `49ae2de6cb652d789c97aa961c0007513362bb6f`.
+Issue #35 recorded **Pass** after reviewing merged implementation baseline `49ae2de6cb652d789c97aa961c0007513362bb6f` and Closing-state baseline `759dd7ab6689c244e28ce9d09b63e9f2bac1878c`.
 
-During `Closing`:
+The final review confirmed:
 
-- product implementation is blocked;
-- no Phase 5 planning implementation or product implementation is authorized;
-- the review must record a Pass or Blocked decision;
-- a Pass result requires a separate closure PR that marks Phase 4 `Done`, records unresolved risks and deferrals, updates `docs/STATUS.md`, and identifies the first Phase 5 planning task;
-- a Blocked result requires one narrow corrective issue without expanding Phase 4 scope.
+- Provider Contract v2 and legacy compatibility are frozen;
+- one exact reviewed Windows amd64 Chromium Snapshot Provider exists;
+- custom and legacy Providers cannot inherit reviewed claims;
+- archive, executable, and complete-package identities are immutable and fail closed;
+- the same exact managed binary passes identity, managed-window/consistency, and controlled Network Evidence;
+- capability and compatibility states remain Provider-, platform-, binary-, and Evidence-derived;
+- unsafe, unsupported, modified, missing, stale, contradictory, and incompatible states remain explicit;
+- privacy, licensing, rollback, platform, governance, and technical validation gates pass;
+- unresolved risks and deferred work are recorded in `docs/PHASE_04_CLOSING_REVIEW.md`.
+
+A first Closing-state Windows Evidence attempt hit a GitHub Runner temporary-directory Chromium Sandbox access denial after successful package installation. The identical Job passed on a fresh Runner without changing code, binary, assertions, or flags. This is retained as a non-blocking CI-environment reliability risk.
+
+Phase 4 is now frozen as `Done`. Later changes to its contracts or support claims require a dedicated issue and reviewed planning change.
 
 ## Phase 4 explicit deferrals
 
@@ -108,22 +116,13 @@ The following work is not part of Phase 4 and gains no implementation authority 
 
 These are candidates for Phase 5 or Phase 6 planning only. They must be prioritized through the next phase planning process rather than inferred from this backlog.
 
-## Phase 4 exit summary
+## Next planning task
 
-The final review must confirm:
+Issue #37, **define Phase 5 profile lifecycle and operations scope**, is the only next authorized planning task.
 
-- Provider Contract v2 and legacy compatibility are frozen;
-- at least one exact reviewed Provider path has real-browser Evidence;
-- custom Providers cannot inherit reviewed claims;
-- capability states are Provider- and Evidence-derived;
-- window, screen, viewport, and DPR consistency passes the approved matrix;
-- browser-observed route and controlled Network Evidence exists for the exact reviewed binary;
-- unsafe, unsupported, modified, missing, stale, contradictory, and incompatible states fail closed or remain explicitly limited;
-- a reviewed exact-combination compatibility contract exists;
-- privacy, licensing, rollback, platform, governance, and technical validation gates pass;
-- unresolved risks and deferred work are recorded.
+It must create a dedicated `docs/PHASE_05.md` in `Planning`, define one explicit user outcome, non-goals, dependency-ordered milestones, data and migration contracts, security/privacy/platform boundaries, validation, and exit gates, and update ROADMAP and STATUS in one reviewed planning pull request.
 
-The detailed closure requirements live in `docs/PHASE_04.md` and the pending review record in `docs/PHASE_04_CLOSING_REVIEW.md`.
+Issue #37 does not activate Phase 5. Phase 5 remains `Planned`, and all product implementation is blocked until the planning pull request is reviewed and a separate activation decision explicitly permits implementation.
 
 ## Phase status rules
 
