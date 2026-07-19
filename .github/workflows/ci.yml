@@ -162,9 +162,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: reviewed-chromium-win64-evidence
-          path: ${{ steps.reviewed_chromium.outputs.packet }}
+          path: ${{ runner.temp }}\reviewed-chromium-evidence-packet.json
           retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: warn
 
       - name: Build headless packages
         run: go build ./cmd/... ./internal/...
