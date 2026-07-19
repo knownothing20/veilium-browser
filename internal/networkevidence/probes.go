@@ -23,6 +23,7 @@ type ProbeDefinition struct {
 	HTTPSURL         string    `json:"httpsUrl,omitempty"`
 	STUNServer       string    `json:"stunServer,omitempty"`
 	DNSZone          string    `json:"dnsZone,omitempty"`
+	DNSResultURL     string    `json:"dnsResultUrl,omitempty"`
 	TimeoutSeconds   int       `json:"timeoutSeconds"`
 	MaxResponseBytes int       `json:"maxResponseBytes,omitempty"`
 	SelfHostable     bool      `json:"selfHostable"`
@@ -59,30 +60,37 @@ func (definition ProbeDefinition) Validate() error {
 	httpsURL := strings.TrimSpace(definition.HTTPSURL)
 	stunServer := strings.TrimSpace(definition.STUNServer)
 	dnsZone := strings.TrimSpace(definition.DNSZone)
+	dnsResultURL := strings.TrimSpace(definition.DNSResultURL)
 	switch definition.Kind {
 	case ProbeExitIP:
-		if stunServer != "" || dnsZone != "" {
+		if stunServer != "" || dnsZone != "" || dnsResultURL != "" {
 			return fmt.Errorf("exit-IP probe contains unrelated endpoint fields")
 		}
-		if err := validateHTTPSProbeURL(httpsURL); err != nil {
+		if err := validateProbeURL(httpsURL, "exit-IP"); err != nil {
 			return err
 		}
 		if definition.MaxResponseBytes < 64 || definition.MaxResponseBytes > 64<<10 {
 			return fmt.Errorf("exit-IP response limit is invalid")
 		}
 	case ProbeWebRTCSTUN:
-		if httpsURL != "" || dnsZone != "" || definition.MaxResponseBytes != 0 {
+		if httpsURL != "" || dnsZone != "" || dnsResultURL != "" || definition.MaxResponseBytes != 0 {
 			return fmt.Errorf("STUN probe contains unrelated endpoint fields")
 		}
 		if err := validateSTUNServer(stunServer); err != nil {
 			return err
 		}
 	case ProbeDelegatedDNS:
-		if httpsURL != "" || stunServer != "" || definition.MaxResponseBytes != 0 {
+		if httpsURL != "" || stunServer != "" {
 			return fmt.Errorf("delegated-DNS probe contains unrelated endpoint fields")
 		}
 		if err := validateDNSZone(dnsZone); err != nil {
 			return err
+		}
+		if err := validateProbeURL(dnsResultURL, "delegated-DNS result"); err != nil {
+			return err
+		}
+		if definition.MaxResponseBytes < 64 || definition.MaxResponseBytes > 64<<10 {
+			return fmt.Errorf("delegated-DNS result limit is invalid")
 		}
 	}
 	return nil
@@ -133,16 +141,16 @@ func (set ProbeSet) Definition(kind ProbeKind) (ProbeDefinition, bool) {
 	return ProbeDefinition{}, false
 }
 
-func validateHTTPSProbeURL(raw string) error {
+func validateProbeURL(raw, label string) error {
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil || parsed.Fragment != "" {
-		return fmt.Errorf("exit-IP probe URL is invalid")
+		return fmt.Errorf("%s probe URL is invalid", label)
 	}
 	if parsed.Scheme == "https" {
 		return nil
 	}
 	if parsed.Scheme != "http" {
-		return fmt.Errorf("exit-IP probe must use HTTPS or loopback HTTP")
+		return fmt.Errorf("%s probe must use HTTPS or loopback HTTP", label)
 	}
 	host := parsed.Hostname()
 	ip := net.ParseIP(host)
