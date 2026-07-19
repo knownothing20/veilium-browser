@@ -10,6 +10,7 @@ import type {
   CredentialSaveRequest,
   EvidenceRun,
   KernelImportRequest,
+  KernelInstallRequest,
   KernelRecord,
   LaunchPlan,
   Profile,
@@ -46,6 +47,7 @@ type WailsDesktopApp = {
   EvidenceActive: (profileId: string) => Promise<boolean>;
   PickKernelExecutable: () => Promise<string>;
   ImportKernel: (request: KernelImportRequest) => Promise<KernelRecord>;
+  InstallOfficialKernel: (request: KernelInstallRequest) => Promise<KernelRecord>;
   VerifyKernel: (id: string) => Promise<KernelRecord>;
   DeleteKernel: (id: string) => Promise<void>;
   PickAdapterExecutable: () => Promise<string>;
@@ -202,6 +204,7 @@ export const backend = {
           credentials: [],
           credentialProvider: "Desktop operating-system keyring",
           adapterPins: [],
+          kernelPins: [],
           runtimePlatform: "browser",
           runtimeArch: "unknown",
         };
@@ -402,6 +405,15 @@ export const backend = {
         "Kernel import is available only in the Wails desktop application",
       );
     return api.ImportKernel(request);
+  },
+
+  async installOfficialKernel(request: KernelInstallRequest): Promise<KernelRecord> {
+    const api = native();
+    if (!api)
+      throw new Error(
+        "Official Chromium installation is available only in the Wails desktop application",
+      );
+    return api.InstallOfficialKernel(request);
   },
 
   async verifyKernel(id: string): Promise<KernelRecord> {
