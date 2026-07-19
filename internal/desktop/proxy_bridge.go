@@ -36,6 +36,7 @@ type bridgeRegistry struct {
 var bridgeRegistries sync.Map
 
 func registryFor(service *Service) *bridgeRegistry {
+	installWindowSupervisor(service)
 	value, _ := bridgeRegistries.LoadOrStore(service, &bridgeRegistry{
 		factory: proxybridge.DefaultFactory{},
 		entries: make(map[string]bridgeEntry),
