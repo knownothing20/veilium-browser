@@ -1,9 +1,9 @@
 # Veilium Roadmap
 
-Last updated: 2026-07-18
+Last updated: 2026-07-19
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
-Current phase status: Active
+Current phase status: Closing
 
 ## How to use this roadmap
 
@@ -18,7 +18,7 @@ A later phase must not begin before the current phase closes through a dedicated
 | Phase 1 | Clean-room core contracts, local persistence, policy validation, and secure local API foundation | Done | Historical PR and module documents |
 | Phase 2 | Wails and React desktop profile workspace with capability-driven configuration | Done | Historical PR and module documents |
 | Phase 3 | Verified local kernels, supervised browser runtime, credential vault, proxy bridges, diagnostics, and reviewed Xray/sing-box adapters | Done | Historical PR and module documents |
-| Phase 4 | Reviewed browser-provider contracts plus real-browser identity, consistency, and network evidence with truthful compatibility states | Active | `docs/PHASE_04.md` |
+| Phase 4 | Reviewed browser-provider contracts plus real-browser identity, consistency, and network evidence with truthful compatibility states | Closing | `docs/PHASE_04.md` |
 | Phase 5 | Profile lifecycle and scalable day-to-day operations; final scope depends on Phase 4 closure | Planned | To be created during Phase 5 planning |
 | Phase 6 | Controlled automation, migration/sync options, and production release hardening; final scope depends on prior phases | Planned | To be created during Phase 6 planning |
 
@@ -40,9 +40,9 @@ The current baseline includes:
 - Linux and Windows Go, frontend, desktop-build, and adapter-validation CI;
 - repository governance, required pull requests, status checks, phase gates, and SSOT documents.
 
-## Active Phase 4 milestone sequence
+## Delivered Phase 4 milestone sequence
 
-Phase 4 is frozen in this dependency order:
+Phase 4 was implemented in this dependency order:
 
 1. **M4.1 — Kernel Provider Contract v2**
    - reviewed versus custom provider trust;
@@ -58,13 +58,15 @@ Phase 4 is frozen in this dependency order:
    - derive understandable profile health from evidence.
 4. **M4.4 — Live Browser Network Evidence and Compatibility Matrix**
    - verify browser-observed route, exit IP, WebRTC/STUN, and DNS behavior;
-   - publish reviewed provider/version/OS/capability compatibility states.
+   - publish exact provider/version/OS/capability compatibility states without exceeding accepted evidence.
 
-The full scope, non-scope, platform policy, acceptance criteria, rollback rules, and exit gate are defined in `docs/PHASE_04.md`. Logical data and evidence contracts are defined in `docs/PHASE_04_CONTRACTS.md`.
+Implementation is complete, but Phase 4 remains `Closing` until Issue #28 reviews every exit gate. The critical question is whether at least one exact reviewed Provider path has applicable identity, consistency/window, and network Evidence. Controlled hosted-browser CI fixtures do not automatically satisfy that production reviewed-Provider gate.
+
+The full scope, non-scope, platform policy, acceptance criteria, rollback rules, and exit gate are defined in `docs/PHASE_04.md`. Logical data and evidence contracts are defined in `docs/PHASE_04_CONTRACTS.md`. The active closing report is `docs/PHASE_04_CLOSING_REVIEW.md`.
 
 ## Phase 4 explicit deferrals
 
-The following work is not authorized during Phase 4 unless a reviewed planning change proves it is strictly required for the approved evidence chain:
+The following work is not authorized during Phase 4 closing review:
 
 ### Profile lifecycle and operations
 
@@ -93,7 +95,7 @@ These are candidates for Phase 5 or Phase 6 planning and do not gain priority fr
 
 ## Phase 4 exit summary
 
-Phase 4 cannot close until:
+Phase 4 cannot become `Done` until:
 
 - Provider Contract v2 and legacy compatibility are frozen;
 - at least one exact reviewed provider path has real-browser evidence;
@@ -105,7 +107,7 @@ Phase 4 cannot close until:
 - a reviewed compatibility matrix exists;
 - the complete governance and technical validation matrix passes.
 
-The detailed closure requirements live in `docs/PHASE_04.md`.
+The detailed closure requirements live in `docs/PHASE_04.md`. Issue #28 must record every gate as Passed, Blocked, or Not applicable with an explanation.
 
 ## Phase status rules
 

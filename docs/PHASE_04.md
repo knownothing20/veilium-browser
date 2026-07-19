@@ -1,9 +1,9 @@
 # Phase 4 — Verified Browser Capability and Evidence
 
-Status: Active
+Status: Closing
 Phase: Phase 4
 Owner decision required: No
-Product implementation allowed: Yes
+Product implementation allowed: No
 
 ## User outcome
 
@@ -265,4 +265,4 @@ Phase 4 becomes `Done` only through a dedicated closure pull request that verifi
 
 ## Current authorized work
 
-The first authorized implementation task is Issue #17, **M4.1 Kernel Provider Contract v2**. No M4.2–M4.4 product implementation or deferred non-scope work should be added to that issue or its pull request.
+The only authorized task is Issue #28, **Phase 4 closing evidence and exit gates**. Product implementation and Phase 5 planning remain blocked until the review records an explicit Pass or Blocked result.

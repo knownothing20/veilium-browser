@@ -162,10 +162,13 @@ def main() -> int:
                 f"{status_phase_doc} must declare Product implementation allowed: Yes or No",
                 errors,
             )
-        if phase_status == "Planning" and implementation_allowed == "Yes":
-            fail("a Planning phase cannot allow product implementation", errors)
-        if phase_status in {"Active", "Closing"} and implementation_allowed == "No":
-            fail(f"an {phase_status} phase must allow product implementation", errors)
+        if phase_status == "Active" and implementation_allowed != "Yes":
+            fail("an Active phase must allow product implementation", errors)
+        if phase_status in {"Planning", "Closing", "Done", "Planned"} and implementation_allowed != "No":
+            fail(
+                f"a {phase_status} phase must block product implementation",
+                errors,
+            )
 
     if roadmap_phase and f"| {roadmap_phase} |" not in roadmap:
         fail(f"roadmap table does not contain the current phase: {roadmap_phase}", errors)

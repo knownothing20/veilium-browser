@@ -2,79 +2,48 @@
 
 Last updated: 2026-07-19
 Application version: 0.15.0-dev
-Main baseline SHA: dcfcee9e4c8b8587ae0c8c44a63103cb0c5c5d6c
+Main baseline SHA: 35a05bcf512a17511cd9b57303724eb0a25d34d5
 Current phase: Phase 4
 Current phase document: docs/PHASE_04.md
-Current milestone: M4.4 — Live Browser Network Evidence and Compatibility Matrix
-Current task: Finish review and protected merge of Issue #25 in Draft PR #27
+Current milestone: Phase 4 Closing Review
+Current task: Review Issue #28 and determine Pass or Blocked
 
 ## Operational rule
 
-Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`. Work only on Issue #25 and PR #27.
+Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`. Work only on Issue #28 and `docs/PHASE_04_CLOSING_REVIEW.md`.
 
-M4.4 is the final Phase 4 implementation milestone. After it merges, the only authorized next action is a separate Phase 4 Closing Review. Phase 5 remains blocked.
+Phase status is `Closing`. Product implementation is not allowed. Phase 5 planning and implementation remain blocked.
 
-## Delivered baseline
+## Delivered implementation baseline
 
-M4.1, M4.2, and M4.3 are complete.
+- M4.1 PR #19 — Provider Contract v2, trust states, exact binary identity, legacy compatibility, and fail-closed advanced configuration.
+- M4.2 PR #21 — controlled real-browser identity Evidence, private reports, desktop inspection, and Windows/Linux fixtures.
+- M4.3 PR #24 — versioned consistency rules, Evidence freshness, managed windows, derived Profile health, and real-window validation.
+- M4.4 PR #27, merged as `35a05bcf512a17511cd9b57303724eb0a25d34d5` — browser network Evidence, explicit ProbeSets, Exit IP, WebRTC/STUN, delegated DNS, health integration, exact compatibility contracts, desktop controls, and Required Windows/Linux Chromium fixtures.
 
-- M4.1 PR #19 established Provider Contract v2, exact managed binary identity, explicit trust/capability states, and fail-closed legacy compatibility.
-- M4.2 PR #21, merged as `094fea4f03c5a87e37f69a4868fd26e609673c6e`, established controlled local real-browser Evidence, private reports, desktop inspection, and Windows/Linux fixtures.
-- M4.3 PR #24, merged as `139907936179ee61d4fcd82b19125c1535bb8e2a`, established versioned consistency rules, Evidence freshness, managed browser windows, derived Profile health, desktop controls, and Windows/Linux real-window validation.
+## Closing review question
 
-No production browser Provider is marked reviewed solely by these milestones.
+The review must determine whether every frozen Phase 4 exit gate has exact applicable evidence.
 
-## M4.4 delivered in PR #27
+The critical gate is the requirement for at least one exact reviewed Provider path with applicable identity, consistency/window, and network Evidence. Hosted Chrome/Chromium CI fixtures prove controlled test paths only and cannot silently become a production reviewed Provider claim.
 
-- independent versioned Network Evidence records tied to existing real-browser Evidence;
-- explicit Exit-IP, WebRTC/STUN, and delegated-DNS observations;
-- explicit replaceable or self-hostable ProbeSet configuration with no hidden public default;
-- HTTPS or loopback-only HTTP endpoint policy and bounded response limits;
-- route classification for Direct, HTTP, HTTPS, SOCKS5, local-auth bridge, Xray, and sing-box;
-- privacy-preserving SHA-256 route identity without storing original proxy URLs or credentials;
-- private atomic write-once report storage, retention, deletion, cancellation, timeout, and shutdown cleanup;
-- loopback-only one-shot Collector with Host, Origin, content type, size, strict JSON, and CSP enforcement;
-- controlled CDP Target lifecycle bound to the selected ready managed browser session;
-- browser-observed Exit-IP, bounded STUN summaries, delegated-DNS trigger and result collection;
-- reconciliation that fails WebRTC public-IP mismatches and degrades missing or unavailable evidence;
-- Profile health integration without silently changing the Profile or route;
-- desktop ProbeSet configuration, run, report, deletion, and compatibility-matrix surfaces;
-- exact Provider/revision/browser/OS/architecture/binary/capability matrix contracts;
-- custom and legacy Providers remain unable to receive reviewed verified status;
-- controlled unit, privacy, storage, lifecycle, frontend, and real-Chromium tests;
-- `docs/NETWORK_EVIDENCE.md` and `docs/COMPATIBILITY_MATRIX.md`.
+## Allowed outcomes
 
-## Remaining M4.4 merge gates
+1. **Pass** — every exit gate is supported; a dedicated closure decision may mark Phase 4 Done and authorize Phase 5 planning.
+2. **Blocked** — one or more gates are unmet; create narrow corrective issues and keep Phase 5 blocked.
 
-1. apply standard Go formatting and the final reviewed small fixes;
-2. add the real Chromium Network Evidence fixture to protected Windows and Linux CI;
-3. remove all temporary autofix or diagnostic workflows;
-4. pass Governance and every protected CI job;
-5. verify the final compare contains only M4.4 code, tests, CI, UI, and documents;
-6. confirm no unresolved review thread;
-7. update PR #27 to its final delivery description;
-8. mark PR #27 ready and complete a protected squash merge.
+No ambiguous or optimistic result is allowed.
 
 ## Active prohibitions
 
 Do not:
 
-- begin Phase 5 work;
-- silently change Profile or route configuration;
-- grant reviewed Provider status from network evidence alone;
-- add new proxy protocols, pool rotation, or batch operations;
-- begin public API, MCP, sync, cookie, extension, migration, or release work;
-- rely on a single non-replaceable probe;
-- claim macOS support without real validation;
-- include unrelated refactors or broad UI redesign.
-
-## Known limitations
-
-- controlled Required CI proves only the exact hosted Chromium, runner OS, architecture, and synthetic loopback Exit-IP fixture;
-- production STUN and delegated-DNS claims require accepted evidence from the exact configured ProbeSet and runtime combination;
-- unavailable probes remain explicit and cannot produce optimistic success;
-- custom and legacy Provider trust remains conservative;
-- macOS remains unclaimed.
+- implement Phase 4 product features during closing review;
+- begin Phase 5 planning or implementation;
+- manufacture a reviewed Provider or compatibility claim from hosted CI alone;
+- broaden Windows, Linux, STUN, DNS, proxy, or macOS claims beyond exact evidence;
+- add cookies, extensions, migration, batch operations, proxy expansion, public API, MCP, sync, or release work;
+- include unrelated refactors or UI changes.
 
 ## Required validation
 
@@ -83,8 +52,8 @@ python scripts/check_project_governance.py
 make check
 ```
 
-The final PR must also pass protected Windows, Linux, frontend, Wails, official-adapter, controlled-probe, privacy, and real-browser checks.
+The closing report must reference protected CI evidence from M4.1 through M4.4 and record every exit gate as Passed, Blocked, or Not applicable with an explanation.
 
 ## Handoff
 
-After PR #27 merges, create a separate Phase 4 Closing Review issue and planning/review PR. Do not silently enter Phase 5.
+Continue only in Issue #28. Phase 5 remains blocked until a separate reviewed decision marks Phase 4 Done.
