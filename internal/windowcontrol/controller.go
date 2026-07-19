@@ -19,8 +19,8 @@ import (
 
 const (
 	maxTargetListBytes = 128 << 10
-	maxCDPMessageBytes  = 128 << 10
-	maxSkippedMessages  = 32
+	maxCDPMessageBytes = 128 << 10
+	maxSkippedMessages = 32
 )
 
 type Controller struct {
@@ -65,7 +65,7 @@ type windowBounds struct {
 func New() *Controller {
 	return &Controller{
 		httpClient: &http.Client{
-			Timeout: 3 * time.Second,
+			Timeout:   3 * time.Second,
 			Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true},
 			CheckRedirect: func(*http.Request, []*http.Request) error {
 				return errors.New("CDP window endpoint must not redirect")
