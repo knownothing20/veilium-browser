@@ -1,0 +1,24 @@
+name: M4.3 Source Snapshot
+
+on:
+  push:
+    branches: [agent/m4-3-identity-window-consistency]
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: m4-3-source-snapshot
+          path: |
+            .
+            !.git
+          hidden-files: true
+          retention-days: 1
