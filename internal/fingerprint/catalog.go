@@ -126,6 +126,7 @@ func Providers() []string {
 
 func Definitions() []ProviderDefinition {
 	definitions := []ProviderDefinition{
+		officialDefinition(),
 		customDefinition(),
 		legacyNativeDefinition(),
 		legacyPatchedDefinition(),
@@ -323,12 +324,11 @@ func supportsVersion(definition ProviderDefinition, version string, major int) b
 		if supported == version {
 			return true
 		}
-		supportedMajor, err := majorVersion(supported)
-		if err == nil && supportedMajor == major {
-			return true
-		}
 	}
-	return definition.TrustStatus != TrustReviewed
+	if definition.TrustStatus == TrustReviewed {
+		return false
+	}
+	return true
 }
 
 func cloneDefinition(definition ProviderDefinition) ProviderDefinition {
