@@ -123,13 +123,32 @@ jobs:
           $hash = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
           if ($hash -ne 'd224019b7cbc115951b0f5dce8cf232c37244881a3eb969c010e457aa369332f') { throw "Unexpected reviewed Chromium archive digest: $hash" }
 
+      - name: Prepare user-local reviewed Chromium workdir
+        id: reviewed_paths
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:LOCALAPPDATA)) {
+            throw 'LOCALAPPDATA is required for reviewed Chromium CI staging'
+          }
+          $root = Join-Path $env:LOCALAPPDATA 'VeiliumCI'
+          $workDir = Join-Path $root "reviewed-chromium-install-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          $result = Join-Path $env:RUNNER_TEMP 'reviewed-chromium-evidence-packet.json'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          if (Test-Path -LiteralPath $workDir) {
+            Remove-Item -LiteralPath $workDir -Recurse -Force
+          }
+          "workdir=$workDir" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          "result=$result" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Reviewed Chromium CI workdir: $workDir"
+
       - name: Install exact reviewed Chromium package
         id: reviewed_chromium
         shell: pwsh
         env:
           VEILIUM_REVIEWED_CHROMIUM_ARCHIVE: ${{ runner.temp }}\veilium-reviewed-chromium-1664436\chrome-win.zip
-          VEILIUM_REVIEWED_CHROMIUM_WORKDIR: ${{ runner.temp }}\veilium-reviewed-chromium-install
-          VEILIUM_REVIEWED_CHROMIUM_RESULT: ${{ runner.temp }}\reviewed-chromium-evidence-packet.json
+          VEILIUM_REVIEWED_CHROMIUM_WORKDIR: ${{ steps.reviewed_paths.outputs.workdir }}
+          VEILIUM_REVIEWED_CHROMIUM_RESULT: ${{ steps.reviewed_paths.outputs.result }}
         run: |
           go test -v -run '^TestReviewedChromiumInstallForCI$' ./internal/kernelinstaller
           $packet = Get-Content $env:VEILIUM_REVIEWED_CHROMIUM_RESULT -Raw | ConvertFrom-Json
@@ -162,12 +181,33 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: reviewed-chromium-win64-evidence
-          path: ${{ runner.temp }}\reviewed-chromium-evidence-packet.json
+          path: ${{ steps.reviewed_paths.outputs.result }}
           retention-days: 7
           if-no-files-found: warn
 
       - name: Build headless packages
         run: go build ./cmd/... ./internal/...
+
+      - name: Cleanup exact reviewed Chromium install
+        if: always()
+        shell: pwsh
+        env:
+          VEILIUM_REVIEWED_CHROMIUM_WORKDIR: ${{ steps.reviewed_paths.outputs.workdir }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $workDir = $env:VEILIUM_REVIEWED_CHROMIUM_WORKDIR
+          if ([string]::IsNullOrWhiteSpace($workDir)) {
+            exit 0
+          }
+          $root = [System.IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'VeiliumCI'))
+          $candidate = [System.IO.Path]::GetFullPath($workDir)
+          $prefix = $root + [System.IO.Path]::DirectorySeparatorChar
+          if (-not $candidate.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing to clean reviewed Chromium path outside $root"
+          }
+          if (Test-Path -LiteralPath $candidate) {
+            Remove-Item -LiteralPath $candidate -Recurse -Force
+          }
 
   official-adapters-linux:
     name: Official adapters Linux
