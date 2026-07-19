@@ -22,3 +22,4 @@ jobs:
             !.git
           hidden-files: true
           retention-days: 1
+          if-no-files-found: error
