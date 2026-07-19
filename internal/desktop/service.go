@@ -19,6 +19,8 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/fingerprint"
 	"github.com/knownothing20/veilium-browser/internal/kernel"
+	"github.com/knownothing20/veilium-browser/internal/kernelinstaller"
+	"github.com/knownothing20/veilium-browser/internal/kernelrelease"
 	"github.com/knownothing20/veilium-browser/internal/launch"
 	"github.com/knownothing20/veilium-browser/internal/profile"
 	"github.com/knownothing20/veilium-browser/internal/proxy"
@@ -45,6 +47,10 @@ type AdapterInstaller interface {
 	Install(context.Context, adapterinstaller.Request) (adapter.Record, error)
 }
 
+type KernelInstaller interface {
+	Install(context.Context, kernelinstaller.Request) (kernel.Record, error)
+}
+
 type Service struct {
 	store            *profile.Store
 	kernels          *kernel.Store
@@ -52,6 +58,7 @@ type Service struct {
 	adapterRuntime   adapterruntime.Factory
 	adapterValidator AdapterValidator
 	adapterInstaller AdapterInstaller
+	kernelInstaller  KernelInstaller
 	credentials      *credential.Manager
 	planner          launch.Planner
 	supervisor       RuntimeSupervisor
@@ -60,17 +67,18 @@ type Service struct {
 }
 
 type Bootstrap struct {
-	Version            string               `json:"version"`
-	Profiles           []domain.Profile     `json:"profiles"`
-	Providers          []ProviderDescriptor `json:"providers"`
-	Kernels            []kernel.Record      `json:"kernels"`
-	Adapters           []adapter.Record     `json:"adapters"`
-	Sessions           []supervisor.Session `json:"sessions"`
-	Credentials        []credential.Record  `json:"credentials"`
-	CredentialProvider string               `json:"credentialProvider"`
-	AdapterPins        []adapterrelease.Pin `json:"adapterPins"`
-	RuntimePlatform    string               `json:"runtimePlatform"`
-	RuntimeArch        string               `json:"runtimeArch"`
+	Version            string                  `json:"version"`
+	Profiles           []domain.Profile        `json:"profiles"`
+	Providers          []ProviderDescriptor    `json:"providers"`
+	Kernels            []kernel.Record         `json:"kernels"`
+	Adapters           []adapter.Record        `json:"adapters"`
+	Sessions           []supervisor.Session    `json:"sessions"`
+	Credentials        []credential.Record     `json:"credentials"`
+	CredentialProvider string                  `json:"credentialProvider"`
+	AdapterPins        []adapterrelease.Pin    `json:"adapterPins"`
+	KernelPins         []kernelrelease.Release `json:"kernelPins"`
+	RuntimePlatform    string                  `json:"runtimePlatform"`
+	RuntimeArch        string                  `json:"runtimeArch"`
 }
 
 type ProviderDescriptor struct {
@@ -138,6 +146,10 @@ func newServiceWithCredentials(store *profile.Store, dataRoot string, runtimeSup
 	if err != nil {
 		return nil, err
 	}
+	officialKernelInstaller, err := kernelinstaller.New(kernels, filepath.Join(dataRoot, "kernel-installer"))
+	if err != nil {
+		return nil, err
+	}
 	service := &Service{
 		store:            store,
 		kernels:          kernels,
@@ -145,6 +157,7 @@ func newServiceWithCredentials(store *profile.Store, dataRoot string, runtimeSup
 		adapterRuntime:   adapterManager,
 		adapterValidator: adaptervalidation.New(),
 		adapterInstaller: officialInstaller,
+		kernelInstaller:  officialKernelInstaller,
 		credentials:      credentials,
 		planner:          launch.Planner{},
 		supervisor:       runtimeSupervisor,
@@ -166,6 +179,7 @@ func (s *Service) Bootstrap() Bootstrap {
 		Credentials:        s.credentials.List(),
 		CredentialProvider: credential.ProviderName(),
 		AdapterPins:        officialAdapterPins(),
+		KernelPins:         officialKernelPins(),
 		RuntimePlatform:    runtime.GOOS,
 		RuntimeArch:        runtime.GOARCH,
 	}
@@ -197,6 +211,13 @@ func (s *Service) DeleteCredential(id string) error {
 
 func (s *Service) ImportKernel(request kernel.ImportRequest) (kernel.Record, error) {
 	return s.kernels.Import(request)
+}
+
+func (s *Service) InstallOfficialKernel(ctx context.Context, request kernelinstaller.Request) (kernel.Record, error) {
+	if s.kernelInstaller == nil {
+		return kernel.Record{}, fmt.Errorf("official Chromium installer is unavailable")
+	}
+	return s.kernelInstaller.Install(ctx, request)
 }
 
 func (s *Service) VerifyKernel(id string) (kernel.Record, error) { return s.kernels.Verify(id) }
@@ -584,6 +605,14 @@ func withValidationSeed(item domain.Profile) domain.Profile {
 		item.Fingerprint.Seed = "profile-default"
 	}
 	return item
+}
+
+func officialKernelPins() []kernelrelease.Release {
+	releases, err := kernelrelease.Releases()
+	if err != nil {
+		return nil
+	}
+	return releases
 }
 
 func officialAdapterPins() []adapterrelease.Pin {
