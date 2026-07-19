@@ -215,6 +215,7 @@ jobs:
       - name: Exercise real-browser evidence collectors in clean Linux container
         shell: bash
         run: |
+          set +e
           docker run --rm \
             -v "$RUNNER_TEMP/veilium-evidence.test:/tmp/veilium-evidence.test:ro" \
             -v "$RUNNER_TEMP/veilium-network-evidence.test:/tmp/veilium-network-evidence.test:ro" \
@@ -226,7 +227,18 @@ jobs:
               chromium --version
               VEILIUM_CHROMIUM_BINARY=/usr/bin/chromium /tmp/veilium-evidence.test -test.v -test.run "^TestRealChromiumEvidenceCollector$"
               VEILIUM_CHROMIUM_BINARY=/usr/bin/chromium /tmp/veilium-network-evidence.test -test.v -test.run "^TestRealChromiumNetworkEvidence$"
-            '
+            ' 2>&1 | tee linux-browser-evidence.log
+          status=${PIPESTATUS[0]}
+          exit "$status"
+
+      - name: Upload Linux browser evidence diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-browser-evidence-diagnostics
+          path: linux-browser-evidence.log
+          retention-days: 1
+          if-no-files-found: warn
 
       - name: Exercise Chromium through both official adapters
         run: |
