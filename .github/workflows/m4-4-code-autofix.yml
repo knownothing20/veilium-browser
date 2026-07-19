@@ -43,6 +43,14 @@ jobs:
           )
           browser_test.write_text(text)
 
+          probe_store = Path('internal/networkevidence/probe_store.go')
+          text = probe_store.read_text().replace(
+              'store := &ProbeStore{path: path}\n\tif _, exists, err := store.Get(); err != nil || !exists {\n\t\treturn store, err\n\t}\n\treturn store, nil',
+              'store := &ProbeStore{path: path}\n\tif _, exists, err := store.Get(); err != nil {\n\t\treturn nil, err\n\t} else if !exists {\n\t\treturn store, nil\n\t}\n\treturn store, nil',
+              1,
+          )
+          probe_store.write_text(text)
+
           desktop = Path('internal/desktop/network_evidence.go')
           text = desktop.read_text()
           text = text.replace(
@@ -56,8 +64,11 @@ jobs:
               1,
           )
           desktop.write_text(text)
+
+          service = Path('internal/desktop/service.go')
+          service.write_text(service.read_text().replace('const AppVersion = "0.14.0-dev"', 'const AppVersion = "0.15.0-dev"', 1))
           PY
-          gofmt -w internal/networkevidence internal/desktop/network_evidence.go desktop_network_evidence.go desktop_evidence.go internal/desktop/proxy_bridge.go
+          gofmt -w internal/networkevidence internal/desktop/network_evidence.go internal/desktop/service.go desktop_network_evidence.go desktop_evidence.go internal/desktop/proxy_bridge.go
       - name: Run Go tests
         shell: bash
         run: go test ./cmd/... ./internal/... 2>&1 | tee m4-4-go-test.log
@@ -78,6 +89,7 @@ jobs:
           path: |
             internal/networkevidence
             internal/desktop/network_evidence.go
+            internal/desktop/service.go
             desktop_network_evidence.go
             desktop_evidence.go
             internal/desktop/proxy_bridge.go
@@ -92,6 +104,6 @@ jobs:
           if git diff --quiet; then exit 0; fi
           git config user.name 'veilium-governance-bot'
           git config user.email 'actions@users.noreply.github.com'
-          git add internal/networkevidence internal/desktop/network_evidence.go desktop_network_evidence.go desktop_evidence.go internal/desktop/proxy_bridge.go
+          git add internal/networkevidence internal/desktop/network_evidence.go internal/desktop/service.go desktop_network_evidence.go desktop_evidence.go internal/desktop/proxy_bridge.go
           git commit -m 'fix: finalize M4.4 network evidence integration'
           git push origin HEAD:agent/m4-4-network-evidence
