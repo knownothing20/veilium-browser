@@ -71,6 +71,7 @@ func TestStaleEvidenceCannotRemainHealthy(t *testing.T) {
 	profile.Fingerprint.WindowHeight = 800
 	profile.Fingerprint.DeviceScaleFactor = 1
 	capabilities := reviewedCapabilities()
+	profile.Kernel.Provider = capabilities.Provider
 	identity := testIdentity(capabilities)
 	completed := time.Now().UTC().Add(-time.Minute)
 	result, err := Evaluate(EvaluationInput{
@@ -81,8 +82,8 @@ func TestStaleEvidenceCannotRemainHealthy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Status != HealthUnknown || result.EvidenceFresh {
-		t.Fatalf("stale reviewed evidence must be unknown: %#v", result)
+	if result.Status != HealthDegraded || result.EvidenceFresh || !contains(result.DegradedReasons, "evidence-stale") {
+		t.Fatalf("stale reviewed evidence must be degraded: %#v", result)
 	}
 }
 
@@ -92,6 +93,7 @@ func TestFreshReviewedWindowEvidenceCanBeHealthy(t *testing.T) {
 	profile.Fingerprint.WindowHeight = 800
 	profile.Fingerprint.DeviceScaleFactor = 1
 	capabilities := reviewedCapabilities()
+	profile.Kernel.Provider = capabilities.Provider
 	identity := testIdentity(capabilities)
 	digest, err := InputDigest(DigestInput{
 		Profile: profile, Capabilities: capabilities, BinaryIdentity: identity,
