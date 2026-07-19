@@ -2,150 +2,124 @@
 
 Last updated: 2026-07-20
 Application version: 0.15.0-dev
-Main baseline SHA: 1d3b12582200328668061bb0dc382b3d24871fc0
+Main baseline SHA: 531f56d49cebc79cf6aee7a24d8f972d6275ce6b
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
-Current milestone: Phase 5 Planning — Profile Lifecycle and Day-to-Day Operations
-Current task: Complete Issue #37 and Draft PR #39 without implementing product code
+Current milestone: Phase 5 Activation Review
+Current task: Review and decide Phase 5 activation in Issue #40 without implementing product code
 
 ## Operational rule
 
 Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`.
 
-Work only on Issue #37, Draft PR #39, `docs/PHASE_05.md`, `docs/PHASE_05_CONTRACTS.md`, and the required ROADMAP/STATUS planning updates.
+Work only on Issue #40 and its documentation-only activation decision. Phase 5 remains `Planning`. Product implementation is blocked until a reviewed activation PR explicitly changes `Product implementation allowed` to `Yes` and identifies exactly one M5.1 implementation issue.
 
-Phase 5 is `Planning`. Product implementation is blocked. Do not create Go, React, Wails, schema-migration, backup-format, Cookie, extension, automation, proxy-expansion, sync, or release code until a separate reviewed activation decision sets `Product implementation allowed: Yes`.
+Do not create Go, React, Wails, persisted-schema, snapshot/restore, portable-definition, template, Cookie, extension, bulk-operation, automation, proxy-expansion, sync, or release code during the activation review.
 
-## Frozen Phase 4 baseline
+## Completed planning packet
 
-Phase 4 is `Done` and remains frozen.
+Issue #37 and PR #39 are complete. PR #39 merged as `531f56d49cebc79cf6aee7a24d8f972d6275ce6b` after Governance and the complete existing CI matrix passed.
 
-The delivered baseline includes:
+The approved planning packet contains:
 
-- Provider Contract v2 and legacy compatibility;
-- real-browser identity Evidence;
-- managed-window/consistency and Profile health;
-- controlled Network Evidence and exact compatibility contracts;
-- one exact reviewed official Chromium Snapshot Provider for Windows amd64;
-- immutable archive, executable, and complete 261-file Package Tree identity;
-- explicit license acknowledgement, secure extraction, atomic activation, rollback, and dependency-tamper detection;
-- protected Windows/Linux Go, frontend, Wails, adapter, browser, Evidence, and build validation.
+- `docs/PHASE_05.md` — user outcome, four dependency-ordered milestones, non-goals, platform policy, validation matrix, exit criteria, and activation gate;
+- `docs/PHASE_05_CONTRACTS.md` — lifecycle, operation, storage inventory, local snapshot, portable definition, template, dependency, migration, cancellation, recovery, resource-bound, and platform contracts;
+- `docs/ROADMAP.md` — Phase 5 as the current `Planning` phase;
+- this status handoff.
 
-Phase 5 lifecycle artifacts cannot broaden Provider trust, capability status, platform support, or Evidence applicability from that frozen baseline.
+Planning completion does not activate Phase 5 and does not prove that any lifecycle feature is implemented.
 
-## Current implementation facts used by the plan
-
-The planning packet is based on the merged product structure:
-
-- `profiles.json` contains Profile metadata, fingerprint settings, route configuration, and local dependency references;
-- each Profile has a Veilium-managed browser user-data directory;
-- deleting a Profile currently removes metadata but does not manage its browser-data directory;
-- proxy secrets live only in the operating-system credential vault;
-- Kernel and adapter binaries use independent managed registries and integrity records;
-- browser and Network Evidence are independently stored, retained, and deleted;
-- runtime logs, adapter runtime files, and temporary installer data are operational state rather than portable Profile identity.
-
-Therefore Phase 5 does not define one naive all-inclusive portable folder. It separates local recovery, portable definitions, secrets, dependencies, and Evidence.
-
-## Proposed Phase 5 user outcome
+## Proposed Phase 5 outcome
 
 A user can preserve, recover, move, template, archive, and manage Veilium Profiles without silently copying secrets, weakening Provider trust, reusing identities unintentionally, or losing browser data during interrupted operations.
 
 ## Proposed milestone order
 
 1. **M5.1 — Lifecycle Contract, Inventory, and Operation Journal**
-   - lifecycle states, operation records, locks, cancellation, storage inventory, and startup reconciliation.
+   - lifecycle states, operation records, per-item results, locks, cancellation, storage inventory, and startup reconciliation.
 2. **M5.2 — Safe Local Snapshot, Restore, Archive, and Trash**
-   - same-machine full snapshots, deterministic tree verification, staging, rollback, recoverable trash, and permanent deletion.
+   - same-machine full snapshots, deterministic tree verification, staging, rollback, recoverable trash, and explicit permanent deletion.
 3. **M5.3 — Portable Profile Definitions and Templates**
    - secret-free configuration packages, dependency remapping, new-identity default, explicit identity preservation, and templates.
 4. **M5.4 — Bounded Multi-profile Operations and Storage Management**
-   - safe bulk metadata/lifecycle/export/health operations, storage inspection, cancellation, and truthful per-item results.
+   - bounded bulk metadata/lifecycle/export/health operations, storage inspection, cancellation, and truthful per-item results.
 
-The complete scope and exit gates are in `docs/PHASE_05.md`. Logical records and safety contracts are in `docs/PHASE_05_CONTRACTS.md`.
+## Activation decision scope
 
-## Key planning decisions
+Issue #40 must review and either approve or block:
 
-### Recovery before portability
+1. the recoverability-first user outcome;
+2. the four milestone order;
+3. the separation between local full snapshots, portable definitions, templates, secrets, dependencies, Evidence, and runtime data;
+4. new-identity default and explicit identity-preserving transfer;
+5. Windows/Linux targets and macOS/cross-platform non-claims;
+6. security, privacy, licensing, migration, interruption, rollback, and resource-bound contracts;
+7. the validation matrix and Phase 5 exit gates;
+8. all explicit non-goals and inherited Phase 4 boundaries.
 
-- same-machine snapshot/restore is implemented before any broader migration claim;
-- a full browser-data snapshot is treated as local/machine-bound unless a platform-specific tested path proves otherwise;
-- the original healthy Profile remains recoverable until a restore is verified and committed.
+## Required first implementation scope
 
-### Portable definitions are configuration-only
+If activation is approved, exactly one M5.1 implementation issue must be created or identified. It may cover only:
 
-Portable definitions exclude:
+- versioned Profile lifecycle states;
+- versioned operation journal and per-item results;
+- operation conflict/locking and active-session blocking;
+- cancellation checkpoints;
+- managed-storage inventory and orphan/missing reporting;
+- startup reconciliation for interrupted journal, staging, and quarantine state;
+- conservative compatibility for existing Profiles.
 
-- browser user data;
-- OS-vault secrets;
-- local Profile IDs and absolute paths;
-- local Kernel, adapter, and credential record IDs;
-- executable binaries;
-- runtime sessions, logs, temporary files, and Evidence.
+It must not include snapshot containers, restore, archive/trash data movement, portable export/import, templates, or multi-profile UI from later milestones.
 
-They carry dependency requirements that must be explicitly mapped to current local records.
+## Frozen Phase 4 boundaries
 
-### Identity behavior
+Phase 4 remains `Done` and frozen:
 
-- new identity is the default import mode;
-- identity preservation is explicit, warns against simultaneous use, and makes old Evidence non-applicable;
-- templates always create a new Profile ID, managed directory, and fingerprint seed.
+- reviewed browser trust remains restricted to the exact Windows amd64 Chromium Snapshot package;
+- lifecycle metadata cannot create Provider trust, capability support, compatibility, health, or Evidence validity;
+- imported or restored dependencies require current local verification;
+- OS-vault secrets remain non-portable by default;
+- custom and legacy Providers remain unpromoted;
+- unsupported, modified, missing, stale, contradictory, and unverifiable states fail closed or remain explicitly limited.
 
-### Bounded operations only
+## Explicit non-scope during activation
 
-Phase 5 may plan bulk tags/groups, archive/trash, definition export, integrity/health refresh, storage inspection, and explicit stop operations.
+Issue #40 does not authorize:
 
-It does not authorize bulk start, scheduling, proxy rotation, account farming, public automation APIs, MCP, or cloud sync.
-
-## Data and platform boundaries
-
-- Profile metadata and validated non-secret configuration may be portable;
-- browser user data and OS-vault secrets are local/machine-bound;
-- Kernel/adapter identity and Evidence remain Provider-, binary-, platform-, route-, and configuration-bound;
-- Windows and Linux are the proposed implementation and CI targets;
-- local full snapshot behavior requires real filesystem integration tests on every claimed platform;
-- the reviewed browser Provider remains Windows amd64 only;
-- macOS and cross-platform full browser-state migration remain unclaimed.
-
-## Explicit non-scope
-
-Issue #37 and PR #39 do not authorize:
-
+- product-code implementation of any Phase 5 milestone;
 - Cookie import, export, or editing;
 - extension installation or package management;
-- exporting or synchronizing credential-vault secrets;
-- bundling or updating Chromium, Xray, or sing-box in Profile artifacts;
-- a second reviewed browser Provider or new fingerprint controls;
-- proxy protocol expansion, pools, rotation, or scheduled health actions;
+- secret export or cloud synchronization;
+- bundling/updating Chromium, Xray, or sing-box in Profile artifacts;
+- a second reviewed Provider or new fingerprint controls;
+- proxy expansion, pools, rotation, scheduling, or account farming;
 - bulk Profile start or general automation;
 - public Launch API, CDP gateway, MCP, or cloud sync;
 - release signing, auto-update, SBOM, or reproducible builds;
 - unrelated broad UI redesign.
 
-## Required planning validation
+## Activation outcomes
+
+### Approve
+
+Create a documentation-only activation PR that:
+
+- changes `docs/PHASE_05.md` from `Planning` to `Active`;
+- changes `Product implementation allowed: No` to `Yes`;
+- identifies the single M5.1 implementation issue;
+- updates ROADMAP and STATUS in the same PR;
+- preserves all contracts, non-goals, and inherited Phase 4 boundaries;
+- passes Governance and the complete existing CI matrix.
+
+### Block
+
+Keep Phase 5 in `Planning`, record the precise plan gap, and create one narrow planning correction. Product implementation remains blocked.
+
+## Required validation
 
 ```bash
 python scripts/check_project_governance.py
 make check
 ```
 
-The planning PR must also confirm:
-
-- the final diff is documentation-only;
-- ROADMAP, STATUS, and PHASE_05 metadata agree;
-- the contract document contains no product-code claims presented as already implemented;
-- Phase 4 remains frozen;
-- Phase 5 remains non-implementable;
-- no temporary workflow or unresolved review thread remains.
-
-## Activation handoff
-
-After Issue #37 and PR #39 are reviewed, a separate activation decision must:
-
-1. approve the Phase 5 outcome, milestone order, contracts, platform policy, non-goals, validation matrix, and exit criteria;
-2. change Phase 5 from `Planning` to `Active`;
-3. change `Product implementation allowed` to `Yes`;
-4. create or identify exactly one M5.1 implementation issue;
-5. update ROADMAP and STATUS in the same activation pull request.
-
-Until then, no Phase 5 product implementation is authorized.
+The activation handoff must remain documentation-only and must not create a temporary workflow or leave unresolved review threads.
