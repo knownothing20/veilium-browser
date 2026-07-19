@@ -22,19 +22,22 @@ jobs:
         with:
           name: reviewed-chromium-source-snapshot
           path: |
-            internal/fingerprint
-            internal/kernel
-            internal/kernelrelease
-            internal/desktop
-            internal/evidence
-            internal/consistency
-            internal/networkevidence
+            go.mod
+            go.sum
+            Makefile
+            cmd
+            internal
+            scripts
+            frontend/package.json
+            frontend/package-lock.json
+            frontend/tsconfig.json
+            frontend/vite.config.ts
             frontend/src
             desktop_app.go
             desktop_evidence.go
             desktop_network_evidence.go
+            desktop_main.go
             .github/workflows/ci.yml
-            docs/KERNEL_REGISTRY.md
-            docs/STATUS.md
+            docs
           retention-days: 1
           if-no-files-found: error
