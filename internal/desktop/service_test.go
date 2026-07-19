@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -179,7 +180,7 @@ func validProfile() domain.Profile {
 		Name:   "Store A",
 		Kernel: domain.KernelRef{Provider: fingerprint.ProviderCustom, Version: "148.0.0", Executable: `C:\Browsers\Chromium\chrome.exe`},
 		Fingerprint: domain.FingerprintConfig{
-			Platform: "windows", Brand: "Chromium", Language: "en-US", Timezone: "America/Los_Angeles",
+			Platform: runtime.GOOS, Brand: "Chromium", Language: "en-US", Timezone: "America/Los_Angeles",
 			ScreenWidth: 1920, ScreenHeight: 1080,
 			WebRTCPolicy: "proxy-only", CanvasMode: "native", AudioMode: "native",
 			FontMode: "native", ClientRectsMode: "native", GPUProfile: "auto",

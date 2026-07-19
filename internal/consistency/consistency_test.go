@@ -142,7 +142,7 @@ func testProfile() domain.Profile {
 func reviewedCapabilities() fingerprint.Capabilities {
 	return fingerprint.Capabilities{
 		SchemaVersion: fingerprint.ContractSchemaVersion,
-		Provider: "reviewed-test", Revision: 1, TrustStatus: fingerprint.TrustReviewed, MajorVersion: 148,
+		Provider:      "reviewed-test", Revision: 1, TrustStatus: fingerprint.TrustReviewed, MajorVersion: 148,
 		Capabilities: map[fingerprint.CapabilityID]fingerprint.CapabilityDeclaration{
 			fingerprint.CapabilityPlatformOverride: {ID: fingerprint.CapabilityPlatformOverride, Status: fingerprint.CapabilityVerified, EvidenceRequired: true},
 		},
@@ -152,7 +152,7 @@ func reviewedCapabilities() fingerprint.Capabilities {
 func testIdentity(capabilities fingerprint.Capabilities) kernel.ProviderBinaryIdentity {
 	return kernel.ProviderBinaryIdentity{
 		SchemaVersion: kernel.BinaryIdentitySchemaVersion,
-		ProviderID: capabilities.Provider, ProviderRevision: capabilities.Revision, ProviderTrust: capabilities.TrustStatus,
+		ProviderID:    capabilities.Provider, ProviderRevision: capabilities.Revision, ProviderTrust: capabilities.TrustStatus,
 		BrowserVersion: "148.0.0", OperatingSystem: "windows", Architecture: "amd64",
 		ExecutablePath: "/managed/chrome", ExecutableSize: 10, ExecutableSHA256: strings.Repeat("b", 64),
 		IntegrityStatus: kernel.StatusVerified, Provenance: "test", Reviewed: capabilities.IsReviewed(),

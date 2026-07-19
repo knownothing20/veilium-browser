@@ -64,29 +64,29 @@ type ObservationInput struct {
 }
 
 type EvidenceInput struct {
-	RunID         string             `json:"runId"`
-	InputDigest   string             `json:"inputDigest,omitempty"`
-	RunStatus     string             `json:"runStatus"`
-	FailureCode   string             `json:"failureCode,omitempty"`
-	CompletedAt   *time.Time         `json:"completedAt,omitempty"`
-	ExpiresAt     time.Time          `json:"expiresAt"`
-	Observations  []ObservationInput `json:"observations"`
-	Limitations   []string           `json:"limitations,omitempty"`
+	RunID        string             `json:"runId"`
+	InputDigest  string             `json:"inputDigest,omitempty"`
+	RunStatus    string             `json:"runStatus"`
+	FailureCode  string             `json:"failureCode,omitempty"`
+	CompletedAt  *time.Time         `json:"completedAt,omitempty"`
+	ExpiresAt    time.Time          `json:"expiresAt"`
+	Observations []ObservationInput `json:"observations"`
+	Limitations  []string           `json:"limitations,omitempty"`
 }
 
 type Result struct {
-	SchemaVersion    int          `json:"schemaVersion"`
-	RulesRevision    string       `json:"rulesRevision"`
-	ProfileID        string       `json:"profileId"`
-	InputDigest      string       `json:"inputDigest"`
-	EvidenceRunID    string       `json:"evidenceRunId,omitempty"`
-	EvidenceFresh    bool         `json:"evidenceFresh"`
-	Status           HealthStatus `json:"status"`
-	Window           WindowSpec   `json:"window"`
-	Checks           []Check      `json:"checks"`
-	BlockingReasons  []string     `json:"blockingReasons,omitempty"`
-	DegradedReasons  []string     `json:"degradedReasons,omitempty"`
-	GeneratedAt      time.Time    `json:"generatedAt"`
+	SchemaVersion   int          `json:"schemaVersion"`
+	RulesRevision   string       `json:"rulesRevision"`
+	ProfileID       string       `json:"profileId"`
+	InputDigest     string       `json:"inputDigest"`
+	EvidenceRunID   string       `json:"evidenceRunId,omitempty"`
+	EvidenceFresh   bool         `json:"evidenceFresh"`
+	Status          HealthStatus `json:"status"`
+	Window          WindowSpec   `json:"window"`
+	Checks          []Check      `json:"checks"`
+	BlockingReasons []string     `json:"blockingReasons,omitempty"`
+	DegradedReasons []string     `json:"degradedReasons,omitempty"`
+	GeneratedAt     time.Time    `json:"generatedAt"`
 }
 
 func (r Result) Validate() error {

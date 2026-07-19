@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/knownothing20/veilium-browser/internal/consistency"
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/fingerprint"
 	"github.com/knownothing20/veilium-browser/internal/kernel"
@@ -105,27 +106,40 @@ func (m *Manager) Run(ctx context.Context, request RunRequest) (Run, error) {
 	if err != nil {
 		return Run{}, err
 	}
+	consistencyDigest, err := consistency.InputDigest(consistency.DigestInput{
+		Profile:         request.Profile,
+		Capabilities:    request.Capabilities,
+		BinaryIdentity:  identity,
+		RuntimeOS:       identity.OperatingSystem,
+		RuntimeArch:     identity.Architecture,
+		HarnessRevision: HarnessRevision,
+	})
+	if err != nil {
+		return Run{}, err
+	}
 	runID, err := NewRunID()
 	if err != nil {
 		return Run{}, err
 	}
 	started := m.now().UTC()
 	run := Run{
-		SchemaVersion:    SchemaVersion,
-		ID:               runID,
-		ProfileID:        request.Profile.ID,
-		ProfileName:      request.Profile.Name,
-		ProviderID:       request.Capabilities.Provider,
-		ProviderRevision: request.Capabilities.Revision,
-		ProviderTrust:    request.Capabilities.TrustStatus,
-		BinaryIdentity:   identity,
-		BrowserVersion:   request.Profile.Kernel.Version,
-		OperatingSystem:  identity.OperatingSystem,
-		Architecture:     identity.Architecture,
-		HarnessRevision:  HarnessRevision,
-		Status:           RunPending,
-		StartedAt:        started,
-		ExpiresAt:        started.Add(m.store.Retention()),
+		SchemaVersion:            SchemaVersion,
+		ID:                       runID,
+		ProfileID:                request.Profile.ID,
+		ProfileName:              request.Profile.Name,
+		ProviderID:               request.Capabilities.Provider,
+		ProviderRevision:         request.Capabilities.Revision,
+		ProviderTrust:            request.Capabilities.TrustStatus,
+		BinaryIdentity:           identity,
+		BrowserVersion:           request.Profile.Kernel.Version,
+		OperatingSystem:          identity.OperatingSystem,
+		Architecture:             identity.Architecture,
+		HarnessRevision:          HarnessRevision,
+		ConsistencyInputDigest:   consistencyDigest,
+		ConsistencyRulesRevision: consistency.RulesRevision,
+		Status:                   RunPending,
+		StartedAt:                started,
+		ExpiresAt:                started.Add(m.store.Retention()),
 	}
 
 	runContext, cancel := context.WithTimeout(nonNilContext(ctx), m.timeout)
