@@ -1,6 +1,7 @@
 package networkevidence
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
