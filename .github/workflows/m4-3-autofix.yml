@@ -89,6 +89,24 @@ jobs:
                       raise SystemExit('desktop integration marker not found')
                   text = text.replace(old, new, 1)
           service.write_text(text)
+
+          consistency_test = Path('internal/consistency/consistency_test.go')
+          text = consistency_test.read_text()
+          reviewed_marker = '\tcapabilities := reviewedCapabilities()\n\tidentity := testIdentity(capabilities)'
+          reviewed_replacement = '\tcapabilities := reviewedCapabilities()\n\tprofile.Kernel.Provider = capabilities.Provider\n\tidentity := testIdentity(capabilities)'
+          if reviewed_replacement not in text:
+              count = text.count(reviewed_marker)
+              if count != 2:
+                  raise SystemExit(f'expected two reviewed capability fixtures, found {count}')
+              text = text.replace(reviewed_marker, reviewed_replacement)
+          consistency_test.write_text(text)
+
+          service_test = Path('internal/desktop/service_test.go')
+          text = service_test.read_text()
+          if '"runtime"' not in text:
+              text = text.replace('"path/filepath"\n', '"path/filepath"\n\t"runtime"\n', 1)
+          text = text.replace('Platform: "windows", Brand:', 'Platform: runtime.GOOS, Brand:', 1)
+          service_test.write_text(text)
           PY
       - name: Format scoped Go files
         run: |
@@ -100,6 +118,7 @@ jobs:
             internal/evidence/types.go \
             internal/desktop/consistency.go \
             internal/desktop/service.go \
+            internal/desktop/service_test.go \
             internal/fingerprint/args.go \
             internal/launch/planner.go
       - name: Run scoped tests with diagnostics
@@ -137,6 +156,7 @@ jobs:
             internal/evidence/types.go \
             internal/desktop/consistency.go \
             internal/desktop/service.go \
+            internal/desktop/service_test.go \
             internal/fingerprint/args.go \
             internal/launch/planner.go
           git commit -m 'feat: integrate M4.3 consistency preflight and freshness'
