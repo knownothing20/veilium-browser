@@ -3,6 +3,8 @@ name: M4.3 Diagnostics
 on:
   push:
     branches: [agent/m4-3-identity-window-consistency]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
