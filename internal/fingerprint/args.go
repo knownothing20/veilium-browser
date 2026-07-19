@@ -2,6 +2,7 @@ package fingerprint
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/knownothing20/veilium-browser/internal/domain"
@@ -12,10 +13,15 @@ func BuildArgs(profile domain.Profile) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	window, err := domain.EffectiveWindowPlan(profile.Fingerprint)
+	if err != nil {
+		return nil, err
+	}
 	fp := profile.Fingerprint
 	args := []string{
 		fmt.Sprintf("--lang=%s", fp.Language),
-		fmt.Sprintf("--window-size=%d,%d", fp.ScreenWidth, fp.ScreenHeight),
+		fmt.Sprintf("--window-size=%d,%d", window.Width, window.Height),
+		"--force-device-scale-factor=" + strconv.FormatFloat(window.DeviceScaleFactor, 'f', -1, 64),
 	}
 
 	if usesSeededSurfaces(fp) {

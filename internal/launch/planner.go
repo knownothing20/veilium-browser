@@ -22,6 +22,10 @@ func (Planner) Build(profile domain.Profile, remoteDebuggingPort int) (domain.La
 	if err != nil {
 		return domain.LaunchPlan{}, err
 	}
+	window, err := domain.EffectiveWindowPlan(profile.Fingerprint)
+	if err != nil {
+		return domain.LaunchPlan{}, err
+	}
 	if strings.TrimSpace(profile.UserDataDir) == "" {
 		return domain.LaunchPlan{}, fmt.Errorf("userDataDir is required")
 	}
@@ -62,6 +66,7 @@ func (Planner) Build(profile domain.Profile, remoteDebuggingPort int) (domain.La
 		RequiresBridge: route.RequiresBridge,
 		BridgeKind:     route.BridgeKind,
 		Warnings:       warnings,
+		Window:         &window,
 	}, nil
 }
 

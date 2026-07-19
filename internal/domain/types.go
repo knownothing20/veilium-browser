@@ -24,29 +24,49 @@ type KernelRef struct {
 }
 
 type FingerprintConfig struct {
-	Seed                string `json:"seed,omitempty"`
-	Platform            string `json:"platform"`
-	Brand               string `json:"brand"`
-	Language            string `json:"language"`
-	Timezone            string `json:"timezone"`
-	ScreenWidth         int    `json:"screenWidth"`
-	ScreenHeight        int    `json:"screenHeight"`
-	HardwareConcurrency int    `json:"hardwareConcurrency,omitempty"`
-	DeviceMemoryGB      int    `json:"deviceMemoryGb,omitempty"`
-	WebRTCPolicy        string `json:"webrtcPolicy"`
-	CanvasMode          string `json:"canvasMode"`
-	AudioMode           string `json:"audioMode"`
-	FontMode            string `json:"fontMode"`
-	ClientRectsMode     string `json:"clientRectsMode"`
-	GPUProfile          string `json:"gpuProfile"`
-	GPUVendor           string `json:"gpuVendor,omitempty"`
-	GPURenderer         string `json:"gpuRenderer,omitempty"`
+	Seed                string  `json:"seed,omitempty"`
+	Platform            string  `json:"platform"`
+	Brand               string  `json:"brand"`
+	Language            string  `json:"language"`
+	Timezone            string  `json:"timezone"`
+	ScreenWidth         int     `json:"screenWidth"`
+	ScreenHeight        int     `json:"screenHeight"`
+	WindowWidth         int     `json:"windowWidth,omitempty"`
+	WindowHeight        int     `json:"windowHeight,omitempty"`
+	DeviceScaleFactor   float64 `json:"deviceScaleFactor,omitempty"`
+	HardwareConcurrency int     `json:"hardwareConcurrency,omitempty"`
+	DeviceMemoryGB      int     `json:"deviceMemoryGb,omitempty"`
+	WebRTCPolicy        string  `json:"webrtcPolicy"`
+	CanvasMode          string  `json:"canvasMode"`
+	AudioMode           string  `json:"audioMode"`
+	FontMode            string  `json:"fontMode"`
+	ClientRectsMode     string  `json:"clientRectsMode"`
+	GPUProfile          string  `json:"gpuProfile"`
+	GPUVendor           string  `json:"gpuVendor,omitempty"`
+	GPURenderer         string  `json:"gpuRenderer,omitempty"`
 }
 
 type ProxyConfig struct {
 	URL           string `json:"url,omitempty"`
 	CredentialRef string `json:"credentialRef,omitempty"`
 	AdapterRef    string `json:"adapterRef,omitempty"`
+}
+
+type WindowPlan struct {
+	Width             int     `json:"width"`
+	Height            int     `json:"height"`
+	DeviceScaleFactor float64 `json:"deviceScaleFactor"`
+	Source            string  `json:"source"`
+}
+
+type WindowState struct {
+	Width             int     `json:"width"`
+	Height            int     `json:"height"`
+	Left              int     `json:"left,omitempty"`
+	Top               int     `json:"top,omitempty"`
+	DeviceScaleFactor float64 `json:"deviceScaleFactor,omitempty"`
+	State             string  `json:"state,omitempty"`
+	Applied           bool    `json:"applied"`
 }
 
 type LaunchPlan struct {
@@ -57,4 +77,5 @@ type LaunchPlan struct {
 	RequiresBridge bool              `json:"requiresBridge"`
 	BridgeKind     string            `json:"bridgeKind,omitempty"`
 	Warnings       []string          `json:"warnings,omitempty"`
+	Window         *WindowPlan       `json:"window,omitempty"`
 }

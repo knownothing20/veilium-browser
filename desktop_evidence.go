@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/knownothing20/veilium-browser/internal/consistency"
 	"github.com/knownothing20/veilium-browser/internal/evidence"
 )
 
@@ -31,4 +32,8 @@ func (a *DesktopApp) DeleteEvidence(id string) error {
 
 func (a *DesktopApp) EvidenceActive(profileID string) bool {
 	return a.service.EvidenceActive(profileID)
+}
+
+func (a *DesktopApp) ProfileConsistency(profileID string) (consistency.Result, error) {
+	return a.service.ProfileConsistency(profileID)
 }

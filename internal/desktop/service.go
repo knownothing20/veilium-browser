@@ -268,6 +268,9 @@ func (s *Service) CreateProfile(input domain.Profile) (domain.Profile, error) {
 	if _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {
 		return domain.Profile{}, err
 	}
+	if err := s.validateProfileConsistency(input); err != nil {
+		return domain.Profile{}, err
+	}
 	return s.store.Create(input)
 }
 
@@ -288,6 +291,9 @@ func (s *Service) UpdateProfile(input domain.Profile) (domain.Profile, error) {
 		return domain.Profile{}, err
 	}
 	if _, err := fingerprint.Validate(withValidationSeed(input)); err != nil {
+		return domain.Profile{}, err
+	}
+	if err := s.validateProfileConsistency(input); err != nil {
 		return domain.Profile{}, err
 	}
 	return s.store.Update(input)
@@ -336,6 +342,9 @@ func (s *Service) BuildLaunchPlan(request LaunchPlanRequest) (domain.LaunchPlan,
 	if err := s.validateProxy(item); err != nil {
 		return domain.LaunchPlan{}, err
 	}
+	if err := s.validateProfileConsistency(item); err != nil {
+		return domain.LaunchPlan{}, err
+	}
 	return s.planner.Build(item, request.RemoteDebuggingPort)
 }
 
@@ -351,6 +360,9 @@ func (s *Service) StartProfile(ctx context.Context, profileID string) (superviso
 		return supervisor.Session{}, err
 	}
 	if err := s.validateProxy(item); err != nil {
+		return supervisor.Session{}, err
+	}
+	if err := s.validateProfileConsistency(item); err != nil {
 		return supervisor.Session{}, err
 	}
 	managedDir := filepath.Join(s.profilesDir, item.ID)

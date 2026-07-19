@@ -1,6 +1,7 @@
 package evidence
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -56,26 +57,28 @@ type Observation struct {
 }
 
 type Run struct {
-	SchemaVersion    int                           `json:"schemaVersion"`
-	ID               string                        `json:"id"`
-	ProfileID        string                        `json:"profileId"`
-	ProfileName      string                        `json:"profileName"`
-	ProviderID       string                        `json:"providerId"`
-	ProviderRevision int                           `json:"providerRevision"`
-	ProviderTrust    fingerprint.TrustStatus       `json:"providerTrust"`
-	BinaryIdentity   kernel.ProviderBinaryIdentity `json:"binaryIdentity"`
-	BrowserVersion   string                        `json:"browserVersion"`
-	OperatingSystem  string                        `json:"operatingSystem"`
-	Architecture     string                        `json:"architecture"`
-	HarnessRevision  string                        `json:"harnessRevision"`
-	Status           RunStatus                     `json:"status"`
-	StartedAt        time.Time                     `json:"startedAt"`
-	CompletedAt      *time.Time                    `json:"completedAt,omitempty"`
-	ExpiresAt        time.Time                     `json:"expiresAt"`
-	Observations     []Observation                 `json:"observations"`
-	Limitations      []string                      `json:"limitations,omitempty"`
-	FailureCode      string                        `json:"failureCode,omitempty"`
-	FailureDetail    string                        `json:"failureDetail,omitempty"`
+	SchemaVersion            int                           `json:"schemaVersion"`
+	ID                       string                        `json:"id"`
+	ProfileID                string                        `json:"profileId"`
+	ProfileName              string                        `json:"profileName"`
+	ProviderID               string                        `json:"providerId"`
+	ProviderRevision         int                           `json:"providerRevision"`
+	ProviderTrust            fingerprint.TrustStatus       `json:"providerTrust"`
+	BinaryIdentity           kernel.ProviderBinaryIdentity `json:"binaryIdentity"`
+	BrowserVersion           string                        `json:"browserVersion"`
+	OperatingSystem          string                        `json:"operatingSystem"`
+	Architecture             string                        `json:"architecture"`
+	HarnessRevision          string                        `json:"harnessRevision"`
+	ConsistencyInputDigest   string                        `json:"consistencyInputDigest,omitempty"`
+	ConsistencyRulesRevision string                        `json:"consistencyRulesRevision,omitempty"`
+	Status                   RunStatus                     `json:"status"`
+	StartedAt                time.Time                     `json:"startedAt"`
+	CompletedAt              *time.Time                    `json:"completedAt,omitempty"`
+	ExpiresAt                time.Time                     `json:"expiresAt"`
+	Observations             []Observation                 `json:"observations"`
+	Limitations              []string                      `json:"limitations,omitempty"`
+	FailureCode              string                        `json:"failureCode,omitempty"`
+	FailureDetail            string                        `json:"failureDetail,omitempty"`
 }
 
 func (r Run) Validate() error {
@@ -93,6 +96,9 @@ func (r Run) Validate() error {
 	}
 	if r.HarnessRevision != HarnessRevision {
 		return fmt.Errorf("unsupported evidence harness revision %q", r.HarnessRevision)
+	}
+	if err := validateConsistencyMetadata(r.ConsistencyInputDigest, r.ConsistencyRulesRevision); err != nil {
+		return err
 	}
 	if !validRunStatus(r.Status) {
 		return fmt.Errorf("invalid evidence run status %q", r.Status)
@@ -116,6 +122,27 @@ func (r Run) Validate() error {
 	}
 	if len(r.Limitations) > 64 {
 		return fmt.Errorf("evidence run contains too many limitations")
+	}
+	return nil
+}
+
+func validateConsistencyMetadata(digest, revision string) error {
+	digest = strings.TrimSpace(digest)
+	revision = strings.TrimSpace(revision)
+	if digest == "" && revision == "" {
+		return nil
+	}
+	if digest == "" || revision == "" {
+		return fmt.Errorf("evidence consistency digest and rules revision must be stored together")
+	}
+	if len(digest) != 64 {
+		return fmt.Errorf("evidence consistency digest is invalid")
+	}
+	if _, err := hex.DecodeString(digest); err != nil {
+		return fmt.Errorf("evidence consistency digest is invalid")
+	}
+	if len(revision) > 128 {
+		return fmt.Errorf("evidence consistency rules revision is too long")
 	}
 	return nil
 }

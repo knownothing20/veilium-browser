@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,7 +13,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/supervisor"
+	"github.com/knownothing20/veilium-browser/internal/windowcontrol"
 )
 
 func TestRealChromiumEvidenceCollector(t *testing.T) {
@@ -49,13 +52,14 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 		"--remote-debugging-address=127.0.0.1",
 		"--remote-debugging-port=0",
 		"--user-data-dir=" + userDataDir,
+		"--window-size=1024,768",
 		"about:blank",
 	}
 	if runtime.GOOS == "linux" {
 		args = append([]string{"--no-sandbox"}, args...)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	command := exec.CommandContext(ctx, binary, args...)
 	var logs bytes.Buffer
@@ -77,11 +81,20 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 		}
 	}()
 
-	portContext, portCancel := context.WithTimeout(ctx, 15*time.Second)
+	portContext, portCancel := context.WithTimeout(ctx, 30*time.Second)
 	port, err := discovery.Wait(portContext, userDataDir)
 	portCancel()
 	if err != nil {
 		t.Fatalf("discover Chromium CDP port: %v\n%s", err, boundedLog(logs.String()))
+	}
+
+	prober := supervisor.HTTPProber{
+		Client:   &http.Client{Timeout: 2 * time.Second, Transport: &http.Transport{Proxy: nil}},
+		Interval: 50 * time.Millisecond,
+	}
+	version, err := prober.Wait(ctx, port)
+	if err != nil {
+		t.Fatalf("read Chromium Browser WebSocket: %v\n%s", err, boundedLog(logs.String()))
 	}
 
 	collector, err := StartCollector(CollectorOptions{})
@@ -107,6 +120,15 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 		_ = targetClient.Close(closeContext, port, target.ID)
 		closeCancel()
 	}()
+
+	windowPlan := domain.WindowPlan{Width: 1024, Height: 768, DeviceScaleFactor: 1, Source: domain.WindowSourceExplicit}
+	windowState, err := windowcontrol.New().Apply(ctx, port, version.WebSocketDebuggerURL, windowPlan)
+	if err != nil {
+		t.Fatalf("apply real Chromium managed window: %v\n%s", err, boundedLog(logs.String()))
+	}
+	if !windowState.Applied || !withinWindowTolerance(windowState.Width, windowPlan.Width) || !withinWindowTolerance(windowState.Height, windowPlan.Height) {
+		t.Fatalf("unexpected real Chromium window state: %#v", windowState)
+	}
 
 	submissionContext, submissionCancel := context.WithTimeout(ctx, 15*time.Second)
 	submission, err := collector.Wait(submissionContext)
@@ -139,6 +161,14 @@ func TestRealChromiumEvidenceCollector(t *testing.T) {
 	}
 	closeCancel()
 	collectorClosed = true
+}
+
+func withinWindowTolerance(observed, expected int) bool {
+	difference := observed - expected
+	if difference < 0 {
+		difference = -difference
+	}
+	return difference <= 2
 }
 
 func boundedLog(value string) string {

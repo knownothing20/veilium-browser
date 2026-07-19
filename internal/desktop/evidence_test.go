@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -73,7 +74,7 @@ func genericEvidenceProfile() domain.Profile {
 	return domain.Profile{
 		Name: "Evidence Profile",
 		Fingerprint: domain.FingerprintConfig{
-			Platform:            "windows",
+			Platform:            runtime.GOOS,
 			Brand:               "Chromium",
 			Language:            "en-US",
 			Timezone:            "America/Los_Angeles",
