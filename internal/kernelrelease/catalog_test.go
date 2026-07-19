@@ -26,6 +26,9 @@ func TestCatalogContainsOneExactReviewedSnapshot(t *testing.T) {
 	if release.ExecutablePath != "chrome-win/chrome.exe" || release.ExecutableSizeBytes != 2926080 {
 		t.Fatalf("unexpected reviewed executable pin: %#v", release)
 	}
+	if release.PackageFileCount != 261 || release.ExpandedSizeBytes != 814120936 || release.PackageTreeSHA256 != "2c2c4df75cc994b51f24028029057296d3213de4edcada6e698842bd24886e4c" {
+		t.Fatalf("unexpected reviewed package-tree pin: %#v", release)
+	}
 	if release.ThirdPartyNoticesURL != "chrome://credits/" || len(release.Limitations) < 3 {
 		t.Fatalf("missing reviewed notices or limitations: %#v", release)
 	}
@@ -47,6 +50,12 @@ func TestFindAndMatchAreExact(t *testing.T) {
 	}
 	if _, ok := MatchExecutable(ProviderID, release.BrowserVersion, strings.Repeat("0", 64), release.ExecutableSizeBytes); ok {
 		t.Fatal("modified executable digest must not match")
+	}
+	if _, ok := MatchPackage(ProviderID, release.BrowserVersion, release.ExecutableSHA256, release.ExecutableSizeBytes, release.PackageTreeSHA256, release.PackageFileCount, release.ExpandedSizeBytes); !ok {
+		t.Fatal("exact package identity was not matched")
+	}
+	if _, ok := MatchPackage(ProviderID, release.BrowserVersion, release.ExecutableSHA256, release.ExecutableSizeBytes, strings.Repeat("0", 64), release.PackageFileCount, release.ExpandedSizeBytes); ok {
+		t.Fatal("modified package tree must not match")
 	}
 }
 
