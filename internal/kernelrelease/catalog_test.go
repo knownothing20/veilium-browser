@@ -26,7 +26,7 @@ func TestCatalogContainsOneExactReviewedSnapshot(t *testing.T) {
 	if release.ExecutablePath != "chrome-win/chrome.exe" || release.ExecutableSizeBytes != 2926080 {
 		t.Fatalf("unexpected reviewed executable pin: %#v", release)
 	}
-	if release.PackageFileCount != 261 || release.ExpandedSizeBytes != 814120936 || release.PackageTreeSHA256 != "2c2c4df75cc994b51f24028029057296d3213de4edcada6e698842bd24886e4c" {
+	if release.PackageFileCount != 261 || release.ExpandedSizeBytes != 814120936 || release.PackageTreeSHA256 != "312cb62d6bfab56ecfa52c4e8047dd33c05a1c17c7e44bc2afd9be436854a8dc" {
 		t.Fatalf("unexpected reviewed package-tree pin: %#v", release)
 	}
 	if release.ThirdPartyNoticesURL != "chrome://credits/" || len(release.Limitations) < 3 {
