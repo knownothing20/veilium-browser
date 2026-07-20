@@ -43,7 +43,7 @@ func (e *RestoreExecutor) resolveKernel(requirement KernelRequirement, selectedI
 	if selectedID == "" {
 		return result, fallback
 	}
-	record, err := e.kernels.Get(selectedID)
+	record, err := e.kernels.Verify(selectedID)
 	if err != nil {
 		if errors.Is(err, kernel.ErrNotFound) {
 			result.Status = DependencyMissing
@@ -105,7 +105,7 @@ func (e *RestoreExecutor) resolveAdapter(requirement AdapterRequirement, selecte
 	if selectedID == "" {
 		return result, ""
 	}
-	record, err := e.adapters.Get(selectedID)
+	record, err := e.adapters.Verify(selectedID)
 	if err != nil {
 		if errors.Is(err, adapter.ErrNotFound) {
 			result.Status = DependencyMissing
