@@ -1,6 +1,7 @@
 package localrecovery
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"math"
@@ -14,6 +15,7 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/credential"
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/kernel"
+	"github.com/knownothing20/veilium-browser/internal/lifecycle"
 	"github.com/knownothing20/veilium-browser/internal/profile"
 )
 
@@ -119,7 +121,7 @@ func newRestoreHarness(t *testing.T, files map[string]string) restoreHarness {
 		Architecture:     runtime.GOARCH,
 		TrustRequirement: "custom",
 	}}
-	snapshotResult, err := base.creator.Create(t.Context(), base.request)
+	snapshotResult, err := base.creator.Create(context.Background(), base.request)
 	if err != nil {
 		t.Fatal(err)
 	}
