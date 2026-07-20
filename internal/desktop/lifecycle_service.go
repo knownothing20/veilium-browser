@@ -88,14 +88,18 @@ func (s *Service) createLifecycleRecord(item domain.Profile) (lifecycle.Record, 
 	if s.lifecycleRecords == nil {
 		return lifecycle.Record{}, fmt.Errorf("lifecycle service is unavailable")
 	}
+	state := lifecycle.StateAvailable
+	limitations := []string(nil)
 	expected := filepath.Join(s.profilesDir, item.ID)
 	if !sameCleanPath(item.UserDataDir, expected) {
-		return lifecycle.Record{}, fmt.Errorf("profile %q does not use its managed lifecycle directory", item.ID)
+		state = lifecycle.StateInvalid
+		limitations = append(limitations, "profile-user-data-unmanaged")
 	}
 	return s.lifecycleRecords.Create(lifecycle.Record{
-		ProfileID:  item.ID,
-		State:      lifecycle.StateAvailable,
-		ManagedDir: managedLifecycleDir(item.ID),
+		ProfileID:       item.ID,
+		State:           state,
+		ManagedDir:      managedLifecycleDir(item.ID),
+		LimitationCodes: limitations,
 	})
 }
 
@@ -119,7 +123,11 @@ func (s *Service) requireLifecycleAvailable(profileID, action string) (lifecycle
 		return lifecycle.Record{}, fmt.Errorf("profile %q cannot %s because lifecycle metadata is missing: %w", profileID, action, err)
 	}
 	if record.State != lifecycle.StateAvailable {
-		return lifecycle.Record{}, fmt.Errorf("profile %q cannot %s while lifecycle state is %q", profileID, action, record.State)
+		detail := ""
+		if len(record.LimitationCodes) > 0 {
+			detail = ": " + strings.Join(record.LimitationCodes, ", ")
+		}
+		return lifecycle.Record{}, fmt.Errorf("profile %q cannot %s while lifecycle state is %q%s", profileID, action, record.State, detail)
 	}
 	if record.Lock != nil {
 		return lifecycle.Record{}, fmt.Errorf("profile %q cannot %s while lifecycle operation %q is active", profileID, action, record.Lock.OperationID)
