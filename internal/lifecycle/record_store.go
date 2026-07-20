@@ -105,6 +105,146 @@ func (s *RecordStore) Update(input Record) (Record, error) {
 	return cloneRecord(input), nil
 }
 
+func (s *RecordStore) AcquireLocks(operationID string, profileIDs []string, acquiredAt time.Time) ([]Record, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := validateIdentifier("operation id", operationID); err != nil {
+		return nil, false, err
+	}
+	ids := normalizeIdentifiers(profileIDs)
+	if len(ids) == 0 || len(ids) > MaxProfilesPerOp {
+		return nil, false, fmt.Errorf("%w: invalid lock profile selection", ErrInvalidRecord)
+	}
+	allReused := true
+	for _, id := range ids {
+		record, exists := s.records[id]
+		if !exists {
+			return nil, false, fmt.Errorf("%w: profile %q", ErrNotFound, id)
+		}
+		if record.Lock == nil {
+			allReused = false
+			continue
+		}
+		if record.Lock.OperationID != operationID {
+			return nil, false, fmt.Errorf("%w: profile %q is locked by operation %q", ErrConflict, id, record.Lock.OperationID)
+		}
+	}
+	if allReused {
+		result := make([]Record, 0, len(ids))
+		for _, id := range ids {
+			result = append(result, cloneRecord(s.records[id]))
+		}
+		return result, true, nil
+	}
+
+	next := cloneRecordMap(s.records)
+	for _, id := range ids {
+		record := next[id]
+		if record.Lock == nil {
+			record.Lock = &OperationLock{OperationID: operationID, AcquiredAt: acquiredAt.UTC()}
+			record.UpdatedAt = s.now().UTC()
+			record.Revision++
+			if err := record.Validate(); err != nil {
+				return nil, false, err
+			}
+			next[id] = record
+		}
+	}
+	if err := s.persist(next); err != nil {
+		return nil, false, err
+	}
+	s.records = next
+	result := make([]Record, 0, len(ids))
+	for _, id := range ids {
+		result = append(result, cloneRecord(next[id]))
+	}
+	return result, false, nil
+}
+
+func (s *RecordStore) ReleaseLocks(operationID string, profileIDs []string) ([]Record, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := validateIdentifier("operation id", operationID); err != nil {
+		return nil, false, err
+	}
+	ids := normalizeIdentifiers(profileIDs)
+	if len(ids) == 0 || len(ids) > MaxProfilesPerOp {
+		return nil, false, fmt.Errorf("%w: invalid unlock profile selection", ErrInvalidRecord)
+	}
+	changed := false
+	for _, id := range ids {
+		record, exists := s.records[id]
+		if !exists {
+			return nil, false, fmt.Errorf("%w: profile %q", ErrNotFound, id)
+		}
+		if record.Lock != nil && record.Lock.OperationID != operationID {
+			return nil, false, fmt.Errorf("%w: profile %q lock ownership changed", ErrConflict, id)
+		}
+		changed = changed || record.Lock != nil
+	}
+	if !changed {
+		result := make([]Record, 0, len(ids))
+		for _, id := range ids {
+			result = append(result, cloneRecord(s.records[id]))
+		}
+		return result, false, nil
+	}
+
+	next := cloneRecordMap(s.records)
+	for _, id := range ids {
+		record := next[id]
+		if record.Lock != nil {
+			record.Lock = nil
+			record.UpdatedAt = s.now().UTC()
+			record.Revision++
+			if err := record.Validate(); err != nil {
+				return nil, false, err
+			}
+			next[id] = record
+		}
+	}
+	if err := s.persist(next); err != nil {
+		return nil, false, err
+	}
+	s.records = next
+	result := make([]Record, 0, len(ids))
+	for _, id := range ids {
+		result = append(result, cloneRecord(next[id]))
+	}
+	return result, true, nil
+}
+
+func (s *RecordStore) AddRecoveryCode(profileID, code string) (Record, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := validateText("recovery code", code, true); err != nil {
+		return Record{}, false, err
+	}
+	record, exists := s.records[profileID]
+	if !exists {
+		return Record{}, false, ErrNotFound
+	}
+	for _, existing := range record.RecoveryCodes {
+		if existing == code {
+			return cloneRecord(record), false, nil
+		}
+	}
+	record.RecoveryCodes = append(record.RecoveryCodes, code)
+	sort.Strings(record.RecoveryCodes)
+	record.UpdatedAt = s.now().UTC()
+	record.Revision++
+	if err := record.Validate(); err != nil {
+		return Record{}, false, err
+	}
+	next := cloneRecordMap(s.records)
+	next[profileID] = cloneRecord(record)
+	if err := s.persist(next); err != nil {
+		return Record{}, false, err
+	}
+	s.records = next
+	return cloneRecord(record), true, nil
+}
+
 func (s *RecordStore) load() error {
 	var envelope recordEnvelope
 	if err := decodeStrictFile(s.path, &envelope); err != nil {
