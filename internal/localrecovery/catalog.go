@@ -74,15 +74,11 @@ func (s *CatalogStore) Create(input CatalogRecord) (CatalogRecord, error) {
 	}
 	now := s.now().UTC()
 	input.SchemaVersion = CatalogSchemaVersion
-	if input.Status == "" {
-		input.Status = SnapshotPending
-	}
+	input.Status = SnapshotPending
 	input.CreatedAt = now
 	input.UpdatedAt = now
+	input.VerifiedAt = nil
 	input.Revision = 1
-	if input.Status != SnapshotVerified {
-		input.VerifiedAt = nil
-	}
 	if err := input.Validate(); err != nil {
 		return CatalogRecord{}, err
 	}
@@ -112,6 +108,9 @@ func (s *CatalogStore) Update(input CatalogRecord) (CatalogRecord, error) {
 	}
 	if input.SourceProfileID != current.SourceProfileID || input.ManifestRef != current.ManifestRef || input.ManifestDigest != current.ManifestDigest || input.TreeDigest != current.TreeDigest || input.FileCount != current.FileCount || input.TotalBytes != current.TotalBytes || !input.CreatedAt.Equal(current.CreatedAt) {
 		return CatalogRecord{}, fmt.Errorf("%w: immutable catalog identity changed", ErrConflict)
+	}
+	if !validCatalogTransition(current.Status, input.Status) {
+		return CatalogRecord{}, fmt.Errorf("%w: unsupported catalog transition %q to %q", ErrConflict, current.Status, input.Status)
 	}
 	input.SchemaVersion = CatalogSchemaVersion
 	input.UpdatedAt = s.now().UTC()
