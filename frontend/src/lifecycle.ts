@@ -125,6 +125,33 @@ export interface LifecycleBootstrap extends Bootstrap {
   lifecycleReconciliation: LifecycleReconciliationReport
 }
 
+const emptyInventory: StorageInventory = {
+  generatedAt: '',
+  managedRoot: '.',
+  profiles: [],
+  orphans: [],
+  unsafe: [],
+  summary: { files: 0, bytes: 0 },
+  incomplete: false,
+  limitations: [],
+}
+
+export function normalizeLifecycleBootstrap(input: Bootstrap): LifecycleBootstrap {
+  const lifecycle = input as Partial<LifecycleBootstrap>
+  return {
+    ...input,
+    lifecycleRecords: lifecycle.lifecycleRecords || [],
+    lifecycleOperations: lifecycle.lifecycleOperations || [],
+    lifecycleReconciliation: lifecycle.lifecycleReconciliation || {
+      generatedAt: '',
+      compatibilityCreated: [],
+      actions: [],
+      inventory: emptyInventory,
+      limitations: [],
+    },
+  }
+}
+
 export function lifecycleRecordFor(records: LifecycleRecord[], profileId: string): LifecycleRecord | undefined {
   return records.find((record) => record.profileId === profileId)
 }
