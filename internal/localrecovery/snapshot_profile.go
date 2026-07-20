@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"strings"
 )
 
@@ -48,9 +49,33 @@ func inspectProfileDefinitionObject(object map[string]any) error {
 		if _, forbidden := forbiddenProfileDefinitionKeys[normalized]; forbidden {
 			return fmt.Errorf("%w: Profile definition contains excluded field %q", ErrInvalidManifest, key)
 		}
+		if (normalized == "url" || normalized == "proxyurl") && value != nil {
+			text, ok := value.(string)
+			if !ok {
+				return fmt.Errorf("%w: Profile URL field %q must be text", ErrInvalidManifest, key)
+			}
+			if err := validateProfileURLExclusions(key, text); err != nil {
+				return err
+			}
+		}
 		if err := inspectProfileDefinitionValue(value); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func validateProfileURLExclusions(key, value string) error {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	parsed, err := url.Parse(value)
+	if err != nil {
+		return fmt.Errorf("%w: Profile URL field %q is invalid", ErrInvalidManifest, key)
+	}
+	if parsed.User != nil {
+		return fmt.Errorf("%w: Profile URL field %q contains embedded credentials", ErrInvalidManifest, key)
 	}
 	return nil
 }
