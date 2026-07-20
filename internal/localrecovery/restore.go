@@ -198,7 +198,7 @@ func (e *RestoreExecutor) reserveRestoreLifecycle(profileID, managedDir, snapsho
 		ProfileID:       profileID,
 		State:           lifecycle.StateDraft,
 		ManagedDir:      managedDir,
-		SourceID:         snapshotID,
+		SourceID:        snapshotID,
 		LimitationCodes: []string{"restore-in-progress", "restore-lifecycle-draft"},
 	})
 	return created, err == nil, err
