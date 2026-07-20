@@ -90,21 +90,14 @@ func kernelRequirementMatches(requirement KernelRequirement, record kernel.Recor
 	if requirement.TrustRequirement == "reviewed" && !capabilities.IsReviewed() {
 		return false
 	}
-	for _, required := range requirement.Capabilities {
-		if !capabilityDeclared(capabilities, required) {
-			return false
-		}
+	// The existing fingerprint package does not expose a reviewed, stable
+	// capability-ID lookup contract for restore. Do not guess. A requirement
+	// with explicit capability IDs remains unresolved until the later Desktop
+	// validation boundary can confirm it through the current Provider contract.
+	if len(requirement.Capabilities) != 0 {
+		return false
 	}
 	return true
-}
-
-func capabilityDeclared(capabilities fingerprint.Capabilities, required string) bool {
-	for _, value := range capabilities.IDs() {
-		if value == required {
-			return true
-		}
-	}
-	return false
 }
 
 func (e *RestoreExecutor) resolveAdapter(requirement AdapterRequirement, selectedID string) (ResolvedDependency, string) {
