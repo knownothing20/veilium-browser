@@ -165,9 +165,9 @@ func TestServiceStartupReconcilesInterruptedOperation(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, _, err := records.EnsureCompatibility([]lifecycle.CompatibilityInput{{
-		ProfileID: item.ID,
+		ProfileID:  item.ID,
 		ManagedDir: filepath.ToSlash(filepath.Join("profiles", item.ID)),
-		State: lifecycle.StateAvailable,
+		State:      lifecycle.StateAvailable,
 	}}); err != nil {
 		t.Fatal(err)
 	}
