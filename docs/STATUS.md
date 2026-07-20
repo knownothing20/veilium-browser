@@ -2,31 +2,36 @@
 
 Last updated: 2026-07-20
 Application version: 0.15.0-dev
-Main baseline SHA: 35dcb17062a9932e20f226b6ec3fb64a2f6772e8
+Main baseline SHA: b5af36ab02ee91f253427ca7c3ba6b768997c485
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
 Current milestone: M5.1 — Lifecycle Contract, Inventory, and Operation Journal
-Current task: Implement the bounded M5.1 scope in Issue #45 after the Phase 5 activation PR merges
+Current task: Implement Issue #45 on branch `agent/m5-1-lifecycle-foundation`
 
 ## Operational rule
 
 Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`.
 
-This activation pull request is documentation-only. It does not contain product code.
-
-After this activation PR merges:
-
-- Phase 5 is `Active`;
-- product implementation is allowed only for Issue #45;
-- use one short-lived M5.1 implementation branch and one Draft PR;
-- update this STATUS file in the same pull request as product-code changes;
-- do not begin M5.2, M5.3, or M5.4 work until M5.1 closes through a dedicated review and STATUS advances.
+Phase 5 is `Active`. Product implementation is allowed only for Issue #45. Use one short-lived implementation branch and one Draft PR. Do not begin M5.2, M5.3, or M5.4 until M5.1 closes through a dedicated review and STATUS advances.
 
 `Product implementation allowed: Yes` is not broad authority. Any product work outside Issue #45 remains blocked.
 
+## Implementation in progress
+
+The current M5.1 implementation starts with the dependency foundation:
+
+1. independent versioned lifecycle records, separate from `profiles.json`, runtime state, Profile health, Provider trust, compatibility, and Evidence;
+2. strict lifecycle and operation vocabularies with fail-closed validation;
+3. private atomic lifecycle and operation persistence with bounded decoding, duplicate-ID rejection, rollback behavior, and conservative existing-Profile compatibility;
+4. operation conflict/lock and cancellation state foundations;
+5. read-only managed-storage inventory and startup reconciliation;
+6. bounded desktop/API and UI presentation only after the policy and stores are stable.
+
+The first implementation slice must not move or delete browser data and must not implement snapshot, restore, archive/trash data movement, portable import/export, templates, or multi-Profile batch operations.
+
 ## Activation decision
 
-The project owner approved Phase 5 on 2026-07-20 through Issue #40.
+The project owner approved Phase 5 on 2026-07-20 through Issue #40. Activation PR #47 merged as `b5af36ab02ee91f253427ca7c3ba6b768997c485` after Governance and the complete existing CI matrix passed.
 
 The approved planning and activation packet includes:
 
@@ -36,7 +41,7 @@ The approved planning and activation packet includes:
 - `docs/PHASE_05_CONTRACTS.md`;
 - Windows reviewed-Chromium CI reliability Hotfix #43, merged as `6d4b04a9668c87cc110a4c0d423909d45649b529`;
 - Activation Review Issue #40;
-- this documentation-only activation PR;
+- Activation PR #47;
 - M5.1 implementation Issue #45.
 
 The approved Phase 5 outcome is:
@@ -50,6 +55,7 @@ M5.1 may implement only the lifecycle foundation.
 ### Versioned lifecycle state
 
 - lifecycle states with at least `available`, `draft`, `archived`, and `trashed`;
+- an explicit invalid/limited result for unsafe or contradictory state;
 - conservative compatibility for existing Profiles;
 - lifecycle state remains separate from runtime state and derived Profile health;
 - lifecycle state cannot grant Provider trust, capability support, compatibility, or Evidence validity.
@@ -125,8 +131,9 @@ Phase 4 remains `Done` and frozen:
 - lifecycle records cannot create reviewed trust or Evidence applicability;
 - imported or restored dependencies require current local verification;
 - operating-system vault secrets remain non-portable by default;
-- unsupported, modified, missing, stale, contradictory, and unverifiable states fail closed or remain explicitly limited;
-- the user-local Windows CI staging fix changes only Runner reliability, not the browser binary, Sandbox, Evidence, or compatibility claims.
+- unsupported, modified, missing, stale, contradictory, and unverifiable states fail closed or remain explicitly limited.
+
+The unresolved GitHub-hosted Windows Chromium AppContainer reliability investigation is tracked separately in Issue #49. Experimental ACL PRs were not merged and do not alter the current product or Provider baseline.
 
 ## Required M5.1 validation
 
