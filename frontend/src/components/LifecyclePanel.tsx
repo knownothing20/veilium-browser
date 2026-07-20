@@ -1,7 +1,8 @@
-import type {
-  LifecycleOperation,
-  LifecycleRecord,
-  LifecycleReconciliationReport,
+import {
+  cancellationAvailability,
+  type LifecycleOperation,
+  type LifecycleRecord,
+  type LifecycleReconciliationReport,
 } from '../lifecycle'
 
 export function LifecyclePanel({
@@ -19,6 +20,9 @@ export function LifecyclePanel({
   const recovery = operations.filter((operation) => operation.status === 'recovery-required').length
   const missing = inventory.profiles.filter((profile) => profile.status === 'missing').length
   const unsafe = inventory.profiles.filter((profile) => profile.status === 'unsafe').length + (inventory.unsafe?.length || 0)
+  const recentOperations = [...operations]
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
+    .slice(0, 5)
   const findings = [
     ...(reconciliation.actions || []).map((item) => ({
       key: `action-${item.kind}-${item.profileId || item.operationId || item.relativePath || item.reasonCode}`,
@@ -45,7 +49,7 @@ export function LifecyclePanel({
       <div className="panel-heading">
         <div>
           <h2>Profile lifecycle</h2>
-          <p>Read-only M5.1 status. No archive, trash, restore or permanent-delete actions are enabled.</p>
+          <p>Read-only M5.1 status. No archive, trash, restore, cancellation or permanent-delete actions are enabled.</p>
         </div>
         <span className={`lifecycle-overall ${limited || locked || recovery || missing || unsafe ? 'attention' : 'clear'}`}>
           {limited || locked || recovery || missing || unsafe ? 'Attention required' : 'No lifecycle blockers'}
@@ -62,6 +66,21 @@ export function LifecyclePanel({
         <strong>{formatBytes(inventory.summary.bytes)} · {inventory.summary.files} files</strong>
         <small>{inventory.incomplete ? 'Bounded scan incomplete' : `Generated ${formatTime(inventory.generatedAt)}`}</small>
       </div>
+      <div className="lifecycle-section-title"><strong>Operation journal</strong><span>State and cancellation availability only</span></div>
+      {recentOperations.length > 0 ? (
+        <ul className="lifecycle-operations">
+          {recentOperations.map((operation) => (
+            <li key={operation.id}>
+              <div><strong>{label(operation.type)}</strong><span>{operation.id} · {operation.profileIds.length} Profile{operation.profileIds.length === 1 ? '' : 's'}</span></div>
+              <span className={`lifecycle-operation-status ${operation.status}`}>{operation.status}</span>
+              <div className="lifecycle-operation-detail"><strong>{label(operation.stage)}</strong><span>{cancellationAvailability(operation)}</span></div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="lifecycle-empty compact">No lifecycle operation has been recorded.</div>
+      )}
+      <div className="lifecycle-section-title"><strong>Recovery and storage findings</strong><span>Read-only startup report</span></div>
       {findings.length > 0 ? (
         <ul className="lifecycle-findings">
           {findings.map((item) => <li className={item.tone} key={item.key}><strong>{item.title}</strong><span>{item.detail}</span></li>)}
