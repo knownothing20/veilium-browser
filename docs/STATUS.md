@@ -6,161 +6,137 @@ Main baseline SHA: b5af36ab02ee91f253427ca7c3ba6b768997c485
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
 Current milestone: M5.1 — Lifecycle Contract, Inventory, and Operation Journal
-Current task: Implement Issue #45 on branch `agent/m5-1-lifecycle-foundation`
+Current task: Complete final validation and review of Issue #45 in Draft PR #52
+Current branch: `agent/m5-1-lifecycle-foundation`
 
 ## Operational rule
 
 Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`.
 
-Phase 5 is `Active`. Product implementation is allowed only for Issue #45. Use one short-lived implementation branch and one Draft PR. Do not begin M5.2, M5.3, or M5.4 until M5.1 closes through a dedicated review and STATUS advances.
+Phase 5 is `Active`. Product implementation remains authorized only for Issue #45. M5.2, M5.3, and M5.4 remain blocked until M5.1 is merged and passes a dedicated Closing Review.
 
-`Product implementation allowed: Yes` is not broad authority. Any product work outside Issue #45 remains blocked.
+`Product implementation allowed: Yes` is not broad authority. No work outside Issue #45 may be added to PR #52.
 
-## Implementation in progress
+## Current implementation stage
 
-The current M5.1 implementation starts with the dependency foundation:
+M5.1 implementation stages 1–5 are complete. Stage 6 is active:
 
-1. independent versioned lifecycle records, separate from `profiles.json`, runtime state, Profile health, Provider trust, compatibility, and Evidence;
-2. strict lifecycle and operation vocabularies with fail-closed validation;
-3. private atomic lifecycle and operation persistence with bounded decoding, duplicate-ID rejection, rollback behavior, and conservative existing-Profile compatibility;
-4. operation conflict/lock and cancellation state foundations;
-5. read-only managed-storage inventory and startup reconciliation;
-6. bounded desktop/API and UI presentation only after the policy and stores are stable.
+1. versioned lifecycle contract and atomic persistence — complete;
+2. operation journal, conflict locks, dependent-operation blocking, and cancellation foundation — complete;
+3. read-only managed-storage inventory and startup reconciliation — complete;
+4. Desktop Service initialization, compatibility migration, lifecycle gating, and rollback integration — complete;
+5. bounded Bootstrap/Wails surface and minimum existing-design UI — complete;
+6. final acceptance audit, documentation, protected CI, diff review, and PR handoff — in progress.
 
-The first implementation slice must not move or delete browser data and must not implement snapshot, restore, archive/trash data movement, portable import/export, templates, or multi-Profile batch operations.
+No further M5.1 feature stage is planned. After Stage 6, the only legal next step is the M5.1 Closing Review; M5.2 must not begin automatically.
 
-## Activation decision
+## Implemented M5.1 behavior
 
-The project owner approved Phase 5 on 2026-07-20 through Issue #40. Activation PR #47 merged as `b5af36ab02ee91f253427ca7c3ba6b768997c485` after Governance and the complete existing CI matrix passed.
+### Lifecycle and persistence
 
-The approved planning and activation packet includes:
+- independent versioned `lifecycle.json` records with `available`, `draft`, `archived`, `trashed`, and `invalid`;
+- lifecycle state remains separate from runtime, health, compatibility, Provider trust, capability support, and Evidence;
+- independent versioned `lifecycle-operations.json` journal with operation state, stage, timestamps, selected Profiles, per-item results, idempotency, cancellation state, limitations, and recovery actions;
+- private, bounded, strict, atomic stores with optimistic revisions and rollback behavior;
+- duplicate, malformed, oversized, future-version, unknown-field, symlink, non-regular-file, and unsafe-path input fails closed.
 
-- Planning Issue #37;
-- Planning PR #39, merged as `531f56d49cebc79cf6aee7a24d8f972d6275ce6b`;
-- `docs/PHASE_05.md`;
-- `docs/PHASE_05_CONTRACTS.md`;
-- Windows reviewed-Chromium CI reliability Hotfix #43, merged as `6d4b04a9668c87cc110a4c0d423909d45649b529`;
-- Activation Review Issue #40;
-- Activation PR #47;
-- M5.1 implementation Issue #45.
+### Conflict, interruption, and recovery
 
-The approved Phase 5 outcome is:
+- one conflicting lifecycle operation lock per Profile;
+- selected Profile locks are acquired atomically;
+- active browser sessions and protected dependent operations block before journal execution;
+- idempotent duplicates return the existing operation;
+- cancellation remains a durable request checked only at safe stages;
+- interrupted, cancelled, partial, or failed work cannot become successful implicitly;
+- application shutdown preserves durable non-terminal state;
+- startup converts interrupted operations to `recovery-required`, creates per-item recovery results, and reconciles stale locks without guessing success.
 
-> A user can preserve, recover, move, template, archive, and manage Veilium Profiles without silently copying secrets, weakening Provider trust, reusing identities unintentionally, or losing browser data during interrupted operations.
+### Storage inventory
 
-## Current authorized implementation: Issue #45
+- read-only expected-directory present/missing reporting;
+- orphaned managed-directory reporting;
+- unsafe root, symlink, Windows reparse/junction, special-file, non-directory, traversal, and uninspectable entry reporting;
+- bounded regular-file counts and byte totals without opening browser content;
+- cancelled or bounded scans remain explicitly incomplete;
+- no automatic repair or deletion.
 
-M5.1 may implement only the lifecycle foundation.
+### Desktop Service and compatibility
 
-### Versioned lifecycle state
+- application startup securely creates a missing private data root and opens/reconciles lifecycle state;
+- malformed or unsupported lifecycle state prevents Service initialization;
+- existing safe managed Profiles receive explicit compatibility records;
+- contradictory or unmanaged legacy Profiles remain readable but are lifecycle `invalid` and cannot launch;
+- Profile creation synchronizes lifecycle metadata and rolls Profile metadata back if lifecycle persistence fails;
+- cloning creates a new identity and lifecycle record and requires an available, unlocked source;
+- launch and launch-plan creation require lifecycle `available` and unlocked in addition to all frozen Phase 4 checks;
+- editing is blocked while locked, archived, or trashed; invalid/draft metadata remains inspectable for repair;
+- direct Profile deletion fails closed until the M5.2 trash transaction exists.
 
-- lifecycle states with at least `available`, `draft`, `archived`, and `trashed`;
-- an explicit invalid/limited result for unsafe or contradictory state;
-- conservative compatibility for existing Profiles;
-- lifecycle state remains separate from runtime state and derived Profile health;
-- lifecycle state cannot grant Provider trust, capability support, compatibility, or Evidence validity.
+### Desktop/UI boundary
 
-### Versioned operation journal
+- Bootstrap exposes lifecycle records, operation records, startup reconciliation, inventory findings, cancellation-request state, and safe-cancellation stage;
+- Profile rows show lifecycle separately from runtime and health;
+- lifecycle limitation, recovery, and lock reasons are visible in bounded form;
+- controls are disabled according to lifecycle policy;
+- dashboard shows lifecycle, operation, cancellation-availability, inventory, orphan, unsafe, and recovery state;
+- no archive, trash, restore, permanent-delete, cancellation, batch, import/export, template, filesystem-browser, or automation action is exposed;
+- browser preview creates no fake lifecycle records or support claims.
 
-- stable operation IDs and schema versions;
-- operation type, selected Profile IDs, stages, timestamps, terminal state, per-item result, cancellation state, limitations, and recovery action;
-- deterministic duplicate and idempotency behavior;
-- private, atomic, bounded persistence with strict decoding and rollback behavior.
+## Validation status
 
-M5.1 may reserve operation vocabulary for future milestones, but it must not implement those later operations.
+The implementation has passed, on current or immediately preceding PR heads:
 
-### Conflict and cancellation control
+- Governance scope checks;
+- Go formatting, vet, unit/race coverage, and builds;
+- lifecycle schema, persistence, rollback, duplicate/conflict, active-session, dependent-operation, cancellation, shutdown, and startup-reconciliation tests;
+- Linux and Windows filesystem safety tests, including symlink and reparse handling;
+- frontend typecheck, lifecycle policy tests, existing tests, and production build;
+- Windows and Linux Wails builds;
+- official adapter checks on Windows and Linux;
+- Linux real-browser Evidence and both official adapter browser paths;
+- exact Windows reviewed-Chromium installation and managed identity/window Evidence in recent runs.
 
-- one conflicting lifecycle operation per Profile;
-- active browser and protected dependent-operation blocking;
-- cancellation only at safe checkpoints;
-- interrupted or cancelled work cannot become successful implicitly;
-- application shutdown preserves enough state for startup reconciliation.
+The final documentation head still requires a fresh complete protected run before PR #52 can leave Draft.
 
-### Managed-storage inventory
+### Independent CI reliability observation
 
-- report expected Profile directories that are present or missing;
-- report unexpected or orphaned managed directories;
-- report unsafe paths, links, junction/reparse escapes, special entries, or paths outside the managed root;
-- provide bounded file-count and byte-size summaries where safe;
-- remain read-only and non-destructive in M5.1.
+A recent Windows Network Evidence attempt failed after the exact identity/window Evidence succeeded. The diagnostic packet reported Chromium Sandbox access denial for the same fixed user-local `chrome.exe` path (`Access is denied (0x5)`), followed by Network Evidence timeout. This matches open Issue #49 and does not call the lifecycle Service or frontend.
 
-### Startup reconciliation
+No Sandbox, browser binary, Provider identity, Evidence rule, workflow permission, or compatibility claim has been weakened in PR #52. The protected matrix must pass before merge; unrelated experimental ACL work remains outside this PR.
 
-- reconcile interrupted journal records and stale locks;
-- report recognized leftover staging or quarantine state;
-- report missing, orphaned, malformed, duplicate, unsupported, or contradictory state;
-- provide actionable recovery status without automatically completing destructive work.
+A separate Linux collector shutdown timeout occurred once during implementation and passed on retry without code changes. It remains an observed CI timing fluctuation, not an M5.1 product claim.
 
-### Desktop/API boundary
+## Security, privacy, and compatibility boundaries
 
-Expose only the bounded state needed to understand:
+- operating-system vault secrets remain non-portable and are never copied into lifecycle state;
+- no Cookies, LocalStorage, IndexedDB, history, tokens, page data, extension contents, or Evidence payloads are inspected;
+- lifecycle reports expose bounded relative managed identities, not arbitrary filesystem browsing;
+- no remote binding, public API, MCP, cloud sync, telemetry, automatic download, or workflow write permission is added;
+- Phase 4 Provider trust, exact binary identity, Sandbox, compatibility, and Evidence requirements remain frozen;
+- lifecycle metadata cannot create reviewed trust or Evidence applicability;
+- macOS lifecycle support remains unclaimed.
 
-- Profile lifecycle;
-- runtime state;
-- Profile health;
-- operation state and cancellation availability;
-- storage/inventory findings and recovery actions.
+## Explicit non-scope retained
 
-The UI extends the existing design and must not introduce an unrelated redesign.
+PR #52 does not implement:
 
-## M5.1 explicit non-scope
-
-Issue #45 does not authorize:
-
-- snapshot container creation;
-- snapshot or restore execution;
-- archive/trash directory movement or permanent deletion;
+- snapshot container creation or snapshot/restore execution;
+- archive, trash, restore-trash, retention, or permanent-delete data movement;
 - portable Profile export/import;
 - templates;
-- Cookie import, export, or editing;
-- extension installation or package management;
-- export of operating-system vault secrets;
+- Cookie or extension management;
+- secret export;
 - multi-Profile batch UI or operations;
-- bulk Profile start, scheduling, proxy rotation, account farming, general automation, public API, MCP, or cloud sync;
-- Provider, Kernel, adapter, fingerprint, proxy-protocol, compatibility, or Evidence claim expansion;
-- macOS lifecycle support claims;
-- release signing, auto-update, SBOM, or reproducible-build work.
+- bulk start, scheduling, proxy rotation, account farming, general automation, public Launch API, MCP, sync, or release work;
+- Provider, Kernel, adapter, fingerprint, proxy-protocol, compatibility, or Evidence claim expansion.
 
-## Frozen Phase 4 boundaries
+## Exact next task
 
-Phase 4 remains `Done` and frozen:
-
-- reviewed browser trust remains restricted to the exact Windows amd64 Chromium Snapshot package;
-- custom and legacy Providers remain unpromoted;
-- lifecycle records cannot create reviewed trust or Evidence applicability;
-- imported or restored dependencies require current local verification;
-- operating-system vault secrets remain non-portable by default;
-- unsupported, modified, missing, stale, contradictory, and unverifiable states fail closed or remain explicitly limited.
-
-The unresolved GitHub-hosted Windows Chromium AppContainer reliability investigation is tracked separately in Issue #49. Experimental ACL PRs were not merged and do not alter the current product or Provider baseline.
-
-## Required M5.1 validation
-
-```bash
-python scripts/check_project_governance.py
-make check
-```
-
-The M5.1 Draft PR must additionally pass the complete applicable matrix:
-
-- Go formatting, vet, race/unit tests, and builds;
-- frontend typecheck, tests, and production build;
-- Windows and Linux Wails builds;
-- schema compatibility and migration fixtures;
-- atomic persistence and rollback failures;
-- duplicate/conflict, active-session, cancellation, shutdown, and startup-reconciliation tests;
-- Windows and Linux real-filesystem inventory tests;
-- symlink, junction/reparse, traversal, special-file, malformed-data, duplicate-ID, oversized-record, and unsupported-version rejection;
-- secret and browser-content exclusion checks;
-- official adapter and Linux browser Evidence checks;
-- exact Windows reviewed-Chromium installation, identity/window Evidence, Network Evidence, dependency-tamper, build, artifact, and safe-cleanup checks.
-
-## M5.1 delivery and closure
-
-1. Implement Issue #45 only.
-2. Keep commits dependency ordered and reviewable.
-3. Keep M5.2–M5.4 code out of the M5.1 PR.
-4. Record schema, migration, rollback, security, privacy, platform, and recovery behavior in module documentation.
-5. After implementation merges, open a dedicated M5.1 Closing Review.
-6. Advance STATUS to M5.2 only after that review passes.
+1. Run Governance and the complete protected CI matrix on the final documentation/code head.
+2. Confirm the final diff still contains only Issue #45 scope and no M5.2–M5.4 implementation.
+3. Inspect PR comments, reviews, and unresolved threads.
+4. Update the Draft PR description with final behavior, validation, known risks, and non-scope.
+5. Mark PR #52 ready for review only when required checks pass and no actionable review item remains.
+6. Merge only after the owner approves the reviewed PR.
+7. Open a dedicated M5.1 Closing Review after merge.
+8. Advance STATUS to M5.2 only if that Closing Review passes.
