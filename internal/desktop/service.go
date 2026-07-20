@@ -22,6 +22,7 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/kernelinstaller"
 	"github.com/knownothing20/veilium-browser/internal/kernelrelease"
 	"github.com/knownothing20/veilium-browser/internal/launch"
+	"github.com/knownothing20/veilium-browser/internal/lifecycle"
 	"github.com/knownothing20/veilium-browser/internal/profile"
 	"github.com/knownothing20/veilium-browser/internal/proxy"
 	"github.com/knownothing20/veilium-browser/internal/singboxprovider"
@@ -52,33 +53,41 @@ type KernelInstaller interface {
 }
 
 type Service struct {
-	store            *profile.Store
-	kernels          *kernel.Store
-	adapters         *adapter.Store
-	adapterRuntime   adapterruntime.Factory
-	adapterValidator AdapterValidator
-	adapterInstaller AdapterInstaller
-	kernelInstaller  KernelInstaller
-	credentials      *credential.Manager
-	planner          launch.Planner
-	supervisor       RuntimeSupervisor
-	dataRoot         string
-	profilesDir      string
+	store                   *profile.Store
+	kernels                 *kernel.Store
+	adapters                *adapter.Store
+	adapterRuntime          adapterruntime.Factory
+	adapterValidator        AdapterValidator
+	adapterInstaller        AdapterInstaller
+	kernelInstaller         KernelInstaller
+	credentials             *credential.Manager
+	planner                 launch.Planner
+	supervisor              RuntimeSupervisor
+	dataRoot                string
+	profilesDir             string
+	lifecycleRecords        *lifecycle.RecordStore
+	lifecycleJournal        *lifecycle.Journal
+	lifecycleCoordinator    *lifecycle.Coordinator
+	lifecycleScanner        *lifecycle.InventoryScanner
+	lifecycleReconciliation lifecycle.ReconciliationReport
 }
 
 type Bootstrap struct {
-	Version            string                  `json:"version"`
-	Profiles           []domain.Profile        `json:"profiles"`
-	Providers          []ProviderDescriptor    `json:"providers"`
-	Kernels            []kernel.Record         `json:"kernels"`
-	Adapters           []adapter.Record        `json:"adapters"`
-	Sessions           []supervisor.Session    `json:"sessions"`
-	Credentials        []credential.Record     `json:"credentials"`
-	CredentialProvider string                  `json:"credentialProvider"`
-	AdapterPins        []adapterrelease.Pin    `json:"adapterPins"`
-	KernelPins         []kernelrelease.Release `json:"kernelPins"`
-	RuntimePlatform    string                  `json:"runtimePlatform"`
-	RuntimeArch        string                  `json:"runtimeArch"`
+	Version                 string                         `json:"version"`
+	Profiles                []domain.Profile               `json:"profiles"`
+	Providers               []ProviderDescriptor           `json:"providers"`
+	Kernels                 []kernel.Record                `json:"kernels"`
+	Adapters                []adapter.Record               `json:"adapters"`
+	Sessions                []supervisor.Session           `json:"sessions"`
+	Credentials             []credential.Record            `json:"credentials"`
+	CredentialProvider      string                         `json:"credentialProvider"`
+	AdapterPins             []adapterrelease.Pin           `json:"adapterPins"`
+	KernelPins              []kernelrelease.Release        `json:"kernelPins"`
+	RuntimePlatform         string                         `json:"runtimePlatform"`
+	RuntimeArch             string                         `json:"runtimeArch"`
+	LifecycleRecords        []lifecycle.Record             `json:"lifecycleRecords"`
+	LifecycleOperations     []lifecycle.Operation          `json:"lifecycleOperations"`
+	LifecycleReconciliation lifecycle.ReconciliationReport `json:"lifecycleReconciliation"`
 }
 
 type ProviderDescriptor struct {
@@ -165,23 +174,29 @@ func newServiceWithCredentials(store *profile.Store, dataRoot string, runtimeSup
 		profilesDir:      filepath.Join(dataRoot, "profiles"),
 	}
 	_ = registryFor(service)
+	if err := service.initializeLifecycle(); err != nil {
+		return nil, err
+	}
 	return service, nil
 }
 
 func (s *Service) Bootstrap() Bootstrap {
 	return Bootstrap{
-		Version:            AppVersion,
-		Profiles:           s.store.List(),
-		Providers:          providerCatalog(),
-		Kernels:            s.kernels.List(),
-		Adapters:           s.adapters.List(),
-		Sessions:           s.supervisor.List(),
-		Credentials:        s.credentials.List(),
-		CredentialProvider: credential.ProviderName(),
-		AdapterPins:        officialAdapterPins(),
-		KernelPins:         officialKernelPins(),
-		RuntimePlatform:    runtime.GOOS,
-		RuntimeArch:        runtime.GOARCH,
+		Version:                 AppVersion,
+		Profiles:                s.store.List(),
+		Providers:               providerCatalog(),
+		Kernels:                 s.kernels.List(),
+		Adapters:                s.adapters.List(),
+		Sessions:                s.supervisor.List(),
+		Credentials:             s.credentials.List(),
+		CredentialProvider:      credential.ProviderName(),
+		AdapterPins:             officialAdapterPins(),
+		KernelPins:              officialKernelPins(),
+		RuntimePlatform:         runtime.GOOS,
+		RuntimeArch:             runtime.GOARCH,
+		LifecycleRecords:        s.ListLifecycleRecords(),
+		LifecycleOperations:     s.ListLifecycleOperations(),
+		LifecycleReconciliation: s.LifecycleReconciliation(),
 	}
 }
 
@@ -292,7 +307,18 @@ func (s *Service) CreateProfile(input domain.Profile) (domain.Profile, error) {
 	if err := s.validateProfileConsistency(input); err != nil {
 		return domain.Profile{}, err
 	}
-	return s.store.Create(input)
+	created, err := s.store.Create(input)
+	if err != nil {
+		return domain.Profile{}, err
+	}
+	if _, err := s.createLifecycleRecord(created); err != nil {
+		rollbackErr := s.store.Delete(created.ID)
+		if rollbackErr != nil {
+			return domain.Profile{}, fmt.Errorf("create lifecycle record: %v; rollback profile metadata: %w", err, rollbackErr)
+		}
+		return domain.Profile{}, fmt.Errorf("create lifecycle record: %w", err)
+	}
+	return created, nil
 }
 
 func (s *Service) UpdateProfile(input domain.Profile) (domain.Profile, error) {
@@ -301,6 +327,9 @@ func (s *Service) UpdateProfile(input domain.Profile) (domain.Profile, error) {
 	}
 	if s.supervisor.IsActive(input.ID) {
 		return domain.Profile{}, fmt.Errorf("profile %q cannot be edited while its browser is running", input.Name)
+	}
+	if _, err := s.requireLifecycleMutable(input.ID); err != nil {
+		return domain.Profile{}, err
 	}
 	if strings.TrimSpace(input.UserDataDir) == "" {
 		input.UserDataDir = filepath.Join(s.profilesDir, input.ID)
@@ -321,6 +350,9 @@ func (s *Service) UpdateProfile(input domain.Profile) (domain.Profile, error) {
 }
 
 func (s *Service) CloneProfile(id, name string) (domain.Profile, error) {
+	if _, err := s.requireLifecycleAvailable(id, "be cloned"); err != nil {
+		return domain.Profile{}, err
+	}
 	source, err := s.store.Get(id)
 	if err != nil {
 		return domain.Profile{}, err
@@ -346,7 +378,10 @@ func (s *Service) DeleteProfile(id string) error {
 	if s.supervisor.IsActive(id) {
 		return fmt.Errorf("profile cannot be deleted while its browser is running")
 	}
-	return s.store.Delete(id)
+	if _, err := s.requireLifecycleMutable(id); err != nil {
+		return err
+	}
+	return fmt.Errorf("profile deletion is unavailable until lifecycle trash transactions are implemented")
 }
 
 func (s *Service) BuildLaunchPlan(request LaunchPlanRequest) (domain.LaunchPlan, error) {
@@ -355,6 +390,9 @@ func (s *Service) BuildLaunchPlan(request LaunchPlanRequest) (domain.LaunchPlan,
 		if errors.Is(err, profile.ErrNotFound) {
 			return domain.LaunchPlan{}, profile.ErrNotFound
 		}
+		return domain.LaunchPlan{}, err
+	}
+	if _, err := s.requireLifecycleAvailable(item.ID, "build a launch plan"); err != nil {
 		return domain.LaunchPlan{}, err
 	}
 	if err := s.resolveKernel(&item); err != nil {
@@ -372,6 +410,9 @@ func (s *Service) BuildLaunchPlan(request LaunchPlanRequest) (domain.LaunchPlan,
 func (s *Service) StartProfile(ctx context.Context, profileID string) (supervisor.Session, error) {
 	item, err := s.store.Get(profileID)
 	if err != nil {
+		return supervisor.Session{}, err
+	}
+	if _, err := s.requireLifecycleAvailable(item.ID, "start"); err != nil {
 		return supervisor.Session{}, err
 	}
 	if strings.TrimSpace(item.Kernel.ID) == "" {
