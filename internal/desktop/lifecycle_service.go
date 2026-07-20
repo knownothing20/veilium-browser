@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -15,6 +16,9 @@ import (
 const lifecycleStartupTimeout = 5 * time.Second
 
 func (s *Service) initializeLifecycle() error {
+	if err := prepareLifecycleDataRoot(s.dataRoot); err != nil {
+		return err
+	}
 	records, err := lifecycle.OpenRecordStore(filepath.Join(s.dataRoot, "lifecycle.json"))
 	if err != nil {
 		return fmt.Errorf("open lifecycle records: %w", err)
@@ -58,6 +62,23 @@ func (s *Service) initializeLifecycle() error {
 	s.lifecycleCoordinator = coordinator
 	s.lifecycleScanner = scanner
 	s.lifecycleReconciliation = report
+	return nil
+}
+
+func prepareLifecycleDataRoot(dataRoot string) error {
+	if strings.TrimSpace(dataRoot) == "" {
+		return fmt.Errorf("lifecycle data root is required")
+	}
+	if err := os.MkdirAll(dataRoot, 0o700); err != nil {
+		return fmt.Errorf("create lifecycle data root: %w", err)
+	}
+	info, err := os.Lstat(dataRoot)
+	if err != nil {
+		return fmt.Errorf("inspect lifecycle data root: %w", err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+		return fmt.Errorf("lifecycle data root must be a real directory")
+	}
 	return nil
 }
 
