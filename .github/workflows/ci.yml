@@ -157,6 +157,40 @@ jobs:
           "packet=$env:VEILIUM_REVIEWED_CHROMIUM_RESULT" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           "workdir=$env:VEILIUM_REVIEWED_CHROMIUM_WORKDIR" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
+      - name: Configure reviewed Chromium AppContainer ACLs
+        shell: pwsh
+        env:
+          VEILIUM_CHROMIUM_BINARY: ${{ steps.reviewed_chromium.outputs.path }}
+          VEILIUM_REVIEWED_CHROMIUM_WORKDIR: ${{ steps.reviewed_chromium.outputs.workdir }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $binary = [System.IO.Path]::GetFullPath($env:VEILIUM_CHROMIUM_BINARY)
+          $workDir = [System.IO.Path]::GetFullPath($env:VEILIUM_REVIEWED_CHROMIUM_WORKDIR)
+          $workPrefix = $workDir + [System.IO.Path]::DirectorySeparatorChar
+          if (-not $binary.StartsWith($workPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Reviewed Chromium binary is outside the expected workdir: $binary"
+          }
+          $chromeWinDir = Split-Path -LiteralPath $binary -Parent
+          $packageRoot = [System.IO.Path]::GetFullPath((Split-Path -LiteralPath $chromeWinDir -Parent))
+          if (-not $packageRoot.StartsWith($workPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Reviewed Chromium package is outside the expected workdir: $packageRoot"
+          }
+          $capabilitySids = @(
+            'S-1-15-3-1024-3424233489-972189580-2057154623-747635277-1604371224-316187997-3786583170-1043257646',
+            'S-1-15-3-1024-2302894289-466761758-1166120688-1039016420-2430351297-4240214049-4028510897-3317428798'
+          )
+          foreach ($sid in $capabilitySids) {
+            & icacls.exe $packageRoot /grant "*${sid}:(OI)(CI)(RX)" /T /C /Q
+            if ($LASTEXITCODE -ne 0) {
+              throw "Failed to configure reviewed Chromium AppContainer ACL for $sid"
+            }
+          }
+          Write-Host "Reviewed Chromium AppContainer ACL root: $packageRoot"
+          & icacls.exe $packageRoot
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to inspect reviewed Chromium package ACL' }
+          & icacls.exe $binary
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to inspect reviewed Chromium executable ACL' }
+
       - name: Exercise exact reviewed identity and managed-window Evidence
         shell: pwsh
         env:
