@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+
+	"github.com/knownothing20/veilium-browser/internal/lifecycle"
 )
 
 type plannedSnapshotFile struct {
@@ -24,11 +26,11 @@ type snapshotPlan struct {
 	TotalBytes int64
 }
 
-func (c *SnapshotCreator) preflight(ctx context.Context, record lifecycleRecordView, request SnapshotRequest) (snapshotPlan, error) {
+func (c *SnapshotCreator) preflight(ctx context.Context, record lifecycle.Record, request SnapshotRequest) (snapshotPlan, error) {
 	if err := c.checkCancellation(ctx, request.OperationID); err != nil {
 		return snapshotPlan{}, err
 	}
-	if record.State != "available" {
+	if record.State != lifecycle.StateAvailable {
 		return snapshotPlan{}, fmt.Errorf("%w: Profile lifecycle state is not available", ErrInvalidRecord)
 	}
 	sourceRoot, err := managedSourcePath(c.dataRoot, record.ManagedDir)
