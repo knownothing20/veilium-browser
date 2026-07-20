@@ -70,10 +70,10 @@ func newRestoreHarness(t *testing.T, files map[string]string) restoreHarness {
 		t.Fatal(err)
 	}
 	source, err := profiles.Create(domain.Profile{
-		ID:    "profile-a",
-		Name:  "Source Profile",
-		Group: "Source Group",
-		Notes: "source metadata remains unchanged",
+		ID:          "profile-a",
+		Name:        "Source Profile",
+		Group:       "Source Group",
+		Notes:       "source metadata remains unchanged",
 		Kernel: domain.KernelRef{
 			ID:         "source-kernel-record",
 			Provider:   "custom-chromium",
