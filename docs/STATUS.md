@@ -6,8 +6,8 @@ Main baseline SHA: 8097422edd06a648631394ab9ff8b987b0f7c313
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
 Current milestone: M5.2 — Safe Local Recovery
-Current task: Implement Issue #54 Stage 1 on branch `agent/m5-2-safe-local-recovery`
-Current implementation stage: Stage 1 — Contracts and persistence
+Current task: Implement Issue #54 Stage 2 on branch `agent/m5-2-safe-local-recovery`
+Current implementation stage: Stage 2 — Local snapshot creation
 
 ## Operational rule
 
@@ -49,13 +49,20 @@ All M5.2 work must:
 
 Every development update must identify the current stage and the remaining stages.
 
-1. **Stage 1 — Contracts and persistence — active**
-   - versioned manifests and operation records;
-   - strict decoding, canonical relative paths, deterministic identity, bounds, persistence, and rollback tests;
-   - no browser-directory copying or restore execution.
+1. **Stage 1 — Contracts and persistence — complete**
+   - versioned manifest and catalog contracts;
+   - canonical relative paths and deterministic file-tree identity;
+   - non-secret dependency requirement records;
+   - strict JSON boundaries, resource bounds, immutable manifest publication, atomic catalog persistence, explicit transitions, and rollback tests;
+   - complete retained Governance and CI matrix passed on head `8cf514d3ea25685ee30903ba19e8f6f7eccf815e`.
 
-2. **Stage 2 — Local snapshot creation — blocked**
-   - preflight, private staging, opaque file copying, hashing, safe cancellation points, verification, publication, and recovery.
+2. **Stage 2 — Local snapshot creation — active**
+   - bounded preflight and safe filesystem traversal;
+   - private operation staging;
+   - opaque regular-file copying and SHA-256 verification;
+   - durable cancellation checks at safe boundaries;
+   - complete staged verification, immutable manifest publication, atomic snapshot activation, and recovery state;
+   - no restore, archive, trash, or UI implementation.
 
 3. **Stage 3 — Restore to new identity — blocked**
    - strict verification, dependency requirement remapping, new identity activation, limited-state behavior, and rollback.
@@ -74,20 +81,25 @@ Every development update must identify the current stage and the remaining stage
 
 Do not begin a later stage until the current stage's relevant tests pass.
 
-## Stage 1 allowed work
+## Stage 2 allowed work
 
-Stage 1 may add only:
+Stage 2 may add only:
 
-- versioned local recovery manifest and catalog contracts;
-- canonical relative entry records and deterministic tree identity inputs;
-- non-secret dependency requirement records;
-- explicit file-count, file-size, total-size, path-length, manifest-size, and record-count bounds;
-- strict fail-closed validation and decoding;
-- private atomic manifest/catalog persistence and rollback behavior;
-- fixtures and unit tests for malformed, duplicate, unsupported, oversized, unsafe, and stale-revision state;
-- documentation of schema, privacy, compatibility, and downgrade behavior.
+- snapshot request, preflight, progress, and result records that map to the M5.1 operation journal;
+- safe traversal of one selected Veilium-managed Profile directory;
+- regular-file inventory without interpreting browser contents;
+- destination-space and resource-bound preflight;
+- operation-specific private staging paths;
+- bounded buffered file copying with source-before/source-after stability checks;
+- per-file and deterministic tree hashing;
+- cancellation checks before traversal, between files, before verification, and before publication;
+- complete staged verification against the generated manifest;
+- immutable manifest publication and atomic same-filesystem activation;
+- deterministic rollback or `recovery-required` results when cleanup cannot complete;
+- Windows/Linux real-filesystem and injected failure tests;
+- Stage 2 documentation.
 
-Stage 1 must not copy, move, activate, restore, archive, or clean up browser directories.
+Stage 2 must not restore a Profile, alter Profile identity, archive or relocate the source Profile, create trash/retention behavior, expose Desktop APIs, or add UI actions.
 
 ## Non-scope
 
@@ -143,8 +155,8 @@ The implementation PR must also pass:
 
 ## Exact next task
 
-1. open one Draft PR for Issue #54;
-2. implement Stage 1 contracts and persistence only;
-3. run Stage 1 tests and the complete retained matrix;
-4. keep Stages 2–6 blocked until Stage 1 passes;
+1. implement Stage 2 preflight, staging, copy, verification, publication, and recovery behavior only;
+2. add Windows/Linux real-filesystem and injected failure tests;
+3. run Stage 2 tests and the complete retained matrix;
+4. keep Stages 3–6 blocked until Stage 2 passes;
 5. keep M5.3 and M5.4 blocked.
