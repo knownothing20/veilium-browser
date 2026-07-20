@@ -11,7 +11,7 @@ import (
 )
 
 func TestManifestPersistenceIsStrictAndImmutable(t *testing.T) {
-	root := t.TempDir()
+	root := privateTempDir(t)
 	manifestPath := filepath.Join(root, "snapshots", "snapshot-a", "manifest.json")
 	manifest := validManifest(t, "linux")
 	digest, err := WriteManifest(manifestPath, manifest)
@@ -34,7 +34,7 @@ func TestManifestPersistenceIsStrictAndImmutable(t *testing.T) {
 }
 
 func TestManifestStrictDecodingRejectsUnknownAndTrailingData(t *testing.T) {
-	root := t.TempDir()
+	root := privateTempDir(t)
 	filePath := filepath.Join(root, "manifest.json")
 	manifest := validManifest(t, "linux")
 	data, err := encodeBounded(manifest, MaxManifestBytes, ErrInvalidManifest)
@@ -58,7 +58,7 @@ func TestManifestStrictDecodingRejectsUnknownAndTrailingData(t *testing.T) {
 }
 
 func TestManifestFileSafety(t *testing.T) {
-	root := t.TempDir()
+	root := privateTempDir(t)
 	manifest := validManifest(t, "linux")
 	realPath := filepath.Join(root, "real.json")
 	if _, err := WriteManifest(realPath, manifest); err != nil {
@@ -82,7 +82,7 @@ func TestManifestFileSafety(t *testing.T) {
 }
 
 func TestCatalogCreateUpdateReopenAndConflict(t *testing.T) {
-	root := t.TempDir()
+	root := privateTempDir(t)
 	store, err := OpenCatalogStore(filepath.Join(root, "local-recovery.json"))
 	if err != nil {
 		t.Fatal(err)
@@ -133,7 +133,7 @@ func TestCatalogCreateUpdateReopenAndConflict(t *testing.T) {
 }
 
 func TestCatalogPersistenceFailureRollsBack(t *testing.T) {
-	root := t.TempDir()
+	root := privateTempDir(t)
 	store, err := OpenCatalogStore(filepath.Join(root, "local-recovery.json"))
 	if err != nil {
 		t.Fatal(err)
@@ -170,7 +170,7 @@ func TestCatalogPersistenceFailureRollsBack(t *testing.T) {
 }
 
 func TestCatalogRejectsFutureAndDuplicateRecords(t *testing.T) {
-	root := t.TempDir()
+	root := privateTempDir(t)
 	filePath := filepath.Join(root, "local-recovery.json")
 	record := validCatalogRecord(t)
 	now := time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC)
@@ -217,4 +217,15 @@ func validCatalogRecord(t *testing.T) CatalogRecord {
 		FileCount:       manifest.FileCount,
 		TotalBytes:      manifest.TotalBytes,
 	}
+}
+
+func privateTempDir(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	if runtime.GOOS != "windows" {
+		if err := os.Chmod(root, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return root
 }
