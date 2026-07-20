@@ -6,8 +6,8 @@ Main baseline SHA: 8097422edd06a648631394ab9ff8b987b0f7c313
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
 Current milestone: M5.2 — Safe Local Recovery
-Current task: Implement Issue #54 Stage 2 on branch `agent/m5-2-safe-local-recovery`
-Current implementation stage: Stage 2 — Local snapshot creation
+Current task: Implement Issue #54 Stage 3 on branch `agent/m5-2-safe-local-recovery`
+Current implementation stage: Stage 3 — Restore to new identity
 
 ## Operational rule
 
@@ -56,16 +56,22 @@ Every development update must identify the current stage and the remaining stage
    - strict JSON boundaries, resource bounds, immutable manifest publication, atomic catalog persistence, explicit transitions, and rollback tests;
    - complete retained Governance and CI matrix passed on head `8cf514d3ea25685ee30903ba19e8f6f7eccf815e`.
 
-2. **Stage 2 — Local snapshot creation — active**
-   - bounded preflight and safe filesystem traversal;
-   - private operation staging;
-   - opaque regular-file copying and SHA-256 verification;
-   - durable cancellation checks at safe boundaries;
-   - complete staged verification, immutable manifest publication, atomic snapshot activation, and recovery state;
-   - no restore, archive, trash, or UI implementation.
+2. **Stage 2 — Local snapshot creation — complete**
+   - M5.1 operation locks, blockers, journal state, idempotency, and cancellation are reused;
+   - bounded managed-directory preflight rejects path escape, links, reparse points, special entries, and hard-link ambiguity;
+   - destination-space, file-count, per-file, total-byte, manifest, and duration bounds are enforced;
+   - private staging copies opaque files with stable source identity and SHA-256 verification;
+   - source and staged file sets are completely reverified before publication;
+   - verified snapshots are atomically activated and catalogued;
+   - cancellation, source changes, insufficient space, rename failure, cleanup failure, and catalog-finalization failure produce truthful rollback or recovery state;
+   - complete retained Governance and CI matrix passed on head `361c39e8168696bfeb99266714d8b3c1a100ceaa`.
 
-3. **Stage 3 — Restore to new identity — blocked**
-   - strict verification, dependency requirement remapping, new identity activation, limited-state behavior, and rollback.
+3. **Stage 3 — Restore to new identity — active**
+   - strict snapshot verification and same-machine applicability checks;
+   - dependency requirement resolution to current local records without copying source IDs or secrets;
+   - new Profile ID, managed directory, and fingerprint seed only;
+   - private staging, complete copy verification, atomic activation, limited lifecycle state, and rollback;
+   - no in-place overwrite or identity-preserving restore.
 
 4. **Stage 4 — Local lifecycle storage operations — blocked**
    - archive and recovery state transitions, recoverable removal state, retention state, explicit final cleanup, and startup recovery.
@@ -81,25 +87,23 @@ Every development update must identify the current stage and the remaining stage
 
 Do not begin a later stage until the current stage's relevant tests pass.
 
-## Stage 2 allowed work
+## Stage 3 allowed work
 
-Stage 2 may add only:
+Stage 3 may add only:
 
-- snapshot request, preflight, progress, and result records that map to the M5.1 operation journal;
-- safe traversal of one selected Veilium-managed Profile directory;
-- regular-file inventory without interpreting browser contents;
-- destination-space and resource-bound preflight;
-- operation-specific private staging paths;
-- bounded buffered file copying with source-before/source-after stability checks;
-- per-file and deterministic tree hashing;
-- cancellation checks before traversal, between files, before verification, and before publication;
-- complete staged verification against the generated manifest;
-- immutable manifest publication and atomic same-filesystem activation;
-- deterministic rollback or `recovery-required` results when cleanup cannot complete;
+- restore request, preflight, progress, result, dependency-resolution, and activation records mapped to the M5.1 journal;
+- strict revalidation of a verified local snapshot manifest and every included file;
+- same-user/same-machine platform applicability checks;
+- dependency requirement matching against current local Kernel, adapter, and credential records without copying source record IDs or secret values;
+- a newly generated Profile ID, managed directory, and fingerprint seed;
+- a new Profile definition derived from the snapshot through reviewed field replacement, not source identity reuse;
+- private restore staging, bounded file copying, staged verification, atomic activation, and rollback;
+- lifecycle creation as `draft` or another conservative limited state until current dependencies and validation pass;
+- deterministic `recovery-required` state for interrupted or partially activated restore work;
 - Windows/Linux real-filesystem and injected failure tests;
-- Stage 2 documentation.
+- Stage 3 documentation.
 
-Stage 2 must not restore a Profile, alter Profile identity, archive or relocate the source Profile, create trash/retention behavior, expose Desktop APIs, or add UI actions.
+Stage 3 must not overwrite an existing Profile, reuse the source Profile ID or fingerprint seed, import secrets, create Provider trust, make source Evidence applicable, archive or move the source Profile, expose Desktop APIs, or add UI actions.
 
 ## Non-scope
 
@@ -155,8 +159,8 @@ The implementation PR must also pass:
 
 ## Exact next task
 
-1. implement Stage 2 preflight, staging, copy, verification, publication, and recovery behavior only;
-2. add Windows/Linux real-filesystem and injected failure tests;
-3. run Stage 2 tests and the complete retained matrix;
-4. keep Stages 3–6 blocked until Stage 2 passes;
+1. implement Stage 3 restore-to-new-identity behavior only;
+2. add dependency-resolution, identity-generation, rollback, and Windows/Linux real-filesystem tests;
+3. run Stage 3 tests and the complete retained matrix;
+4. keep Stages 4–6 blocked until Stage 3 passes;
 5. keep M5.3 and M5.4 blocked.
