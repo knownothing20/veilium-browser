@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -37,16 +38,16 @@ const (
 )
 
 type SnapshotRequest struct {
-	OperationID         string
-	SnapshotID          string
-	ProfileID           string
-	IdempotencyKey      string
-	ProfileName         string
+	OperationID          string
+	SnapshotID           string
+	ProfileID            string
+	IdempotencyKey       string
+	ProfileName          string
 	ProfileSchemaVersion int
-	ApplicationVersion  string
-	ProfileDefinition   []byte
-	Dependencies        DependencyRequirements
-	MaxDuration         time.Duration
+	ApplicationVersion   string
+	ProfileDefinition    []byte
+	Dependencies         DependencyRequirements
+	MaxDuration          time.Duration
 }
 
 func (r SnapshotRequest) Validate() error {
@@ -143,7 +144,7 @@ func OpenSnapshotCreator(dataRoot string, records *lifecycle.RecordStore, journa
 	if err != nil {
 		return nil, err
 	}
-	catalog, err := OpenCatalogStore(recoveryRoot + stringPathSeparator() + "catalog.json")
+	catalog, err := OpenCatalogStore(filepath.Join(recoveryRoot, "catalog.json"))
 	if err != nil {
 		return nil, err
 	}
