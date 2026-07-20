@@ -179,15 +179,22 @@ jobs:
           $rights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
           $allow = [System.Security.AccessControl.AccessControlType]::Allow
           $inheritance = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
-          $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+          $directoryRule = [System.Security.AccessControl.FileSystemAccessRule]::new(
             $lpacSid, $rights, $inheritance, [System.Security.AccessControl.PropagationFlags]::None, $allow
           )
-          $acl = Get-Acl -LiteralPath $packageRoot
-          $acl.SetAccessRule($rule)
-          Set-Acl -LiteralPath $packageRoot -AclObject $acl
+          $rootAcl = Get-Acl -LiteralPath $packageRoot
+          $rootAcl.SetAccessRule($directoryRule)
+          Set-Acl -LiteralPath $packageRoot -AclObject $rootAcl
+          $binaryAcl = Get-Acl -LiteralPath $binary
+          $binaryAcl.SetAccessRule([System.Security.AccessControl.FileSystemAccessRule]::new($lpacSid, $rights, $allow))
+          Set-Acl -LiteralPath $binary -AclObject $binaryAcl
           Write-Host "Reviewed Chromium AppContainer ACL root: $packageRoot"
-          $rootRule = (Get-Acl -LiteralPath $packageRoot).Access | Where-Object { $_.IdentityReference.Value -eq $lpacSid.Value -and $_.AccessControlType -eq $allow }
-          $binaryRule = (Get-Acl -LiteralPath $binary).Access | Where-Object { $_.IdentityReference.Value -eq $lpacSid.Value -and $_.AccessControlType -eq $allow }
+          $rootRule = (Get-Acl -LiteralPath $packageRoot).Access | Where-Object {
+            $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -eq $lpacSid.Value -and $_.AccessControlType -eq $allow
+          }
+          $binaryRule = (Get-Acl -LiteralPath $binary).Access | Where-Object {
+            $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -eq $lpacSid.Value -and $_.AccessControlType -eq $allow
+          }
           $rootRule | Format-List | Out-String | Write-Host
           $binaryRule | Format-List | Out-String | Write-Host
           if (-not $rootRule -or -not $binaryRule) {
