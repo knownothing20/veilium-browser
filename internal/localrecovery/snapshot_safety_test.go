@@ -44,3 +44,14 @@ func TestSnapshotRequestRejectsExcludedProfileFieldsBeforeJournal(t *testing.T) 
 		t.Fatalf("invalid request created an operation: %#v", operations)
 	}
 }
+
+func TestSnapshotRequestRejectsURLCredentialsBeforeJournal(t *testing.T) {
+	harness := newSnapshotHarness(t, map[string]string{"file.txt": "content"})
+	harness.request.ProfileDefinition = []byte(`{"id":"profile-a","proxy":{"url":"http://name:pass@example.test:8080"}}`)
+	if _, err := harness.creator.Create(context.Background(), harness.request); err == nil {
+		t.Fatal("credentials embedded in a Profile URL were accepted")
+	}
+	if operations := harness.journal.List(); len(operations) != 0 {
+		t.Fatalf("invalid URL created an operation: %#v", operations)
+	}
+}
