@@ -2,13 +2,14 @@ package localrecovery
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
-	"time"
 
 	"github.com/knownothing20/veilium-browser/internal/lifecycle"
 )
@@ -25,7 +26,7 @@ func (c *SnapshotCreator) Create(ctx context.Context, request SnapshotRequest) (
 
 	stagingRef := snapshotStagingRef(request.OperationID)
 	operation := lifecycle.NewOperation(request.OperationID, lifecycle.OperationSnapshot, []string{request.ProfileID}, c.now())
-	operation.IdempotencyKey = request.IdempotencyKey
+	operation.IdempotencyKey = snapshotIdempotencyKey(request)
 	operation.ApplicationVersion = request.ApplicationVersion
 	operation.Platform = runtime.GOOS + "/" + runtime.GOARCH
 	operation.StagingRef = stagingRef
@@ -46,7 +47,7 @@ func (c *SnapshotCreator) Create(ctx context.Context, request SnapshotRequest) (
 		return c.abortSnapshot(request, started, "", false, false, CatalogRecord{}, snapshotCounters{}, fmt.Errorf("%w: Profile lifecycle state or lock is not valid for snapshot", ErrInvalidRecord))
 	}
 	if _, err := c.setOperationStage(request.OperationID, SnapshotStagePreflight, stagingRef); err != nil {
-		return SnapshotResult{}, err
+		return c.abortSnapshot(request, started, "", false, false, CatalogRecord{}, snapshotCounters{}, err)
 	}
 
 	plan, err := c.preflight(ctx, record, request)
@@ -176,14 +177,14 @@ func (c *SnapshotCreator) Create(ctx context.Context, request SnapshotRequest) (
 
 	completedAt := c.now().UTC()
 	item := lifecycle.OperationItemResult{
-		ItemID:          request.ProfileID,
-		Status:          lifecycle.ItemSucceeded,
-		StartedAt:       &started.StartedAt,
-		CompletedAt:     &completedAt,
-		CompletedStage:  string(SnapshotStageFinished),
-		FilesProcessed:  counters.files,
-		BytesProcessed:  counters.bytes,
-		OutputID:        request.SnapshotID,
+		ItemID:         request.ProfileID,
+		Status:         lifecycle.ItemSucceeded,
+		StartedAt:      &started.StartedAt,
+		CompletedAt:    &completedAt,
+		CompletedStage: string(SnapshotStageFinished),
+		FilesProcessed: counters.files,
+		BytesProcessed: counters.bytes,
+		OutputID:       request.SnapshotID,
 	}
 	finished, err := c.coordinator.Finish(request.OperationID, lifecycle.OperationCompleted, []lifecycle.OperationItemResult{item}, nil, nil)
 	if err != nil {
@@ -209,6 +210,11 @@ func (c *SnapshotCreator) Create(ctx context.Context, request SnapshotRequest) (
 	}, nil
 }
 
+func snapshotIdempotencyKey(request SnapshotRequest) string {
+	digest := sha256.Sum256([]byte(request.SnapshotID + "\x00" + request.IdempotencyKey))
+	return "snapshot-" + hex.EncodeToString(digest[:])
+}
+
 func (c *SnapshotCreator) resultForReusedOperation(request SnapshotRequest, operation lifecycle.Operation) (SnapshotResult, error) {
 	if !operation.Status.Terminal() {
 		return SnapshotResult{Operation: operation}, fmt.Errorf("%w: snapshot operation is already running", lifecycle.ErrConflict)
@@ -216,9 +222,22 @@ func (c *SnapshotCreator) resultForReusedOperation(request SnapshotRequest, oper
 	if operation.Status != lifecycle.OperationCompleted {
 		return SnapshotResult{Operation: operation}, fmt.Errorf("%w: reused snapshot operation ended with %s", ErrInvalidRecord, operation.Status)
 	}
+	matchedOutput := false
+	for _, item := range operation.Items {
+		if item.ItemID == request.ProfileID && item.OutputID == request.SnapshotID && item.Status == lifecycle.ItemSucceeded {
+			matchedOutput = true
+			break
+		}
+	}
+	if !matchedOutput {
+		return SnapshotResult{Operation: operation}, fmt.Errorf("%w: reused operation output does not match the requested snapshot", lifecycle.ErrConflict)
+	}
 	catalog, err := c.catalog.Get(request.SnapshotID)
 	if err != nil {
 		return SnapshotResult{Operation: operation}, fmt.Errorf("%w: completed operation has no catalog record", ErrRecoveryRequired)
+	}
+	if catalog.SourceProfileID != request.ProfileID || catalog.Status != SnapshotVerified {
+		return SnapshotResult{Operation: operation, Catalog: catalog}, fmt.Errorf("%w: completed operation catalog is contradictory", ErrRecoveryRequired)
 	}
 	manifest, err := ReadManifest(filepath.Join(c.recoveryRoot, filepath.FromSlash(catalog.ManifestRef)))
 	if err != nil {
@@ -307,22 +326,27 @@ func (c *SnapshotCreator) abortSnapshot(request SnapshotRequest, started lifecyc
 	if recoveryRequired {
 		status = lifecycle.OperationRecoveryRequired
 		itemStatus = lifecycle.ItemRecoveryRequired
-		recoveryActions = []string{"inspect-local-recovery-staging"}
-		recoveryID = snapshotStagingRef(request.OperationID)
+		if finalPublished {
+			recoveryActions = []string{"inspect-local-recovery-published"}
+			recoveryID = snapshotPublishedRef(request.SnapshotID)
+		} else {
+			recoveryActions = []string{"inspect-local-recovery-staging"}
+			recoveryID = snapshotStagingRef(request.OperationID)
+		}
 		reason = "snapshot-recovery-required"
 	}
 	sort.Strings(recoveryActions)
 	completedAt := c.now().UTC()
 	item := lifecycle.OperationItemResult{
-		ItemID:          request.ProfileID,
-		Status:          itemStatus,
-		StartedAt:       &started.StartedAt,
-		CompletedAt:     &completedAt,
-		CompletedStage:  string(SnapshotStageFinished),
-		FilesProcessed:  counters.files,
-		BytesProcessed:  counters.bytes,
-		ReasonCode:      reason,
-		RecoveryID:      recoveryID,
+		ItemID:         request.ProfileID,
+		Status:         itemStatus,
+		StartedAt:      &started.StartedAt,
+		CompletedAt:    &completedAt,
+		CompletedStage: string(SnapshotStageFinished),
+		FilesProcessed: counters.files,
+		BytesProcessed: counters.bytes,
+		ReasonCode:     reason,
+		RecoveryID:     recoveryID,
 	}
 	finished, finishErr := c.coordinator.Finish(request.OperationID, status, []lifecycle.OperationItemResult{item}, nil, recoveryActions)
 	result := SnapshotResult{Operation: finished, Catalog: catalog}
