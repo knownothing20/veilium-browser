@@ -2,16 +2,16 @@
 
 Last updated: 2026-07-20
 Application version: 0.15.0-dev
-Main baseline SHA: 51c469e51ec4cab4ade99efd83c2e6c26145f266
+Main baseline SHA: 8097422edd06a648631394ab9ff8b987b0f7c313
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
 Current milestone: M5.2 — Safe Local Recovery
-Current task: Implement Issue #54 after this documentation handoff merges
-Planned implementation branch: `agent/m5-2-safe-local-recovery`
+Current task: Implement Issue #54 Stage 1 on branch `agent/m5-2-safe-local-recovery`
+Current implementation stage: Stage 1 — Contracts and persistence
 
 ## Operational rule
 
-Phase 5 remains `Active`. After this handoff merges, product implementation is allowed only for Issue #54.
+Phase 5 remains `Active`. Product implementation is allowed only for Issue #54.
 
 M5.3 and M5.4 remain blocked until the preceding milestone merges, passes a dedicated Closing Review, and this file advances again.
 
@@ -49,29 +49,45 @@ All M5.2 work must:
 
 Every development update must identify the current stage and the remaining stages.
 
-1. **Stage 1 — Contracts and persistence**
+1. **Stage 1 — Contracts and persistence — active**
    - versioned manifests and operation records;
-   - strict decoding, canonical relative paths, deterministic identity, bounds, persistence, and rollback tests.
+   - strict decoding, canonical relative paths, deterministic identity, bounds, persistence, and rollback tests;
+   - no browser-directory copying or restore execution.
 
-2. **Stage 2 — Local snapshot creation**
+2. **Stage 2 — Local snapshot creation — blocked**
    - preflight, private staging, opaque file copying, hashing, safe cancellation points, verification, publication, and recovery.
 
-3. **Stage 3 — Restore to new identity**
+3. **Stage 3 — Restore to new identity — blocked**
    - strict verification, dependency requirement remapping, new identity activation, limited-state behavior, and rollback.
 
-4. **Stage 4 — Local lifecycle storage operations**
+4. **Stage 4 — Local lifecycle storage operations — blocked**
    - archive and recovery state transitions, recoverable removal state, retention state, explicit final cleanup, and startup recovery.
 
-5. **Stage 5 — Desktop/Wails API and minimum UI**
+5. **Stage 5 — Desktop/Wails API and minimum UI — blocked**
    - bounded preflight, progress, results, history, cancellation availability, local recovery list, recovery state, and confirmations.
 
-6. **Stage 6 — Integration, documentation, protected CI, and Closing Review handoff**
+6. **Stage 6 — Integration, documentation, protected CI, and Closing Review handoff — blocked**
    - Windows/Linux real-filesystem and failure-injection coverage;
    - final scope review;
    - PR readiness and owner merge decision;
    - dedicated M5.2 Closing Review after merge.
 
 Do not begin a later stage until the current stage's relevant tests pass.
+
+## Stage 1 allowed work
+
+Stage 1 may add only:
+
+- versioned local recovery manifest and catalog contracts;
+- canonical relative entry records and deterministic tree identity inputs;
+- non-secret dependency requirement records;
+- explicit file-count, file-size, total-size, path-length, manifest-size, and record-count bounds;
+- strict fail-closed validation and decoding;
+- private atomic manifest/catalog persistence and rollback behavior;
+- fixtures and unit tests for malformed, duplicate, unsupported, oversized, unsafe, and stale-revision state;
+- documentation of schema, privacy, compatibility, and downgrade behavior.
+
+Stage 1 must not copy, move, activate, restore, archive, or clean up browser directories.
 
 ## Non-scope
 
@@ -117,9 +133,9 @@ The implementation PR must also pass:
 - frontend typecheck, tests, and production build;
 - Windows and Linux Wails builds;
 - strict schema and filesystem safety fixtures;
-- persistence, staging, activation, rollback, interruption, cancellation, and storage-failure tests;
+- persistence, staging, activation, rollback, interruption, cancellation, and storage-failure tests as each stage becomes active;
 - active-session, protected-operation, conflict, and idempotency tests;
-- Windows and Linux real-filesystem operation tests;
+- Windows and Linux real-filesystem operation tests for every claimed stage;
 - artifact exclusion tests;
 - Phase 4 and M5.1 regression tests;
 - official adapter and browser Evidence checks;
@@ -127,10 +143,8 @@ The implementation PR must also pass:
 
 ## Exact next task
 
-After this handoff PR merges:
-
-1. create branch `agent/m5-2-safe-local-recovery`;
-2. open one Draft PR for Issue #54 before substantial product work;
-3. begin Stage 1 only;
-4. update this file in the same PR as product code;
+1. open one Draft PR for Issue #54;
+2. implement Stage 1 contracts and persistence only;
+3. run Stage 1 tests and the complete retained matrix;
+4. keep Stages 2–6 blocked until Stage 1 passes;
 5. keep M5.3 and M5.4 blocked.
