@@ -175,6 +175,14 @@ func (e *RestoreExecutor) resolveCredential(requirement CredentialRequirement, s
 		result.ReasonCode = "credential-username-missing"
 		return result, ""
 	}
+	if requirement.RequiresSecret {
+		// Metadata existence cannot prove that current vault material exists.
+		// Stage 3 never reads or copies the secret. Keep the dependency limited
+		// until the current Desktop validation path can verify the vault entry.
+		result.Status = DependencyUserActionRequired
+		result.ReasonCode = "credential-secret-verification-required"
+		return result, ""
+	}
 	result.Status = DependencyResolved
 	result.ReasonCode = "credential-metadata-resolved"
 	return result, record.ID
