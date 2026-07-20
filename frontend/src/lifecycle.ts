@@ -169,3 +169,10 @@ export function lifecycleLabel(record: LifecycleRecord | undefined): string {
   if (record.lock) return `${record.state} · locked`
   return record.state
 }
+
+export function cancellationAvailability(operation: LifecycleOperation): string {
+  if (operation.cancellationRequested) return 'Cancellation requested'
+  if (!['pending', 'running'].includes(operation.status)) return 'Cancellation unavailable · terminal'
+  if (operation.safeCancellationStage) return `Cancellation available at ${operation.safeCancellationStage}`
+  return 'Cancellation unavailable at current stage'
+}
