@@ -96,7 +96,7 @@ The implementation has passed, on current or immediately preceding PR heads:
 - Linux real-browser Evidence and both official adapter browser paths;
 - exact Windows reviewed-Chromium installation and managed identity/window Evidence in recent runs.
 
-Final Governance on head `0ecec66365f3effe4e346479b545c777ae3fc63b` passed. The complete protected CI run on that head is in progress and must pass before PR #52 can leave Draft.
+Governance passed on the final code-and-documentation series. The complete protected CI matrix must pass on the current PR head before PR #52 can leave Draft.
 
 ### Independent CI reliability observation
 
@@ -132,7 +132,7 @@ PR #52 does not implement:
 
 ## Exact next task
 
-1. Allow the complete protected CI matrix on final head `0ecec66365f3effe4e346479b545c777ae3fc63b` to finish.
+1. Allow the complete protected CI matrix on the current PR head to finish.
 2. Confirm the final diff still contains only Issue #45 scope and no M5.2–M5.4 implementation.
 3. Confirm PR comments, reviews, and unresolved threads remain clear.
 4. Mark PR #52 ready for review only when required checks pass and no actionable review item remains.
