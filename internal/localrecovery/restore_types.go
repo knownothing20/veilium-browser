@@ -65,9 +65,9 @@ type ResolvedDependency struct {
 }
 
 type RestoreDependencyResolution struct {
-	Kernel     ResolvedDependency
-	Adapter    *ResolvedDependency
-	Credential *ResolvedDependency
+	Kernel      ResolvedDependency
+	Adapter     *ResolvedDependency
+	Credential  *ResolvedDependency
 	Limitations []string
 }
 
@@ -85,12 +85,13 @@ func (r RestoreDependencyResolution) FullyResolved() bool {
 }
 
 type RestoreRequest struct {
-	OperationID    string
-	SnapshotID     string
-	IdempotencyKey string
-	Name           string
-	Dependencies   RestoreDependencySelection
-	MaxDuration    time.Duration
+	OperationID        string
+	SnapshotID         string
+	IdempotencyKey     string
+	ApplicationVersion string
+	Name               string
+	Dependencies       RestoreDependencySelection
+	MaxDuration        time.Duration
 }
 
 func (r RestoreRequest) Validate() error {
@@ -104,6 +105,9 @@ func (r RestoreRequest) Validate() error {
 	}
 	if strings.TrimSpace(r.IdempotencyKey) != r.IdempotencyKey || len(r.IdempotencyKey) > MaxIdentifierLength {
 		return fmt.Errorf("%w: invalid restore idempotency key", ErrInvalidManifest)
+	}
+	if err := validateText("application version", r.ApplicationVersion, true, ErrInvalidManifest); err != nil {
+		return err
 	}
 	if err := validateText("restored Profile name", r.Name, false, ErrInvalidManifest); err != nil {
 		return err
