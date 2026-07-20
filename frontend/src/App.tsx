@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AdapterRegistry } from './components/AdapterRegistry'
 import { CredentialVault } from './components/CredentialVault'
+import { LifecyclePanel } from './components/LifecyclePanel'
 import { MetricCard } from './components/MetricCard'
 import { OfficialKernelCard } from './components/OfficialKernelCard'
 import { PlanDrawer } from './components/PlanDrawer'
@@ -8,6 +9,12 @@ import { ProfileEditor } from './components/ProfileEditor'
 import { ProfileTable } from './components/ProfileTable'
 import { RuntimePanel } from './components/RuntimePanel'
 import { Sidebar, type ViewKey } from './components/Sidebar'
+import {
+  lifecycleAllowsLaunch,
+  lifecycleRecordFor,
+  normalizeLifecycleBootstrap,
+  type LifecycleBootstrap,
+} from './lifecycle'
 import { backend } from './lib/backend'
 import { filterProfiles, groupsOf, profileHealth } from './lib/model'
 import { isRuntimeActive, sessionForProfile } from './lib/runtime'
@@ -16,7 +23,6 @@ import type {
   AdapterInstallRequest,
   AdapterRecord,
   AdapterValidationReport,
-  Bootstrap,
   CredentialSaveRequest,
   KernelImportRequest,
   KernelInstallRequest,
@@ -25,7 +31,7 @@ import type {
   Profile,
 } from './types'
 
-const emptyBootstrap: Bootstrap = {
+const emptyBootstrap: LifecycleBootstrap = normalizeLifecycleBootstrap({
   version: 'loading',
   profiles: [],
   providers: [],
@@ -38,10 +44,10 @@ const emptyBootstrap: Bootstrap = {
   kernelPins: [],
   runtimePlatform: 'browser',
   runtimeArch: 'unknown',
-}
+})
 
 export default function App() {
-  const [data, setData] = useState<Bootstrap>(emptyBootstrap)
+  const [data, setData] = useState<LifecycleBootstrap>(emptyBootstrap)
   const [view, setView] = useState<ViewKey>('dashboard')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -71,7 +77,7 @@ export default function App() {
   async function refresh() {
     setLoading(true)
     try {
-      setData(await backend.bootstrap())
+      setData(normalizeLifecycleBootstrap(await backend.bootstrap()))
       setError('')
     } catch (reason) {
       setError(errorText(reason))
@@ -98,7 +104,9 @@ export default function App() {
 
   const groups = useMemo(() => groupsOf(data.profiles), [data.profiles])
   const filtered = useMemo(() => filterProfiles(data.profiles, query, group), [data.profiles, query, group])
-  const readyCount = useMemo(() => data.profiles.filter((item) => profileHealth(item) === 'ready').length, [data.profiles])
+  const readyCount = useMemo(() => data.profiles.filter((item) => (
+    profileHealth(item) === 'ready' && lifecycleAllowsLaunch(lifecycleRecordFor(data.lifecycleRecords, item.id))
+  )).length, [data.profiles, data.lifecycleRecords])
   const runningCount = useMemo(() => data.sessions.filter(isRuntimeActive).length, [data.sessions])
 
   async function saveProfile(item: Profile) { if (item.id) await backend.updateProfile(item); else await backend.createProfile(item); await refresh() }
@@ -162,6 +170,7 @@ export default function App() {
   const table = (profiles: Profile[]) => <ProfileTable
     profiles={profiles}
     sessions={data.sessions}
+    lifecycleRecords={data.lifecycleRecords}
     selectedID={selectedID}
     nativeMode={backend.isNative()}
     busyProfileID={runtimeBusy}
@@ -179,20 +188,21 @@ export default function App() {
       <Heading eyebrow="Local identity workspace" title="Browser environments, without the guesswork." description="Every profile uses explicit kernel, identity, network and managed dependency contracts." action={<button className="button primary" onClick={() => { setEditing(undefined); setEditorOpen(true) }}>＋ New profile</button>} />
       <div className="metric-grid">
         <MetricCard label="Profiles" value={data.profiles.length} detail="Isolated local identities" />
-        <MetricCard label="Ready" value={readyCount} detail="Passed visible checks" tone="good" />
+        <MetricCard label="Ready" value={readyCount} detail="Health and lifecycle allow launch" tone="good" />
         <MetricCard label="Running" value={runningCount} detail="Supervised sessions" tone={runningCount ? 'good' : 'neutral'} />
         <MetricCard label="Adapters" value={data.adapters.length} detail="Managed Xray and sing-box binaries" />
       </div>
       {runtimeError && <div className="form-error runtime-global-error">{runtimeError}</div>}
+      <LifecyclePanel records={data.lifecycleRecords} operations={data.lifecycleOperations} reconciliation={data.lifecycleReconciliation} />
       <div className="dashboard-grid">
-        <section className="panel wide"><div className="panel-heading"><div><h2>Recent profiles</h2><p>Start only after referenced binaries pass integrity checks.</p></div><button className="text-button" onClick={() => setView('profiles')}>View all →</button></div>{table(data.profiles.slice(0, 5))}</section>
-        <section className="panel rail-card"><div className="panel-heading"><div><h2>Safety posture</h2><p>Runtime boundaries that cannot silently weaken.</p></div></div><ul className="check-list"><li><span>✓</span><div><strong>Verified browser kernels</strong><p>Legacy executable paths stay dry-run only.</p></div></li><li><span>✓</span><div><strong>OS-backed credentials</strong><p>Passwords never enter profile metadata.</p></div></li><li><span>✓</span><div><strong>Authenticated loopback bridge</strong><p>HTTP, HTTPS and SOCKS5 secrets stay out of Chromium arguments.</p></div></li><li><span>✓</span><div><strong>Supervised advanced runtimes</strong><p>Xray and sing-box routes use private per-session configuration.</p></div></li></ul></section>
+        <section className="panel wide"><div className="panel-heading"><div><h2>Recent profiles</h2><p>Start only after lifecycle, dependency and integrity checks pass.</p></div><button className="text-button" onClick={() => setView('profiles')}>View all →</button></div>{table(data.profiles.slice(0, 5))}</section>
+        <section className="panel rail-card"><div className="panel-heading"><div><h2>Safety posture</h2><p>Runtime boundaries that cannot silently weaken.</p></div></div><ul className="check-list"><li><span>✓</span><div><strong>Verified browser kernels</strong><p>Legacy executable paths stay dry-run only.</p></div></li><li><span>✓</span><div><strong>OS-backed credentials</strong><p>Passwords never enter profile metadata.</p></div></li><li><span>✓</span><div><strong>Lifecycle fail-closed</strong><p>Invalid, archived, trashed or locked Profiles cannot launch.</p></div></li><li><span>✓</span><div><strong>Read-only storage inventory</strong><p>M5.1 reports missing, orphaned and unsafe entries without changing browser data.</p></div></li></ul></section>
       </div>
     </>
   }
 
   function profiles() {
-    return <><Heading eyebrow="Identity registry" title="Browser profiles" description="Start, stop, diagnose, clone and edit isolated environments." action={<button className="button primary" onClick={() => { setEditing(undefined); setEditorOpen(true) }}>＋ New profile</button>} />{runtimeError && <div className="form-error runtime-global-error">{runtimeError}</div>}<section className="panel"><div className="toolbar"><div className="search-box">⌕<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, tag, kernel or proxy…" /></div><select value={group} onChange={(event) => setGroup(event.target.value)}><option value="all">All groups</option>{groups.map((item) => <option key={item}>{item}</option>)}</select><span className="result-count">{filtered.length} profile{filtered.length === 1 ? '' : 's'}</span></div>{table(filtered)}</section></>
+    return <><Heading eyebrow="Identity registry" title="Browser profiles" description="Start, stop, diagnose, clone and edit isolated environments when lifecycle policy permits." action={<button className="button primary" onClick={() => { setEditing(undefined); setEditorOpen(true) }}>＋ New profile</button>} />{runtimeError && <div className="form-error runtime-global-error">{runtimeError}</div>}<section className="panel"><div className="toolbar"><div className="search-box">⌕<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search name, tag, kernel or proxy…" /></div><select value={group} onChange={(event) => setGroup(event.target.value)}><option value="all">All groups</option>{groups.map((item) => <option key={item}>{item}</option>)}</select><span className="result-count">{filtered.length} profile{filtered.length === 1 ? '' : 's'}</span></div>{table(filtered)}</section></>
   }
 
   function runtime() {
@@ -239,7 +249,7 @@ export default function App() {
 
   const adapters = () => <><Heading eyebrow="Managed external runtimes" title="Proxy adapters" description="Register local Xray or sing-box binaries, identify exact pinned official releases, and run their native configuration checks before production use." /><AdapterRegistry records={data.adapters} pins={data.adapterPins} reports={adapterReports} runtimePlatform={data.runtimePlatform} runtimeArch={data.runtimeArch} nativeMode={backend.isNative()} busy={adapterBusy} error={adapterError} onPick={pickAdapter} onImport={importAdapter} onInstall={installOfficialAdapter} onVerify={verifyAdapter} onValidate={validateAdapter} onDelete={removeAdapter} /></>
   const credentials = () => <><Heading eyebrow="Operating-system secret storage" title="Credential vault" description={`Passwords stay inside ${data.credentialProvider}.`} /><CredentialVault records={data.credentials} provider={data.credentialProvider} nativeMode={backend.isNative()} onSave={saveCredential} onDelete={deleteCredential} /></>
-  const settings = () => <><Heading eyebrow="Application controls" title="Settings" description="Xray and sing-box execution are enabled for reviewed protocol subsets; unsupported options remain gated." /><section className="settings-grid"><article className="panel setting-card"><h2>Runtime</h2><dl><div><dt>Application version</dt><dd>{data.version}</dd></div><div><dt>Frontend mode</dt><dd>{backend.isNative() ? 'Wails desktop' : 'Browser preview'}</dd></div><div><dt>Active sessions</dt><dd>{runningCount}</dd></div></dl></article><article className="panel setting-card"><h2>Managed dependencies</h2><dl><div><dt>Kernels</dt><dd>{data.kernels.length}</dd></div><div><dt>Proxy adapters</dt><dd>{data.adapters.length}</dd></div><div><dt>Automatic downloads</dt><dd>Disabled</dd></div></dl></article><article className="panel setting-card"><h2>Deferred work</h2><ul className="plain-list"><li>Broader sing-box and Xray share-link compatibility</li><li>Additional reviewed transports and protocol options</li><li>Optional signed installer manifests</li><li>Encrypted export/import</li></ul></article></section></>
+  const settings = () => <><Heading eyebrow="Application controls" title="Settings" description="Xray and sing-box execution are enabled for reviewed protocol subsets; unsupported options remain gated." /><section className="settings-grid"><article className="panel setting-card"><h2>Runtime</h2><dl><div><dt>Application version</dt><dd>{data.version}</dd></div><div><dt>Frontend mode</dt><dd>{backend.isNative() ? 'Wails desktop' : 'Browser preview'}</dd></div><div><dt>Active sessions</dt><dd>{runningCount}</dd></div></dl></article><article className="panel setting-card"><h2>Managed dependencies</h2><dl><div><dt>Kernels</dt><dd>{data.kernels.length}</dd></div><div><dt>Proxy adapters</dt><dd>{data.adapters.length}</dd></div><div><dt>Automatic downloads</dt><dd>Disabled</dd></div></dl></article><article className="panel setting-card"><h2>Lifecycle boundary</h2><ul className="plain-list"><li>M5.1 inventory and reconciliation are read-only</li><li>Archive, trash and restore execution remain disabled</li><li>Profile deletion is fail-closed until M5.2</li><li>Portable export/import and templates remain blocked</li></ul></article></section></>
 
   const activeEditingSession = editing ? sessionForProfile(data.sessions, editing.id) : undefined
   return <div className="app-shell"><Sidebar active={view} onChange={setView} nativeMode={backend.isNative()} /><main className="main-content"><div className="topbar"><div className="window-context"><span className="context-dot" />Veilium workspace</div><div className="top-actions"><span className="version-chip">v{data.version}</span><button title="Refresh" onClick={() => void refresh()}>↻</button></div></div><div className="page-content">{loading && <div className="loading-screen">Loading isolated identities…</div>}{error && <div className="form-error">{error}</div>}{!loading && view === 'dashboard' && dashboard()}{!loading && view === 'profiles' && profiles()}{!loading && view === 'runtime' && runtime()}{!loading && view === 'kernels' && kernels()}{!loading && view === 'adapters' && adapters()}{!loading && view === 'credentials' && credentials()}{!loading && view === 'settings' && settings()}</div></main><ProfileEditor open={editorOpen && !isRuntimeActive(activeEditingSession)} profile={editing} providers={data.providers} kernels={data.kernels} adapters={data.adapters} credentials={data.credentials} onClose={() => setEditorOpen(false)} onSave={saveProfile} /><PlanDrawer profile={planProfile} plan={plan} error={planError} onClose={() => { setPlanProfile(undefined); setPlan(undefined) }} /></div>
