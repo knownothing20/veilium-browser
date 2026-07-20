@@ -2,24 +2,21 @@
 
 Last updated: 2026-07-20
 Application version: 0.15.0-dev
-Main baseline SHA: 35dcb17062a9932e20f226b6ec3fb64a2f6772e8
+Main baseline SHA: b5af36ab02ee91f253427ca7c3ba6b768997c485
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
 Current milestone: M5.1 — Lifecycle Contract, Inventory, and Operation Journal
-Current task: Implement the bounded M5.1 scope in Issue #45 after the Phase 5 activation PR merges
+Current task: Implement the bounded M5.1 scope in Issue #45
 
 ## Operational rule
 
 Read this file after `AGENTS.md`, `docs/PRODUCT.md`, and `docs/ROADMAP.md`.
 
-This activation pull request is documentation-only. It does not contain product code.
+Phase 5 is `Active`, but product implementation is allowed only for Issue #45.
 
-After this activation PR merges:
-
-- Phase 5 is `Active`;
-- product implementation is allowed only for Issue #45;
-- use one short-lived M5.1 implementation branch and one Draft PR;
+- work only on Issue #45 and its dedicated short-lived implementation branch and Draft PR;
 - update this STATUS file in the same pull request as product-code changes;
+- keep commits dependency ordered and reviewable;
 - do not begin M5.2, M5.3, or M5.4 work until M5.1 closes through a dedicated review and STATUS advances.
 
 `Product implementation allowed: Yes` is not broad authority. Any product work outside Issue #45 remains blocked.
@@ -27,6 +24,8 @@ After this activation PR merges:
 ## Activation decision
 
 The project owner approved Phase 5 on 2026-07-20 through Issue #40.
+
+Activation PR #47 merged as `b5af36ab02ee91f253427ca7c3ba6b768997c485` after Governance and the complete CI matrix passed. Issue #40 is closed.
 
 The approved planning and activation packet includes:
 
@@ -36,7 +35,7 @@ The approved planning and activation packet includes:
 - `docs/PHASE_05_CONTRACTS.md`;
 - Windows reviewed-Chromium CI reliability Hotfix #43, merged as `6d4b04a9668c87cc110a4c0d423909d45649b529`;
 - Activation Review Issue #40;
-- this documentation-only activation PR;
+- Activation PR #47;
 - M5.1 implementation Issue #45.
 
 The approved Phase 5 outcome is:
