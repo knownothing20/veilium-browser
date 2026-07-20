@@ -3,9 +3,10 @@ package localrecovery
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/knownothing20/veilium-browser/internal/domain"
 )
 
 type verifiedRestoreSource struct {
@@ -15,11 +16,9 @@ type verifiedRestoreSource struct {
 	SnapshotPath    string
 	BrowserDataPath string
 	ProfileData     []byte
-	SourceProfile   domainProfile
+	SourceProfile   domain.Profile
 	Plan            snapshotPlan
 }
-
-type domainProfile = structProfile
 
 func (e *RestoreExecutor) verifyRestoreSource(ctx context.Context, request RestoreRequest) (verifiedRestoreSource, error) {
 	if err := e.checkCancellation(ctx, request.OperationID); err != nil {
@@ -129,15 +128,4 @@ func (e *RestoreExecutor) planRestoreFiles(ctx context.Context, operationID, sna
 		return snapshotPlan{}, fmt.Errorf("%w: restore requires %d bytes but only %d are available", ErrInsufficientSpace, required, available)
 	}
 	return plan, nil
-}
-
-func readRestoreProfileFile(filePath string) ([]byte, error) {
-	info, err := os.Lstat(filePath)
-	if err != nil {
-		return nil, err
-	}
-	if info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() {
-		return nil, fmt.Errorf("%w: restore Profile metadata is not a regular file", ErrInvalidManifest)
-	}
-	return readBoundedFile(filePath, MaxProfileDefinitionBytes)
 }
