@@ -78,23 +78,20 @@ func (e FileEntry) Validate(sourceOS string) error {
 	if e.Size < 0 || e.Size > MaxFileBytes {
 		return fmt.Errorf("%w: file %q size is outside bounds", ErrInvalidManifest, e.Path)
 	}
-	if err := validateDigest("file sha256", e.SHA256, ErrInvalidManifest); err != nil {
-		return err
-	}
-	return nil
+	return validateDigest("file sha256", e.SHA256, ErrInvalidManifest)
 }
 
 type KernelRequirement struct {
-	ProviderID       string   `json:"providerId"`
-	ProviderRevision int      `json:"providerRevision,omitempty"`
-	BrowserVersion   string   `json:"browserVersion"`
-	OperatingSystem  string   `json:"operatingSystem"`
-	Architecture     string   `json:"architecture"`
-	TrustRequirement string   `json:"trustRequirement"`
-	ExecutableSHA256 string   `json:"executableSha256,omitempty"`
+	ProviderID        string   `json:"providerId"`
+	ProviderRevision  int      `json:"providerRevision,omitempty"`
+	BrowserVersion    string   `json:"browserVersion"`
+	OperatingSystem   string   `json:"operatingSystem"`
+	Architecture      string   `json:"architecture"`
+	TrustRequirement  string   `json:"trustRequirement"`
+	ExecutableSHA256  string   `json:"executableSha256,omitempty"`
 	PackageTreeSHA256 string   `json:"packageTreeSha256,omitempty"`
-	Capabilities     []string `json:"capabilities,omitempty"`
-	Limitations      []string `json:"limitations,omitempty"`
+	Capabilities      []string `json:"capabilities,omitempty"`
+	Limitations       []string `json:"limitations,omitempty"`
 }
 
 func (r KernelRequirement) Validate() error {
@@ -196,8 +193,8 @@ func (r CredentialRequirement) Validate() error {
 }
 
 type DependencyRequirements struct {
-	Kernel     KernelRequirement     `json:"kernel"`
-	Adapter    *AdapterRequirement   `json:"adapter,omitempty"`
+	Kernel     KernelRequirement      `json:"kernel"`
+	Adapter    *AdapterRequirement    `json:"adapter,omitempty"`
 	Credential *CredentialRequirement `json:"credential,omitempty"`
 }
 
@@ -219,27 +216,27 @@ func (r DependencyRequirements) Validate() error {
 }
 
 type LocalSnapshotManifest struct {
-	SchemaVersion               int                    `json:"schemaVersion"`
-	SnapshotID                  string                 `json:"snapshotId"`
-	Scope                       ArtifactScope          `json:"scope"`
-	SourceProfileID             string                 `json:"sourceProfileId"`
-	SourceProfileName           string                 `json:"sourceProfileName"`
-	SourceProfileSchemaVersion  int                    `json:"sourceProfileSchemaVersion"`
-	SourceApplicationVersion    string                 `json:"sourceApplicationVersion"`
-	SourceOS                    string                 `json:"sourceOs"`
-	SourceArch                  string                 `json:"sourceArch"`
-	CreatedAt                   time.Time              `json:"createdAt"`
-	ProfileDefinitionDigest     string                 `json:"profileDefinitionDigest"`
-	IncludedRoots               []string               `json:"includedRoots"`
-	TreeDigest                  string                 `json:"treeDigest"`
-	FileCount                   int64                  `json:"fileCount"`
-	TotalBytes                  int64                  `json:"totalBytes"`
-	Files                       []FileEntry            `json:"files"`
-	Dependencies                DependencyRequirements `json:"dependencies"`
-	ExcludedData                []string               `json:"excludedData"`
-	Portability                 PortabilityClass       `json:"portability"`
-	Limitations                 []string               `json:"limitations,omitempty"`
-	ParentSnapshotID            string                 `json:"parentSnapshotId,omitempty"`
+	SchemaVersion              int                    `json:"schemaVersion"`
+	SnapshotID                 string                 `json:"snapshotId"`
+	Scope                      ArtifactScope          `json:"scope"`
+	SourceProfileID            string                 `json:"sourceProfileId"`
+	SourceProfileName          string                 `json:"sourceProfileName"`
+	SourceProfileSchemaVersion int                    `json:"sourceProfileSchemaVersion"`
+	SourceApplicationVersion   string                 `json:"sourceApplicationVersion"`
+	SourceOS                   string                 `json:"sourceOs"`
+	SourceArch                 string                 `json:"sourceArch"`
+	CreatedAt                  time.Time              `json:"createdAt"`
+	ProfileDefinitionDigest    string                 `json:"profileDefinitionDigest"`
+	IncludedRoots              []string               `json:"includedRoots"`
+	TreeDigest                 string                 `json:"treeDigest"`
+	FileCount                  int64                  `json:"fileCount"`
+	TotalBytes                 int64                  `json:"totalBytes"`
+	Files                      []FileEntry            `json:"files"`
+	Dependencies               DependencyRequirements `json:"dependencies"`
+	ExcludedData               []string               `json:"excludedData"`
+	Portability                PortabilityClass       `json:"portability"`
+	Limitations                []string               `json:"limitations,omitempty"`
+	ParentSnapshotID           string                 `json:"parentSnapshotId,omitempty"`
 }
 
 func (m LocalSnapshotManifest) Validate() error {
@@ -332,20 +329,20 @@ func (m LocalSnapshotManifest) Validate() error {
 }
 
 type CatalogRecord struct {
-	SchemaVersion  int            `json:"schemaVersion"`
-	SnapshotID     string         `json:"snapshotId"`
-	SourceProfileID string        `json:"sourceProfileId"`
-	ManifestRef    string         `json:"manifestRef"`
-	Status         SnapshotStatus `json:"status"`
-	CreatedAt      time.Time      `json:"createdAt"`
-	UpdatedAt      time.Time      `json:"updatedAt"`
-	VerifiedAt     *time.Time     `json:"verifiedAt,omitempty"`
-	ManifestDigest string         `json:"manifestDigest"`
-	TreeDigest     string         `json:"treeDigest"`
-	FileCount      int64          `json:"fileCount"`
-	TotalBytes     int64          `json:"totalBytes"`
-	Limitations    []string       `json:"limitations,omitempty"`
-	Revision       uint64         `json:"revision"`
+	SchemaVersion   int            `json:"schemaVersion"`
+	SnapshotID      string         `json:"snapshotId"`
+	SourceProfileID string         `json:"sourceProfileId"`
+	ManifestRef     string         `json:"manifestRef"`
+	Status          SnapshotStatus `json:"status"`
+	CreatedAt       time.Time      `json:"createdAt"`
+	UpdatedAt       time.Time      `json:"updatedAt"`
+	VerifiedAt      *time.Time     `json:"verifiedAt,omitempty"`
+	ManifestDigest  string         `json:"manifestDigest"`
+	TreeDigest      string         `json:"treeDigest"`
+	FileCount       int64          `json:"fileCount"`
+	TotalBytes      int64          `json:"totalBytes"`
+	Limitations     []string       `json:"limitations,omitempty"`
+	Revision        uint64         `json:"revision"`
 }
 
 func (r CatalogRecord) Validate() error {
@@ -436,7 +433,7 @@ func windowsReservedName(segment string) bool {
 }
 
 func validateIdentifier(label, value string, base error) error {
-	if value == "" || strings.TrimSpace(value) != value || len(value) > MaxIdentifierLength {
+	if value == "" || value == "." || value == ".." || strings.TrimSpace(value) != value || len(value) > MaxIdentifierLength {
 		return fmt.Errorf("%w: invalid %s", base, label)
 	}
 	for _, char := range value {
@@ -509,5 +506,5 @@ func validateRequiredExclusions(values []string) error {
 	return nil
 }
 
-func validOS(value string) bool { return value == "windows" || value == "linux" }
+func validOS(value string) bool   { return value == "windows" || value == "linux" }
 func validArch(value string) bool { return value == "amd64" || value == "arm64" }
