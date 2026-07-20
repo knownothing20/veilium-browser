@@ -213,7 +213,7 @@ func ensurePrivateDirectoryTree(directoryPath string) error {
 		} else if unsafe {
 			return fmt.Errorf("%w: local recovery directory path contains a reparse point", ErrInvalidRecord)
 		}
-		if runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
+		if current == absolute && runtime.GOOS != "windows" && info.Mode().Perm()&0o077 != 0 {
 			return fmt.Errorf("%w: local recovery directory permissions are not private", ErrInvalidRecord)
 		}
 	}
