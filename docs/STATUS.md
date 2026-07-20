@@ -6,7 +6,7 @@ Main baseline SHA: b5af36ab02ee91f253427ca7c3ba6b768997c485
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
 Current milestone: M5.1 — Lifecycle Contract, Inventory, and Operation Journal
-Current task: Complete final validation and review of Issue #45 in Draft PR #52
+Current task: Owner review and merge decision for PR #52
 Current branch: `agent/m5-1-lifecycle-foundation`
 
 ## Operational rule
@@ -17,18 +17,18 @@ Phase 5 is `Active`. Product implementation remains authorized only for Issue #4
 
 `Product implementation allowed: Yes` is not broad authority. No work outside Issue #45 may be added to PR #52.
 
-## Current implementation stage
+## M5.1 implementation stage
 
-M5.1 implementation stages 1–5 are complete. Stage 6 is active:
+All six implementation and delivery stages are complete:
 
 1. versioned lifecycle contract and atomic persistence — complete;
 2. operation journal, conflict locks, dependent-operation blocking, and cancellation foundation — complete;
 3. read-only managed-storage inventory and startup reconciliation — complete;
 4. Desktop Service initialization, compatibility migration, lifecycle gating, and rollback integration — complete;
 5. bounded Bootstrap/Wails surface and minimum existing-design UI — complete;
-6. final acceptance audit, documentation, protected CI, diff review, and PR handoff — in progress.
+6. acceptance audit, implementation documentation, full protected CI, diff review, and PR handoff — complete.
 
-No further M5.1 feature stage is planned. After Stage 6, the only legal next step is the M5.1 Closing Review; M5.2 must not begin automatically.
+No further M5.1 feature stage is authorized. The next action is review and merge of PR #52, followed by the dedicated M5.1 Closing Review. M5.2 must not begin automatically.
 
 ## Implemented M5.1 behavior
 
@@ -82,9 +82,9 @@ No further M5.1 feature stage is planned. After Stage 6, the only legal next ste
 - no archive, trash, restore, permanent-delete, cancellation, batch, import/export, template, filesystem-browser, or automation action is exposed;
 - browser preview creates no fake lifecycle records or support claims.
 
-## Validation status
+## Validation completed
 
-The implementation has passed, on current or immediately preceding PR heads:
+The complete protected matrix passed on the completed implementation and documentation series:
 
 - Governance scope checks;
 - Go formatting, vet, unit/race coverage, and builds;
@@ -94,17 +94,17 @@ The implementation has passed, on current or immediately preceding PR heads:
 - Windows and Linux Wails builds;
 - official adapter checks on Windows and Linux;
 - Linux real-browser Evidence and both official adapter browser paths;
-- exact Windows reviewed-Chromium installation and managed identity/window Evidence in recent runs.
+- exact Windows reviewed-Chromium installation, identity/window Evidence, Network Evidence, dependency-tamper fail-closed, build, artifact, and safe cleanup.
 
-Governance passed on the final code-and-documentation series. The complete protected CI matrix must pass on the current PR head before PR #52 can leave Draft.
+The final diff contains only Issue #45 lifecycle, Desktop integration, minimum UI, tests, and required documentation. It changes no workflow, Provider, Kernel, adapter protocol, fingerprint contract, Evidence rule, or M5.2–M5.4 data operation.
+
+PR #52 has no review comments, review submissions, or unresolved inline threads at handoff.
 
 ### Independent CI reliability observation
 
-A recent Windows Network Evidence attempt failed after the exact identity/window Evidence succeeded. The diagnostic packet reported Chromium Sandbox access denial for the same fixed user-local `chrome.exe` path (`Access is denied (0x5)`), followed by Network Evidence timeout. This matches open Issue #49 and does not call the lifecycle Service or frontend.
+During development, one Windows Network Evidence attempt reproduced open Issue #49: Chromium Sandbox reported `Access is denied (0x5)` for the fixed user-local executable. A later complete protected run passed the exact identity/window, Network Evidence, tamper, build, artifact, and cleanup chain without lifecycle or workflow changes.
 
-No Sandbox, browser binary, Provider identity, Evidence rule, workflow permission, or compatibility claim has been weakened in PR #52. The protected matrix must pass before merge; unrelated experimental ACL work remains outside this PR.
-
-A separate Linux collector shutdown timeout occurred once during implementation and passed on retry without code changes. It remains an observed CI timing fluctuation, not an M5.1 product claim.
+A Linux collector shutdown timeout also occurred once and passed on retry without code changes. These remain recorded CI reliability observations; no Sandbox or Evidence requirement was weakened.
 
 ## Security, privacy, and compatibility boundaries
 
@@ -132,10 +132,8 @@ PR #52 does not implement:
 
 ## Exact next task
 
-1. Allow the complete protected CI matrix on the current PR head to finish.
-2. Confirm the final diff still contains only Issue #45 scope and no M5.2–M5.4 implementation.
-3. Confirm PR comments, reviews, and unresolved threads remain clear.
-4. Mark PR #52 ready for review only when required checks pass and no actionable review item remains.
-5. Merge only after the owner approves the reviewed PR.
-6. Open a dedicated M5.1 Closing Review after merge.
-7. Advance STATUS to M5.2 only if that Closing Review passes.
+1. Confirm the docs-only handoff commit retains green Governance and protected CI.
+2. Mark PR #52 ready for review.
+3. Obtain the owner merge decision and use squash merge if approved.
+4. After merge, open the dedicated M5.1 Closing Review.
+5. Advance STATUS to M5.2 only if that Closing Review passes.
