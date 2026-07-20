@@ -154,11 +154,11 @@ type restoreProfileStore interface {
 }
 
 type restoreKernelStore interface {
-	Get(string) (kernel.Record, error)
+	Verify(string) (kernel.Record, error)
 }
 
 type restoreAdapterStore interface {
-	Get(string) (adapter.Record, error)
+	Verify(string) (adapter.Record, error)
 }
 
 type restoreCredentialStore interface {
@@ -235,13 +235,13 @@ func (e *RestoreExecutor) duration(request RestoreRequest) time.Duration {
 	return DefaultRestoreDuration
 }
 
-func restoreDestinationID(operationID, snapshotID string) string {
-	digest := sha256.Sum256([]byte("restore-profile\x00" + operationID + "\x00" + snapshotID))
+func restoreDestinationID(idempotencyKey, snapshotID string) string {
+	digest := sha256.Sum256([]byte("restore-profile\x00" + idempotencyKey + "\x00" + snapshotID))
 	return hex.EncodeToString(digest[:16])
 }
 
-func restoreFingerprintSeed(operationID, snapshotID, manifestDigest string) string {
-	digest := sha256.Sum256([]byte("restore-fingerprint\x00" + operationID + "\x00" + snapshotID + "\x00" + manifestDigest))
+func restoreFingerprintSeed(idempotencyKey, snapshotID, manifestDigest string) string {
+	digest := sha256.Sum256([]byte("restore-fingerprint\x00" + idempotencyKey + "\x00" + snapshotID + "\x00" + manifestDigest))
 	return hex.EncodeToString(digest[:])
 }
 
