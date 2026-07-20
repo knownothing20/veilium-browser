@@ -12,7 +12,6 @@ import (
 
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/lifecycle"
-	"github.com/knownothing20/veilium-browser/internal/profile"
 )
 
 func (e *RestoreExecutor) Restore(ctx context.Context, request RestoreRequest) (RestoreResult, error) {
@@ -25,7 +24,7 @@ func (e *RestoreExecutor) Restore(ctx context.Context, request RestoreRequest) (
 	ctx, cancel := context.WithTimeout(ctx, e.duration(request))
 	defer cancel()
 
-	destinationID := restoreDestinationID(request.OperationID, request.SnapshotID)
+	destinationID := restoreDestinationID(request.IdempotencyKey, request.SnapshotID)
 	managedRef := restoreManagedRef(destinationID)
 	if existing, err := e.journal.Get(request.OperationID); err == nil {
 		return e.resultForReusedRestore(request, destinationID, existing)
@@ -39,7 +38,7 @@ func (e *RestoreExecutor) Restore(ctx context.Context, request RestoreRequest) (
 	}
 	operation := lifecycle.NewOperation(request.OperationID, lifecycle.OperationRestore, []string{destinationID}, e.now())
 	operation.IdempotencyKey = restoreIdempotencyKey(request)
-	operation.ApplicationVersion = "local-restore"
+	operation.ApplicationVersion = request.ApplicationVersion
 	operation.Platform = runtime.GOOS + "/" + runtime.GOARCH
 	operation.StagingRef = restoreStagingRef(request.OperationID)
 	operation.SafeCancellationStage = string(RestoreStagePreflight)
@@ -59,6 +58,9 @@ func (e *RestoreExecutor) Restore(ctx context.Context, request RestoreRequest) (
 			return e.abortRestore(request, destinationID, managedRef, started, "", false, false, false, domain.Profile{}, RestoreDependencyResolution{}, err)
 		}
 	}
+	if reserved.Lock == nil || reserved.Lock.OperationID != request.OperationID {
+		return e.abortRestore(request, destinationID, managedRef, started, "", false, false, false, domain.Profile{}, RestoreDependencyResolution{}, lifecycle.ErrConflict)
+	}
 
 	if _, err := e.setRestoreStage(request.OperationID, RestoreStagePreflight); err != nil {
 		return e.abortRestore(request, destinationID, managedRef, started, "", false, false, false, domain.Profile{}, RestoreDependencyResolution{}, err)
@@ -74,7 +76,7 @@ func (e *RestoreExecutor) Restore(ctx context.Context, request RestoreRequest) (
 	if err := e.updateRestoreLifecycle(destinationID, source.Manifest.SnapshotID, resolution.Limitations); err != nil {
 		return e.abortRestore(request, destinationID, managedRef, started, "", false, false, false, domain.Profile{}, resolution, err)
 	}
-	seed := restoreFingerprintSeed(request.OperationID, request.SnapshotID, source.ManifestDigest)
+	seed := restoreFingerprintSeed(request.IdempotencyKey, request.SnapshotID, source.ManifestDigest)
 	finalProfilePath := filepath.Join(e.profilesRoot, destinationID)
 	restoredProfile := buildRestoredProfile(source.SourceProfile, request, destinationID, seed, finalProfilePath, kernelRef, proxyRefs)
 
@@ -115,7 +117,7 @@ func (e *RestoreExecutor) Restore(ctx context.Context, request RestoreRequest) (
 		return e.abortRestoreWithCounters(request, destinationID, managedRef, started, stagePath, true, false, false, restoredProfile, resolution, counters, err)
 	}
 	if _, err := os.Lstat(finalProfilePath); err == nil {
-		return e.abortRestoreWithCounters(request, destinationID, managedRef, started, stagePath, true, false, false, restoredProfile, resolution, counters, profile.ErrNotFound)
+		return e.abortRestoreWithCounters(request, destinationID, managedRef, started, stagePath, true, false, false, restoredProfile, resolution, counters, lifecycle.ErrConflict)
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return e.abortRestoreWithCounters(request, destinationID, managedRef, started, stagePath, true, false, false, restoredProfile, resolution, counters, err)
 	}
@@ -153,6 +155,7 @@ func (e *RestoreExecutor) Restore(ctx context.Context, request RestoreRequest) (
 		limitations = append(limitations, "restore-staging-cleanup-required")
 		sort.Strings(limitations)
 		limitations = uniqueStrings(limitations)
+		e.markRestoreRecovery(destinationID, "restore-staging-cleanup-required")
 	}
 	finished, finishErr := e.coordinator.Finish(request.OperationID, status, []lifecycle.OperationItemResult{item}, limitations, recoveryActions)
 	result := RestoreResult{
@@ -161,10 +164,12 @@ func (e *RestoreExecutor) Restore(ctx context.Context, request RestoreRequest) (
 		Dependencies: resolution,
 		ManagedRef:   managedRef,
 	}
-	result.Lifecycle, _ = e.records.Get(destinationID)
 	if finishErr != nil {
+		e.markRestoreRecovery(destinationID, "restore-operation-finalization-required")
+		result.Lifecycle, _ = e.records.Get(destinationID)
 		return result, fmt.Errorf("%w: restored Profile activated but operation finalization failed: %v", ErrRecoveryRequired, finishErr)
 	}
+	result.Lifecycle, _ = e.records.Get(destinationID)
 	if cleanupErr != nil {
 		return result, fmt.Errorf("%w: restored Profile activated but staging cleanup failed: %v", ErrRecoveryRequired, cleanupErr)
 	}
@@ -310,6 +315,23 @@ func (e *RestoreExecutor) resultForReusedRestore(request RestoreRequest, destina
 	if err != nil {
 		return RestoreResult{Operation: operation, Profile: profileRecord}, fmt.Errorf("%w: completed restore has no lifecycle record", ErrRecoveryRequired)
 	}
+	if lifecycleRecord.State != lifecycle.StateDraft || lifecycleRecord.SourceID != request.SnapshotID || lifecycleRecord.ManagedDir != restoreManagedRef(destinationID) {
+		return RestoreResult{Operation: operation, Profile: profileRecord, Lifecycle: lifecycleRecord}, fmt.Errorf("%w: completed restore lifecycle record is contradictory", ErrRecoveryRequired)
+	}
+	if profileRecord.ID != destinationID || filepath.Clean(profileRecord.UserDataDir) != filepath.Join(e.profilesRoot, destinationID) {
+		return RestoreResult{Operation: operation, Profile: profileRecord, Lifecycle: lifecycleRecord}, fmt.Errorf("%w: completed restore Profile identity is contradictory", ErrRecoveryRequired)
+	}
+	catalog, err := e.catalog.Get(request.SnapshotID)
+	if err != nil || catalog.Status != SnapshotVerified {
+		return RestoreResult{Operation: operation, Profile: profileRecord, Lifecycle: lifecycleRecord}, fmt.Errorf("%w: completed restore source snapshot is unavailable", ErrRecoveryRequired)
+	}
+	manifest, err := ReadManifest(filepath.Join(e.recoveryRoot, filepath.FromSlash(catalog.ManifestRef)))
+	if err != nil {
+		return RestoreResult{Operation: operation, Profile: profileRecord, Lifecycle: lifecycleRecord}, fmt.Errorf("%w: completed restore source manifest cannot be read", ErrRecoveryRequired)
+	}
+	if err := verifyRestoredBrowserData(filepath.Join(e.profilesRoot, destinationID), manifest); err != nil {
+		return RestoreResult{Operation: operation, Profile: profileRecord, Lifecycle: lifecycleRecord}, fmt.Errorf("%w: completed restore data cannot be verified: %v", ErrRecoveryRequired, err)
+	}
 	return RestoreResult{
 		Operation:  operation,
 		Profile:    profileRecord,
@@ -381,10 +403,12 @@ func (e *RestoreExecutor) abortRestoreWithCounters(request RestoreRequest, desti
 	finished, finishErr := e.coordinator.Finish(request.OperationID, status, []lifecycle.OperationItemResult{item}, resolution.Limitations, recoveryActions)
 	result := RestoreResult{Operation: finished, Profile: restoredProfile, Dependencies: resolution, ManagedRef: managedRef}
 	if finishErr != nil {
+		e.markRestoreRecovery(destinationID, "restore-operation-finalization-required")
 		return result, fmt.Errorf("%w: restore failure could not be finalized: %v; original error: %v", ErrRecoveryRequired, finishErr, cause)
 	}
 	if !recoveryRequired {
 		if _, err := e.records.RemoveRecord(destinationID); err != nil {
+			e.markRestoreRecovery(destinationID, "restore-reservation-cleanup-required")
 			return result, fmt.Errorf("%w: restore rolled back but lifecycle reservation could not be removed: %v", ErrRecoveryRequired, err)
 		}
 	} else {
