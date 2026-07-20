@@ -14,9 +14,9 @@ import (
 const (
 	snapshotStagingDirectory = ".staging"
 	snapshotFinalDirectory   = "snapshots"
-	profileDefinitionName   = "profile-definition.json"
-	browserDataDirectory    = "browser-data"
-	manifestFileName        = "manifest.json"
+	profileDefinitionName    = "profile-definition.json"
+	browserDataDirectory     = "browser-data"
+	manifestFileName         = "manifest.json"
 )
 
 func prepareRecoveryRoots(dataRoot string) (string, string, error) {
@@ -183,8 +183,4 @@ func syncDirectory(directoryPath string) {
 		_ = directory.Sync()
 		_ = directory.Close()
 	}
-}
-
-func stringPathSeparator() string {
-	return string(filepath.Separator)
 }
