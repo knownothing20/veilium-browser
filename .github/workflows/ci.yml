@@ -175,15 +175,24 @@ jobs:
           if (-not $packageRoot.StartsWith($workPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
             throw "Reviewed Chromium package is outside the expected workdir: $packageRoot"
           }
-          & icacls.exe $packageRoot /grant '*S-1-15-2-2:(OI)(CI)(RX)'
-          if ($LASTEXITCODE -ne 0) {
-            throw 'Failed to configure reviewed Chromium LPAC ACL'
-          }
+          $lpacSid = [System.Security.Principal.SecurityIdentifier]::new('S-1-15-2-2')
+          $rights = [System.Security.AccessControl.FileSystemRights]::ReadAndExecute
+          $allow = [System.Security.AccessControl.AccessControlType]::Allow
+          $inheritance = [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
+          $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+            $lpacSid, $rights, $inheritance, [System.Security.AccessControl.PropagationFlags]::None, $allow
+          )
+          $acl = Get-Acl -LiteralPath $packageRoot
+          $acl.SetAccessRule($rule)
+          Set-Acl -LiteralPath $packageRoot -AclObject $acl
           Write-Host "Reviewed Chromium AppContainer ACL root: $packageRoot"
-          & icacls.exe $packageRoot
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to inspect reviewed Chromium package ACL' }
-          & icacls.exe $binary
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to inspect reviewed Chromium executable ACL' }
+          $rootRule = (Get-Acl -LiteralPath $packageRoot).Access | Where-Object { $_.IdentityReference.Value -eq $lpacSid.Value -and $_.AccessControlType -eq $allow }
+          $binaryRule = (Get-Acl -LiteralPath $binary).Access | Where-Object { $_.IdentityReference.Value -eq $lpacSid.Value -and $_.AccessControlType -eq $allow }
+          $rootRule | Format-List | Out-String | Write-Host
+          $binaryRule | Format-List | Out-String | Write-Host
+          if (-not $rootRule -or -not $binaryRule) {
+            throw 'Reviewed Chromium LPAC ACL verification failed'
+          }
 
       - name: Exercise exact reviewed identity and managed-window Evidence
         shell: pwsh
