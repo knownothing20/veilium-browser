@@ -6,14 +6,14 @@ Main baseline SHA: 8097422edd06a648631394ab9ff8b987b0f7c313
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
 Current milestone: M5.2 — Safe Local Recovery
-Current task: Complete Issue #54 Stage 6 on branch `agent/m5-2-safe-local-recovery`
-Current implementation stage: Stage 6 — Integration, documentation, protected CI, and owner-review handoff
+Current task: Owner review and merge decision for PR #56
+Current implementation stage: M5.2 Stages 1–6 complete — ready for owner review
 
 ## Operational rule
 
-Phase 5 remains `Active`. Product implementation is allowed only for Issue #54.
+Phase 5 remains `Active`. Product implementation remains limited to Issue #54 until PR #56 is merged and M5.2 passes its dedicated Closing Review.
 
-M5.3 and M5.4 remain blocked until M5.2 merges, passes a dedicated Closing Review, and this file advances again.
+M5.3 and M5.4 remain blocked until that post-merge review passes and a separate documentation-only handoff advances this file.
 
 ## Completed M5.1 handoff
 
@@ -29,25 +29,23 @@ The M5.1 lifecycle records, operation journal, locks, blockers, cancellation sta
 
 Issue #54 is the single M5.2 implementation task.
 
-M5.2 may implement only bounded same-machine recovery workflows described by Issue #54, `docs/PHASE_05_CONTRACTS.md`, `docs/LOCAL_RECOVERY.md`, and `docs/LOCAL_RECOVERY_DESKTOP.md`.
+M5.2 implements only bounded same-machine recovery workflows described by Issue #54, `docs/PHASE_05_CONTRACTS.md`, `docs/LOCAL_RECOVERY.md`, and `docs/LOCAL_RECOVERY_DESKTOP.md`.
 
-All M5.2 work must:
+All M5.2 work:
 
-- use the M5.1 journal, locks, blockers, cancellation state, inventory, and recovery records;
-- require stopped runtime and protected dependent work;
-- treat browser files as opaque data;
-- reject unsafe, duplicate, linked, special, absolute, or out-of-root paths;
-- enforce reviewed file, size, space, duration, manifest, and path bounds;
-- use private staging, complete verification, atomic activation, and rollback;
-- preserve the only healthy copy until replacement state validates;
-- restore to a new Profile ID, managed directory, and fingerprint seed by default;
-- remap dependency requirements without copying secrets or source record IDs;
-- never broaden Provider trust, health, compatibility, or Evidence applicability;
-- preserve interrupted or partial work as explicit recovery state.
+- uses the M5.1 journal, locks, blockers, cancellation state, inventory, and recovery records;
+- requires stopped runtime and protected dependent work;
+- treats browser files as opaque data;
+- rejects unsafe, duplicate, linked, special, absolute, or out-of-root paths;
+- enforces reviewed file, size, space, duration, manifest, and path bounds;
+- uses private staging, complete verification, atomic activation, and rollback;
+- preserves the only healthy copy until replacement state validates;
+- restores to a new Profile ID, managed directory, and fingerprint seed by default;
+- remaps dependency requirements without copying secrets or source record IDs;
+- never broadens Provider trust, health, compatibility, or Evidence applicability;
+- preserves interrupted or partial work as explicit recovery state.
 
 ## M5.2 implementation stages
-
-Every development update must identify the current stage and the remaining stages.
 
 1. **Stage 1 — Contracts and persistence — complete**
    - versioned manifest and catalog contracts;
@@ -96,32 +94,33 @@ Every development update must identify the current stage and the remaining stage
    - browser preview remains non-operational and no general filesystem browser is introduced;
    - Desktop service tests, Go formatting/vet/unit/race/build, frontend typecheck/tests/build, Windows/Linux Wails builds, official adapters, Linux browser checks, and exact Windows reviewed-Chromium checks passed on head `8035a4ac53c1cafe85c129b1239ad9677a5f8fbc`.
 
-6. **Stage 6 — Integration, documentation, protected CI, and owner-review handoff — active**
-   - final contract and Desktop documentation synchronization;
-   - final changed-file, non-scope, secret, path, rollback, lifecycle, confirmation, and recovery-state review;
-   - review-thread and temporary-artifact check;
-   - protected Governance and CI confirmation on the final documentation head;
-   - PR description and readiness update;
-   - owner merge decision;
-   - dedicated M5.2 Closing Review after merge.
+6. **Stage 6 — Integration, documentation, protected CI, and owner-review handoff — complete**
+   - contract, Desktop, status, and pre-merge review documentation are synchronized;
+   - final changed-file, non-scope, secret, path, rollback, lifecycle, confirmation, and recovery-state review passed;
+   - no temporary workflow or diagnostic artifact remains in the changed-file set;
+   - no PR conversation comment or inline review thread remains unresolved;
+   - Governance and the complete retained CI matrix passed on head `ac49ea8f1dd41b32c9884e823ec29e09789b8f65`;
+   - `docs/M5_2_IMPLEMENTATION_REVIEW.md` records the pre-merge verdict `READY FOR OWNER REVIEW`;
+   - PR #56 may be marked ready for review, but the owner retains the merge decision;
+   - a dedicated M5.2 Closing Review remains mandatory after merge.
 
-Do not begin M5.3 or M5.4 during Stage 6.
+## Completed scope
 
-## Stage 6 allowed work
+M5.2 provides:
 
-Stage 6 may add or change only:
-
-- implementation-status and local recovery documentation;
-- the pre-merge implementation review record;
-- PR description, review readiness, and reviewer-facing evidence;
-- corrections discovered by the final M5.2 scope, safety, or protected-CI review;
-- test-only or CI-only corrections required to preserve existing protected assertions without broadening product scope.
-
-Stage 6 must not add new product capability, automatic retention cleanup, orphan deletion, remote APIs, multi-Profile batch operations, templates, portable transfer, or any Provider/Evidence expansion.
+- versioned same-machine full snapshot records and strict catalogs;
+- bounded, staged, verified, atomic snapshot creation;
+- restore to a new limited identity with current local dependency remapping;
+- reversible archive/unarchive;
+- recoverable trash, exact restore-trash, retention metadata, and explicit irreversible cleanup;
+- conservative startup reconciliation;
+- bounded Desktop/Wails preflight, state, progress, history, cancellation, and action APIs;
+- a minimum Local recovery workspace extending the existing design;
+- Windows/Linux, failure-path, persistence, frontend, Wails, official-adapter, and reviewed-Chromium regression coverage.
 
 ## Non-scope
 
-Issue #54 does not authorize:
+Issue #54 does not authorize and PR #56 does not implement:
 
 - portable cross-machine Profile transfer;
 - cross-platform full browser-state claims;
@@ -131,6 +130,7 @@ Issue #54 does not authorize:
 - secret export;
 - multi-Profile batch operations;
 - automatic retention or orphan cleanup;
+- a general filesystem browser;
 - remote APIs, MCP, cloud sync, or general automation;
 - Provider, Kernel, adapter, fingerprint, proxy-protocol, compatibility, or Evidence expansion;
 - macOS support claims;
@@ -148,16 +148,18 @@ Phase 4 and M5.1 remain frozen:
 - lifecycle state remains independent from runtime, health, trust, compatibility, and Evidence;
 - unsupported, missing, unsafe, partial, contradictory, and unverifiable state fails closed or remains explicitly limited.
 
-Issue #49 remains a separate hosted-runner reliability investigation. It must not be addressed by weakening Sandbox or Evidence requirements inside Issue #54.
+Issue #49 remains a separate hosted-runner reliability investigation. PR #56 does not weaken Sandbox or Evidence requirements.
 
 ## Required validation
+
+The reviewed implementation passed:
 
 ```bash
 python scripts/check_project_governance.py
 make check
 ```
 
-The implementation PR must also pass:
+The protected matrix also passed:
 
 - Go formatting, vet, race/unit tests, and builds;
 - frontend typecheck, tests, and production build;
@@ -165,23 +167,16 @@ The implementation PR must also pass:
 - strict schema and filesystem safety fixtures;
 - persistence, staging, activation, rollback, interruption, cancellation, and storage-failure tests;
 - active-session, protected-operation, conflict, and idempotency tests;
-- Windows and Linux real-filesystem operation tests for every claimed stage;
+- Windows and Linux real-filesystem operation tests;
 - artifact exclusion tests;
 - Phase 4 and M5.1 regression tests;
 - official adapter and browser Evidence checks;
 - exact Windows reviewed-Chromium identity, Network Evidence, tamper, artifact, and cleanup checks.
 
-## Current review evidence
-
-- Stage 5 protected Governance and CI passed on `8035a4ac53c1cafe85c129b1239ad9677a5f8fbc`.
-- No PR conversation comment or inline review thread is currently unresolved.
-- The final changed-file list contains no workflow file and no temporary diagnostic artifact.
-- `docs/M5_2_IMPLEMENTATION_REVIEW.md` records the pre-merge functional, safety, privacy, platform, and non-scope review.
-
 ## Exact next task
 
-1. run Governance and the complete retained CI matrix on the final Stage 6 documentation head;
-2. confirm the PR diff and review state remain clean;
-3. mark Stage 6 complete and PR #56 ready for owner review;
-4. do not merge without the owner decision;
-5. after merge, create and perform the dedicated M5.2 Closing Review before any M5.3 handoff.
+1. mark PR #56 ready for owner review after the final status-only head passes Governance and protected CI;
+2. owner reviews the complete PR and chooses whether to squash-merge it;
+3. do not start M5.3 or M5.4 before merge and dedicated Closing Review;
+4. after merge, create a dedicated M5.2 Closing Review against the merged main commit;
+5. only a separate documentation-only handoff may authorize the next milestone.
