@@ -59,7 +59,7 @@ type LocalRecoveryPreflight struct {
 	RestoreTrashAllowed    bool            `json:"restoreTrashAllowed"`
 	PermanentDeleteAllowed bool            `json:"permanentDeleteAllowed"`
 	TrashID                string          `json:"trashId,omitempty"`
-	RetentionDeadline      *time.Time       `json:"retentionDeadline,omitempty"`
+	RetentionDeadline      *time.Time      `json:"retentionDeadline,omitempty"`
 	Reasons                []string        `json:"reasons,omitempty"`
 }
 
@@ -335,7 +335,7 @@ func (s *Service) CreateLocalSnapshot(ctx context.Context, input CreateLocalSnap
 			FilesProcessed: progress.FilesProcessed, FilesTotal: progress.FilesTotal,
 			BytesProcessed: progress.BytesProcessed, BytesTotal: progress.BytesTotal,
 			CancellationAvailable: progress.Stage != localrecovery.SnapshotStagePublishing && progress.Stage != localrecovery.SnapshotStageFinished,
-			UpdatedAt: time.Now().UTC(),
+			UpdatedAt:             time.Now().UTC(),
 		})
 	})
 	result, createErr := creator.Create(ctx, request)
@@ -377,7 +377,7 @@ func (s *Service) RestoreLocalSnapshot(ctx context.Context, input RestoreLocalSn
 			Stage: string(progress.Stage), FilesProcessed: progress.FilesProcessed, FilesTotal: progress.FilesTotal,
 			BytesProcessed: progress.BytesProcessed, BytesTotal: progress.BytesTotal,
 			CancellationAvailable: progress.Stage != localrecovery.RestoreStageActivating && progress.Stage != localrecovery.RestoreStageMetadata && progress.Stage != localrecovery.RestoreStageFinished,
-			UpdatedAt: time.Now().UTC(),
+			UpdatedAt:             time.Now().UTC(),
 		})
 	})
 	result, restoreErr := executor.Restore(ctx, request)
