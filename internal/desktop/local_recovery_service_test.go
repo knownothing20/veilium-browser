@@ -69,7 +69,7 @@ func TestDesktopLocalRecoverySnapshotArchiveAndTrash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snapshot.Catalog.Status != localrecovery.CatalogVerified || snapshot.Catalog.FileCount != 1 {
+	if snapshot.Catalog.Status != localrecovery.SnapshotVerified || snapshot.Catalog.FileCount != 1 {
 		t.Fatalf("unexpected snapshot result: %#v", snapshot)
 	}
 	state, err := service.LocalRecoveryState()
