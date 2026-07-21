@@ -81,6 +81,7 @@ func (s *TrashStore) Create(input TrashRecord) (TrashRecord, error) {
 	}
 	input.UpdatedAt = now
 	input.Revision = 1
+	input.OriginalRecoveryCodes = sortedUnique(input.OriginalRecoveryCodes)
 	input.OriginalLimitationCodes = sortedUnique(input.OriginalLimitationCodes)
 	input.Limitations = sortedUnique(input.Limitations)
 	if err := input.Validate(); err != nil {
@@ -122,6 +123,7 @@ func (s *TrashStore) Update(input TrashRecord) (TrashRecord, error) {
 	input.SchemaVersion = TrashSchemaVersion
 	input.UpdatedAt = s.now().UTC()
 	input.Revision = current.Revision + 1
+	input.OriginalRecoveryCodes = sortedUnique(input.OriginalRecoveryCodes)
 	input.OriginalLimitationCodes = sortedUnique(input.OriginalLimitationCodes)
 	input.Limitations = sortedUnique(input.Limitations)
 	if err := input.Validate(); err != nil {
@@ -217,9 +219,9 @@ func sameTrashIdentity(left, right TrashRecord) bool {
 		left.OriginalManagedDir == right.OriginalManagedDir &&
 		timePointersEqual(left.OriginalArchivedAt, right.OriginalArchivedAt) &&
 		left.OriginalSourceID == right.OriginalSourceID &&
+		reflect.DeepEqual(left.OriginalRecoveryCodes, right.OriginalRecoveryCodes) &&
 		reflect.DeepEqual(left.OriginalLimitationCodes, right.OriginalLimitationCodes) &&
 		left.TrashRef == right.TrashRef &&
-		left.DataPresent == right.DataPresent &&
 		left.ProfileDefinitionDigest == right.ProfileDefinitionDigest &&
 		left.TreeDigest == right.TreeDigest &&
 		left.FileCount == right.FileCount &&
@@ -240,9 +242,11 @@ func validTrashTransition(from, to TrashStatus) bool {
 	case TrashRestoring:
 		return to == TrashStored || to == TrashRecoveryRequired
 	case TrashCleanupPending:
-		return to == TrashStored || to == TrashRecoveryRequired
+		return to == TrashStored || to == TrashDeleted || to == TrashRecoveryRequired
 	case TrashRecoveryRequired:
-		return to == TrashStored
+		return to == TrashStored || to == TrashDeleted
+	case TrashDeleted:
+		return to == TrashRecoveryRequired
 	default:
 		return false
 	}
@@ -257,11 +261,16 @@ func cloneTrashMap(source map[string]TrashRecord) map[string]TrashRecord {
 }
 
 func cloneTrashRecord(record TrashRecord) TrashRecord {
+	record.OriginalRecoveryCodes = append([]string(nil), record.OriginalRecoveryCodes...)
 	record.OriginalLimitationCodes = append([]string(nil), record.OriginalLimitationCodes...)
 	record.Limitations = append([]string(nil), record.Limitations...)
 	if record.OriginalArchivedAt != nil {
 		value := *record.OriginalArchivedAt
 		record.OriginalArchivedAt = &value
+	}
+	if record.DeletedAt != nil {
+		value := *record.DeletedAt
+		record.DeletedAt = &value
 	}
 	return record
 }

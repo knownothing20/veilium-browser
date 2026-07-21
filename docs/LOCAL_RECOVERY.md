@@ -1,246 +1,204 @@
 # Local Recovery Contracts
 
-Status: M5.2 Stage 3 implementation
+Status: M5.2 Stage 4 implementation and validation
 Phase: Phase 5
 Milestone: M5.2 — Safe Local Recovery
 Authority: Issue #54
 
 ## Current boundary
 
-Stages 1–3 implement versioned local recovery records, verified same-machine snapshots, and restore to a new limited identity.
+Stages 1–4 provide versioned local recovery records, verified same-machine snapshots, restore to a new limited identity, archive/unarchive, recoverable trash/restore, explicit irreversible cleanup, and conservative trash reconciliation.
 
-The implementation reuses the M5.1 lifecycle operation journal, Profile locks, runtime and dependent-operation blockers, cancellation state, storage inventory, and recovery records.
+All operations reuse the M5.1 lifecycle journal, Profile locks, active-session and dependent-operation blockers, cancellation state, item results, managed references, and recovery codes. No parallel task system is introduced.
 
-The current boundary does not provide archive, trash, permanent cleanup, Desktop APIs, or UI actions. Those remain blocked until the relevant later stage is activated.
+Desktop/Wails APIs and UI actions remain outside this stage. Automatic retention cleanup, cross-machine portability, templates, batch operations, remote APIs, and Provider or Evidence expansion remain prohibited.
+
+## Shared integrity rules
+
+- Browser user-data files are treated as opaque bytes.
+- Managed paths are canonical, relative, and contained inside reviewed application roots.
+- Absolute paths, traversal, path collisions, links, reparse points, special files, and hard-link ambiguity fail closed.
+- File count, individual size, total size, path length, encoded record size, and operation identity are bounded.
+- Authoritative JSON uses strict decoding and rejects unknown fields, trailing data, unsupported versions, duplicates, and contradictions.
+- Persistent catalogs use private temporary files and atomic replacement.
+- The only healthy copy remains recoverable until replacement state is verified.
+- Credential secrets, Kernel and adapter binaries, runtime data, private logs, and Evidence payloads are excluded.
+- Lifecycle state does not manufacture health, Provider trust, compatibility, or applicable Evidence.
 
 ## Persisted records
 
-### Immutable local snapshot manifest
+### Local snapshot manifest
 
-The manifest records:
-
-- schema version and stable snapshot ID;
-- same-machine artifact scope;
-- source Profile ID, display name, Profile schema version, application version, operating system, and architecture;
-- a canonical Profile-definition digest;
-- canonical relative browser-file entries with byte size and SHA-256;
-- deterministic file-tree identity, file count, and total bytes;
-- non-secret Kernel, adapter, and credential requirements;
-- explicit excluded-data classes;
-- portability and limitation codes.
-
-The manifest is published once and is not replaced in place.
+The immutable manifest records source Profile metadata identity, platform, canonical file entries, file and tree digests, bounded totals, non-secret dependency requirements, exclusions, portability limitations, and application/schema versions.
 
 ### Local recovery catalog
 
-The catalog records the local manifest reference, verification state, immutable digests and size summary, timestamps, limitations, and optimistic revision.
+The catalog records the immutable manifest reference and digest, tree identity, file totals, verification state, timestamps, limitations, and optimistic revision.
 
-Catalog creation begins in a non-final state. Supported transitions are explicit. Stale revisions and changes to immutable identity fields fail with a conflict.
+### Trash catalog
 
-### M5.1 lifecycle records and journal
+The versioned Trash Catalog records:
 
-Snapshot and restore execution does not create a second task system. It uses the M5.1 journal and lifecycle records for:
+- Trash ID and Profile ID;
+- current operating system and architecture;
+- exact original lifecycle state, managed directory, archive timestamp, source ID, recovery codes, and limitation codes;
+- private trash reference;
+- retained Profile-definition digest;
+- browser file-tree digest, count, and total bytes;
+- whether recoverable browser data is still present;
+- visible trash and retention timestamps;
+- optional irreversible-deletion timestamp;
+- explicit status, limitations, and optimistic revision.
 
-- operation identity and idempotency;
-- Profile selection and locking;
-- current stage and safe cancellation stage;
-- bounded item results and progress totals;
-- limitations and recovery actions;
-- managed staging references;
-- terminal success, cancellation, failure, partial success, or recovery-required state.
+Only one Trash Record may exist for a Profile. Immutable identity fields cannot change during status transitions.
 
-## Canonical path policy
+Trash statuses are:
 
-Manifest paths use slash-separated relative form. Validation rejects:
+- `pending` — the transaction is registered but not committed;
+- `stored` — the Profile data is verified in private recoverable trash;
+- `restoring` — restoration to the original managed location is in progress;
+- `cleanup-pending` — explicit irreversible cleanup has crossed its confirmation gate but not yet completed;
+- `deleted` — payload and Profile metadata are gone and bounded audit tombstones remain;
+- `recovery-required` — files, lifecycle metadata, catalog state, or staging require manual reconciliation.
 
-- absolute paths;
-- `.` or `..` traversal;
-- backslashes and alternate data stream separators;
-- empty or repeated segments;
-- trailing separators, spaces, or dots;
-- control characters;
-- oversized paths or segments;
-- Windows reserved device names;
-- Windows case-insensitive path collisions;
-- duplicate or unsorted entries.
-
-Filesystem operations independently reject symbolic links, junctions, reparse points, unsupported special entries, path escape, and hard-link ambiguity.
-
-## Bounds
-
-The contract defines explicit limits for:
-
-- manifest and catalog encoded bytes;
-- Profile-definition bytes;
-- number of catalog records;
-- file entries;
-- individual file bytes;
-- total file bytes;
-- identifiers, text, codes, capabilities, paths, and path segments;
-- operation duration;
-- required destination space.
-
-Manifest JSON encoding validates before materializing the complete output. A conservative entry-size estimate rejects a file-entry set that cannot fit the encoded manifest budget. The final encoded byte limit remains authoritative.
-
-## Deterministic identity
-
-The tree identity is SHA-256 over sorted canonical records containing:
-
-1. relative path;
-2. decimal byte size;
-3. file SHA-256.
-
-Windows path collision checks use case-insensitive keys while preserving the original canonical path in the manifest.
-
-The Profile-definition digest uses canonical JSON object encoding. It represents the non-secret Profile definition only; it cannot grant Provider trust, compatibility, health, or Evidence applicability.
-
-## Dependency requirements and exclusions
-
-Dependency records contain requirements, not source local record IDs or executable paths.
-
-- reviewed Kernel requirements need an exact binary or package-tree identity;
-- official adapter requirements need an exact executable identity;
-- Kernel and adapter platforms must match the snapshot source platform;
-- credential records contain placeholders and required input classes only;
-- resolved credential values remain exclusively in the operating-system vault.
-
-Every manifest explicitly excludes:
-
-- credential secrets;
-- Kernel binaries;
-- adapter binaries;
-- runtime state;
-- private runtime logs;
-- browser and Network Evidence payloads.
-
-Profile-definition validation rejects secret-like fields and URLs containing embedded usernames or passwords before an operation is journaled.
-
-The implementation treats browser files as opaque data. It does not parse Cookies, LocalStorage, IndexedDB, history, page data, tokens, or extension data.
+Retention is visible metadata only. No background process automatically deletes trash.
 
 ## Stage 1 — Contracts and persistence
 
-Stage 1 provides:
-
-- versioned manifest and catalog schemas;
-- deterministic tree and Profile-definition digests;
-- strict JSON decoding and resource bounds;
-- immutable manifest publication;
-- private atomic catalog persistence;
-- optimistic revisions and explicit catalog transitions;
-- rollback of in-memory and on-disk state when persistence fails;
-- fail-closed behavior for unknown future schemas.
+Stage 1 provides versioned manifests and catalogs, deterministic file-tree and Profile-definition digests, canonical path validation, strict resource bounds, immutable manifest publication, atomic catalog persistence, optimistic revisions, explicit transitions, and persistence rollback.
 
 ## Stage 2 — Local snapshot creation
 
-### Transaction order
+Snapshot creation:
 
-1. Validate the request before creating journal state.
-2. Use the M5.1 coordinator to reject active sessions and conflicting operations, then lock the source Profile.
-3. Resolve only the Profile lifecycle managed directory and verify it remains inside the application data root.
-4. Traverse the source without following links and enforce file, path, size, duration, and destination-space bounds.
-5. Create private operation-specific staging.
-6. Copy regular files with bounded buffers while checking source identity before and after opening.
-7. Hash every copied file and revalidate the complete source plan.
-8. Generate the manifest, verify the complete staged tree, and persist a staged catalog record.
-9. Check cancellation before publication.
-10. Atomically rename verified staging into the immutable snapshot location.
-11. Mark the catalog verified and only then finish the M5.1 operation successfully.
+1. validates the request before journaling;
+2. blocks active or protected work and locks the source Profile;
+3. verifies the managed source directory;
+4. performs bounded link-safe traversal and destination-space preflight;
+5. copies regular files into private staging while checking stable file identity;
+6. hashes every file and revalidates the complete source and staged trees;
+7. checks cancellation before publication;
+8. atomically publishes the verified snapshot;
+9. finalizes the catalog and M5.1 operation only after verification.
 
-### Failure and cancellation
-
-- cancellation is checked before traversal, between files, before verification, and before publication;
-- source changes fail the operation and do not publish a snapshot;
-- insufficient space fails before copying;
-- publication failure removes owned staging when safe;
-- cleanup failure or catalog finalization ambiguity becomes recovery-required;
-- the original Profile and browser data are never moved or changed by snapshot creation;
-- retries use operation and idempotency identities and cannot silently publish a different snapshot.
+Snapshot creation never moves or changes the original Profile data.
 
 ## Stage 3 — Restore to a new identity
 
-### Identity and applicability
+Restore defaults to a new deterministic Profile ID, new managed directory, and independently derived fingerprint seed. It never overwrites the source Profile or reuses source local Kernel, adapter, credential, or Evidence identities.
 
-Restore defaults to a new identity and never overwrites the source Profile.
+The restore transaction strictly revalidates the snapshot, maps current local dependencies conservatively, builds a reviewed replacement definition, copies into private staging, verifies the entire staged tree, atomically activates the new browser directory, persists Profile metadata, and leaves the new lifecycle record `draft` until current dependencies and validation pass.
 
-The destination receives:
+Cancellation, tamper, target conflict, activation failure, metadata persistence failure, cleanup failure, and operation-finalization ambiguity have explicit rollback or recovery-required outcomes.
 
-- a new deterministic Profile ID derived from the snapshot and idempotency request;
-- a new managed Profile directory;
-- a new fingerprint seed derived independently from the source seed;
-- no copied source local Kernel, adapter, or credential record IDs;
-- no inherited browser or Network Evidence;
-- lifecycle state `draft` with explicit limitations.
+## Stage 4 — Local lifecycle storage operations
 
-Only a verified same-user, same-machine snapshot matching the current operating system and architecture is applicable.
+### Archive and unarchive
 
-### Dependency resolution
+Archive changes lifecycle metadata only; it does not move browser files.
 
-- the snapshot stores requirements rather than source local IDs;
-- selected Kernel and adapter records are reverified through their current stores before matching;
-- exact Provider, version, platform, architecture, digest, package, official identity, route scheme, and trust requirements fail closed when they do not match;
-- explicit capability requirements remain unresolved when the current frozen Provider contract cannot prove them without guessing;
-- credential metadata never proves that vault material exists;
-- a dependency requiring a secret remains `user-action-required` and its local credential reference is not written into the restored Profile;
-- unresolved dependencies keep the restored Profile limited and non-launchable.
+- `available` and `draft` Profiles may be archived.
+- The exact origin state is persisted.
+- Unarchive restores the exact origin state rather than always promoting to `available`.
+- Existing limitations are preserved.
+- Active sessions, protected work, conflicting locks, cancellation, unsafe managed paths, and contradictory timestamps fail closed.
+- Lifecycle persistence failure leaves the original state unchanged.
+- A committed state with failed journal finalization receives an explicit recovery code.
 
-### Restore transaction order
+### Recoverable trash transaction
 
-1. Derive the destination identity and reserve a `draft` lifecycle record.
-2. Create and lock the M5.1 restore operation for that new identity.
-3. Re-read the catalog, manifest, Profile definition, and every snapshot file.
-4. Recompute manifest, file, and tree identities and reject contradictions or modification.
-5. Resolve current local dependencies conservatively and record limitations.
-6. Build a reviewed replacement Profile definition with the new ID, directory, seed, and safe local references only.
-7. Copy browser files into private restore staging and verify the complete staged result.
-8. Check cancellation before activation.
-9. Atomically activate the new browser-data directory.
-10. Persist the new Profile metadata.
-11. Remove restore staging and finish the operation, leaving the lifecycle state as `draft`.
+Recoverable trash preserves Profile metadata and moves only the Profile-owned managed browser directory.
 
-### Rollback and recovery
+Transaction order:
 
-- cancellation before activation removes staging and the lifecycle reservation;
-- snapshot modification fails before activation;
-- an existing target ID or directory is a conflict and is never overwritten;
-- directory activation failure rolls back staging;
-- Profile metadata persistence failure removes the newly activated directory;
-- rollback never changes the source Profile or source snapshot;
-- cleanup failure after successful activation preserves the restored Profile and records partial/recovery state;
-- operation-finalization ambiguity records a lifecycle recovery code rather than claiming silent success;
-- idempotent retry returns the same restored identity and verifies that its committed data still matches the source snapshot.
+1. validate request, retention metadata, lifecycle state, Profile metadata, and current blockers;
+2. acquire the M5.1 operation lock;
+3. resolve exactly `profiles/<ProfileID>` and safely inventory and hash the complete browser tree;
+4. serialize and digest the non-secret retained Profile definition;
+5. create a `pending` Trash Record before moving files;
+6. create private operation staging and persist the Profile definition there;
+7. check cancellation and revalidate retained Profile metadata;
+8. rename the managed browser directory into private staging;
+9. verify every moved file and the complete deterministic tree identity;
+10. atomically publish staging to `local-recovery/trash/<TrashID>`;
+11. change the Trash Record to `stored`;
+12. only then commit lifecycle state `trashed`, timestamps, retention metadata, and trash markers;
+13. finish the M5.1 operation and release the lock.
 
-## Persistence and privacy
+If any precommit cleanup or rollback cannot remove its catalog record, the record is retained as `recovery-required`; recovery metadata is never deleted before the only authoritative copy is restored.
 
-Authoritative persistence:
+### Restore from trash
 
-- uses strict JSON decoding with unknown-field and trailing-data rejection;
-- rejects oversized, unsupported-version, malformed, duplicate, contradictory, linked, reparse, or non-regular authoritative files;
-- requires private managed directories and files;
-- writes through a private temporary file;
-- flushes the temporary file before publication;
-- publishes immutable manifests without replacing an existing manifest;
-- replaces catalogs and lifecycle journals atomically;
-- preserves the only healthy source copy until a replacement is verified;
-- never uploads or synchronizes recovery artifacts automatically.
+Restore-from-trash requires lifecycle state `trashed`, a `stored` Trash Record, an absent original target directory, and retained Profile metadata whose digest still matches the Trash Record.
+
+Transaction order:
+
+1. verify the stored Profile definition and complete browser tree;
+2. transition the Trash Record to `restoring`;
+3. move the private trash root into operation staging;
+4. verify it again after the move;
+5. atomically activate browser data at the exact original managed directory;
+6. restore the exact original lifecycle state, archive timestamp, source ID, recovery codes, and limitations;
+7. remove the Trash Record;
+8. clean owned staging and finalize the operation.
+
+Target conflicts never overwrite existing files. Failure before activation returns the payload to private trash. Failure after activation attempts both lifecycle and payload rollback. Any failed catalog reset, rollback, or staging cleanup becomes explicit recovery state.
+
+### Explicit irreversible cleanup
+
+Irreversible cleanup requires an exact confirmation equal to the Profile ID. Retention expiry alone never authorizes deletion.
+
+The operation:
+
+1. revalidates the `stored` Trash Record, retained Profile metadata, and full payload;
+2. transitions the record to `cleanup-pending`;
+3. moves the owned trash root into private delete staging;
+4. verifies the staged payload again;
+5. records the irreversible operation stage;
+6. deletes only the verified browser-data subtree inside the owned staging boundary;
+7. deletes the matching Profile metadata;
+8. removes remaining owned staging;
+9. changes lifecycle state to an `invalid` audit tombstone;
+10. changes the Trash Record to a `deleted` audit tombstone with `DataPresent=false` and a deletion timestamp;
+11. finalizes the operation and releases the lock.
+
+Directory cleanup rechecks containment, links, reparse points, and special entries immediately before removal. Failure after the irreversible boundary is never reported as success; the Trash Record and lifecycle record become recovery-required with truthful information about whether browser data remains.
+
+### Startup reconciliation
+
+The Stage 4 reconciler is observational and conservative. It never guesses which copy is authoritative and never deletes or moves data automatically.
+
+For each Trash Record it compares:
+
+- lifecycle state and lock;
+- original managed source-path presence;
+- private trash-root presence;
+- operation staging and quarantine references;
+- retained Profile metadata presence and digest;
+- Trash Record status and `DataPresent` claim.
+
+Healthy `stored` and `deleted` states remain unchanged. Interrupted `pending`, `restoring`, or `cleanup-pending` records, stale locks, duplicate source/trash copies, missing Profile metadata, changed Profile definitions, unsafe paths, or contradictory tombstones become `recovery-required` and receive bounded recovery findings.
 
 ## Validation coverage
 
 The retained suite covers:
 
-- valid manifest and deterministic identity;
-- unsafe and colliding paths;
-- contradictory size summaries and artifact scope;
-- dependency identity and source-platform contradictions;
-- strict JSON round trips and unknown-field rejection;
-- immutable manifest publication and catalog rollback;
-- private files, symlinks, reparse points, special entries, and hard-link ambiguity;
-- snapshot success, idempotency, cancellation, source mutation, insufficient space, publication failure, cleanup failure, and catalog-finalization failure;
-- restore to a new ID and seed;
-- conservative dependency resolution and secret exclusion;
-- restore idempotency, cancellation, snapshot tamper rejection, target conflicts, activation failure, metadata persistence failure, and cleanup recovery;
+- strict schema, path, digest, size, persistence, and rollback contracts;
+- snapshot success, idempotency, cancellation, source mutation, insufficient space, publication failure, and cleanup failure;
+- restore new identity, dependency resolution, secret exclusion, idempotency, tamper rejection, conflicts, activation rollback, metadata rollback, and cleanup recovery;
+- archive/unarchive round trips for `available` and `draft` origins;
+- archive blockers, cancellation, unsafe path rejection, persistence failure, and finalization ambiguity;
+- recoverable trash and exact restore for `available`, `draft`, and `archived` origins;
+- Trash Catalog transitions, uniqueness, reopen, optimistic revision, and persistence rollback;
+- active-session and protected-operation blockers;
+- cancellation before move, rename failure, lifecycle persistence failure, catalog cleanup failure, and target conflict;
+- changed or missing retained Profile metadata;
+- exact irreversible confirmation and irreversible-cleanup failure;
+- bounded audit tombstones and idempotent retry;
+- healthy and contradictory startup reconciliation;
 - Windows and Linux unit and real-filesystem behavior;
 - frontend, Wails, official adapter, Linux browser, and exact Windows reviewed-Chromium regression checks.
 
-Issue #49 remains a separate hosted-runner reliability risk in the exact Windows reviewed-Chromium Sandbox/Evidence job. It must not be addressed by weakening Sandbox, identity, Network Evidence, tamper, artifact, or cleanup requirements inside M5.2.
+Issue #49 remains a separate hosted-runner reliability risk. M5.2 does not weaken Sandbox, identity, Network Evidence, tamper, artifact, or cleanup requirements.
 
-Stage 4 remains blocked until Stage 3 implementation, documentation, Windows/Linux validation, and the retained matrix pass on the same current Head.
+Stage 5 remains blocked until the Stage 4 implementation, documentation, Windows/Linux validation, and retained matrix pass on the same current Head.

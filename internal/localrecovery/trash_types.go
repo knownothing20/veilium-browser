@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	TrashSchemaVersion  = 1
-	MaxTrashRecords     = 4096
-	MaxTrashCatalogSize = 8 << 20
+	TrashSchemaVersion   = 1
+	MaxTrashRecords      = 4096
+	MaxTrashCatalogSize  = 8 << 20
 	DefaultRetentionDays = 30
 	MaxRetentionDays     = 365
 )
@@ -26,12 +26,13 @@ const (
 	TrashStored           TrashStatus = "stored"
 	TrashRestoring        TrashStatus = "restoring"
 	TrashCleanupPending   TrashStatus = "cleanup-pending"
+	TrashDeleted          TrashStatus = "deleted"
 	TrashRecoveryRequired TrashStatus = "recovery-required"
 )
 
 func (s TrashStatus) Valid() bool {
 	switch s {
-	case TrashPending, TrashStored, TrashRestoring, TrashCleanupPending, TrashRecoveryRequired:
+	case TrashPending, TrashStored, TrashRestoring, TrashCleanupPending, TrashDeleted, TrashRecoveryRequired:
 		return true
 	default:
 		return false
@@ -46,8 +47,9 @@ type TrashRecord struct {
 	Architecture            string          `json:"architecture"`
 	OriginalState           lifecycle.State `json:"originalState"`
 	OriginalManagedDir      string          `json:"originalManagedDir"`
-	OriginalArchivedAt      *time.Time       `json:"originalArchivedAt,omitempty"`
+	OriginalArchivedAt      *time.Time      `json:"originalArchivedAt,omitempty"`
 	OriginalSourceID        string          `json:"originalSourceId,omitempty"`
+	OriginalRecoveryCodes   []string        `json:"originalRecoveryCodes,omitempty"`
 	OriginalLimitationCodes []string        `json:"originalLimitationCodes,omitempty"`
 	TrashRef                string          `json:"trashRef"`
 	DataPresent             bool            `json:"dataPresent"`
@@ -58,6 +60,7 @@ type TrashRecord struct {
 	Status                  TrashStatus     `json:"status"`
 	TrashedAt               time.Time       `json:"trashedAt"`
 	RetentionDeadline       time.Time       `json:"retentionDeadline"`
+	DeletedAt               *time.Time      `json:"deletedAt,omitempty"`
 	UpdatedAt               time.Time       `json:"updatedAt"`
 	Limitations             []string        `json:"limitations,omitempty"`
 	Revision                uint64          `json:"revision"`
@@ -105,6 +108,9 @@ func (r TrashRecord) Validate() error {
 	if err := validateText("original source id", r.OriginalSourceID, false, ErrInvalidRecord); err != nil {
 		return err
 	}
+	if err := validateCodes("original recovery codes", r.OriginalRecoveryCodes, MaxCodes, ErrInvalidRecord); err != nil {
+		return err
+	}
 	if err := validateCodes("original limitation codes", r.OriginalLimitationCodes, MaxCodes, ErrInvalidRecord); err != nil {
 		return err
 	}
@@ -121,7 +127,7 @@ func (r TrashRecord) Validate() error {
 	if r.FileCount < 0 || r.FileCount > MaxFiles || r.TotalBytes < 0 || r.TotalBytes > MaxTotalBytes {
 		return fmt.Errorf("%w: trash file summary is outside bounds", ErrInvalidRecord)
 	}
-	if !r.DataPresent && (r.FileCount != 0 || r.TotalBytes != 0) {
+	if !r.DataPresent && r.Status != TrashDeleted && r.Status != TrashRecoveryRequired && (r.FileCount != 0 || r.TotalBytes != 0) {
 		return fmt.Errorf("%w: metadata-only trash record contains file totals", ErrInvalidRecord)
 	}
 	if !r.Status.Valid() {
@@ -135,6 +141,18 @@ func (r TrashRecord) Validate() error {
 	}
 	if _, offset := r.RetentionDeadline.Zone(); offset != 0 {
 		return fmt.Errorf("%w: retention deadline must use UTC", ErrInvalidRecord)
+	}
+	if r.DeletedAt != nil {
+		if _, offset := r.DeletedAt.Zone(); offset != 0 {
+			return fmt.Errorf("%w: deletion timestamp must use UTC", ErrInvalidRecord)
+		}
+	}
+	if r.Status == TrashDeleted {
+		if r.DeletedAt == nil || r.DataPresent {
+			return fmt.Errorf("%w: deleted trash record requires a deletion timestamp and no live data", ErrInvalidRecord)
+		}
+	} else if r.DeletedAt != nil && r.Status != TrashRecoveryRequired {
+		return fmt.Errorf("%w: non-deleted trash record has a deletion timestamp", ErrInvalidRecord)
 	}
 	if r.UpdatedAt.IsZero() {
 		return fmt.Errorf("%w: trash update timestamp is required", ErrInvalidRecord)
