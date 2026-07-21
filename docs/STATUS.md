@@ -99,9 +99,10 @@ All M5.2 work:
    - final changed-file, non-scope, secret, path, rollback, lifecycle, confirmation, and recovery-state review passed;
    - no temporary workflow or diagnostic artifact remains in the changed-file set;
    - no PR conversation comment or inline review thread remains unresolved;
-   - Governance and the complete retained CI matrix passed on head `ac49ea8f1dd41b32c9884e823ec29e09789b8f65`;
+   - the Evidence collector keeps its declared shutdown deadline authoritative and force-closes only the bounded loopback server if Chromium retains an active request; a deterministic regression test covers this cleanup boundary;
+   - Governance and the complete retained CI matrix passed on head `74ad752d56d56f6c0350437b250172a900bb7e08`;
    - `docs/M5_2_IMPLEMENTATION_REVIEW.md` records the pre-merge verdict `READY FOR OWNER REVIEW`;
-   - PR #56 may be marked ready for review, but the owner retains the merge decision;
+   - PR #56 may be marked ready for review after the final documentation-only head remains green, but the owner retains the merge decision;
    - a dedicated M5.2 Closing Review remains mandatory after merge.
 
 ## Completed scope
@@ -170,13 +171,14 @@ The protected matrix also passed:
 - Windows and Linux real-filesystem operation tests;
 - artifact exclusion tests;
 - Phase 4 and M5.1 regression tests;
-- official adapter and browser Evidence checks;
+- official adapter and browser Evidence checks, including bounded collector shutdown;
 - exact Windows reviewed-Chromium identity, Network Evidence, tamper, artifact, and cleanup checks.
 
 ## Exact next task
 
-1. mark PR #56 ready for owner review after the final status-only head passes Governance and protected CI;
-2. owner reviews the complete PR and chooses whether to squash-merge it;
-3. do not start M5.3 or M5.4 before merge and dedicated Closing Review;
-4. after merge, create a dedicated M5.2 Closing Review against the merged main commit;
-5. only a separate documentation-only handoff may authorize the next milestone.
+1. confirm the final documentation-only head passes Governance and protected CI;
+2. mark PR #56 ready for owner review;
+3. owner reviews the complete PR and chooses whether to squash-merge it;
+4. do not start M5.3 or M5.4 before merge and dedicated Closing Review;
+5. after merge, create a dedicated M5.2 Closing Review against the merged main commit;
+6. only a separate documentation-only handoff may authorize the next milestone.
