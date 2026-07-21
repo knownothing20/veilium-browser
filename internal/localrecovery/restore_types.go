@@ -202,20 +202,20 @@ func OpenRestoreExecutor(dataRoot string, profiles *profile.Store, records *life
 		return nil, err
 	}
 	executor := &RestoreExecutor{
-		dataRoot:      root,
-		recoveryRoot:  recoveryRoot,
-		profilesRoot:  profilesRoot,
-		profiles:      profiles,
-		records:       records,
-		journal:       journal,
-		coordinator:   coordinator,
-		catalog:       catalog,
-		kernels:       kernels,
-		adapters:      adapters,
-		credentials:   credentials,
-		now:           func() time.Time { return time.Now().UTC() },
-		rename:        renamePath,
-		space:         availableBytes,
+		dataRoot:     root,
+		recoveryRoot: recoveryRoot,
+		profilesRoot: profilesRoot,
+		profiles:     profiles,
+		records:      records,
+		journal:      journal,
+		coordinator:  coordinator,
+		catalog:      catalog,
+		kernels:      kernels,
+		adapters:     adapters,
+		credentials:  credentials,
+		now:          func() time.Time { return time.Now().UTC() },
+		rename:       renamePath,
+		space:        availableBytes,
 	}
 	executor.removeStage = executor.removeOwnedRestoreStage
 	executor.removeProfile = executor.removeOwnedRestoredProfile
