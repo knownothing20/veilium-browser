@@ -6,14 +6,14 @@ Main baseline SHA: 8097422edd06a648631394ab9ff8b987b0f7c313
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
 Current milestone: M5.2 — Safe Local Recovery
-Current task: Implement Issue #54 Stage 4 on branch `agent/m5-2-safe-local-recovery`
-Current implementation stage: Stage 4 — Local lifecycle storage operations
+Current task: Implement Issue #54 Stage 5 on branch `agent/m5-2-safe-local-recovery`
+Current implementation stage: Stage 5 — Desktop/Wails API and minimum UI
 
 ## Operational rule
 
 Phase 5 remains `Active`. Product implementation is allowed only for Issue #54.
 
-M5.3 and M5.4 remain blocked until the preceding milestone merges, passes a dedicated Closing Review, and this file advances again.
+M5.3 and M5.4 remain blocked until M5.2 merges, passes a dedicated Closing Review, and this file advances again.
 
 ## Completed M5.1 handoff
 
@@ -23,13 +23,13 @@ M5.1 is complete:
 - PR #52 squash-merged as `51c469e51ec4cab4ade99efd83c2e6c26145f266`;
 - Closing Review #53 passed and closed.
 
-The M5.1 lifecycle records, operation journal, locks, blockers, cancellation state, storage inventory, startup recovery, Desktop integration, UI, tests, and documentation are the frozen foundation for M5.2.
+The M5.1 lifecycle records, operation journal, locks, blockers, cancellation state, storage inventory, startup recovery, Desktop integration, UI, tests, and documentation remain the frozen foundation for M5.2.
 
 ## Current authority
 
 Issue #54 is the single M5.2 implementation task.
 
-M5.2 may implement only bounded same-machine recovery workflows described by Issue #54 and `docs/PHASE_05_CONTRACTS.md`.
+M5.2 may implement only bounded same-machine recovery workflows described by Issue #54, `docs/PHASE_05_CONTRACTS.md`, `docs/LOCAL_RECOVERY_CONTRACTS.md`, and `docs/LOCAL_RECOVERY_DESKTOP.md`.
 
 All M5.2 work must:
 
@@ -76,44 +76,49 @@ Every development update must identify the current stage and the remaining stage
    - cancellation, snapshot tamper, target conflict, activation failure, metadata persistence failure, cleanup failure, and operation-finalization ambiguity produce truthful rollback or recovery state;
    - implementation, Windows/Linux tests, documentation, Governance, and the complete retained CI matrix passed on head `711b10d0486a63df4f9c7bf43887fdd9f1855287`.
 
-4. **Stage 4 — Local lifecycle storage operations — active**
-   - reversible archive and unarchive state transitions;
-   - recoverable trash movement into a private managed boundary;
-   - retention deadline and original managed identity preservation;
-   - restore from trash through verified atomic movement;
-   - explicit bounded permanent cleanup of trashed Profile data only;
-   - startup reconciliation and recovery-required state for interrupted moves or cleanup;
-   - no Desktop API or UI implementation.
+4. **Stage 4 — Local lifecycle storage operations — complete**
+   - reversible archive and unarchive preserve the exact origin lifecycle state;
+   - recoverable trash moves only the Profile-owned managed browser directory into a private verified boundary;
+   - retention deadline and original managed identity are preserved;
+   - restore-trash completely revalidates and atomically restores the exact original managed location and lifecycle metadata;
+   - explicit permanent cleanup requires exact Profile confirmation and removes only verified owned trash data and matching Profile metadata;
+   - startup reconciliation reports interrupted and contradictory states without moving or deleting data automatically;
+   - failure after a commit or irreversible boundary remains truthful through rollback or `recovery-required` state;
+   - Governance and the complete retained CI matrix passed on head `4e3b0c39f561e1a00cf863663739dff5f6c49753`.
 
-5. **Stage 5 — Desktop/Wails API and minimum UI — blocked**
-   - bounded preflight, progress, results, history, cancellation availability, local recovery list, recovery state, and confirmations.
+5. **Stage 5 — Desktop/Wails API and minimum UI — active**
+   - bounded local recovery state, snapshot and trash listing, snapshot detail, and Profile preflight APIs;
+   - snapshot, restore-to-new-identity, archive, unarchive, recoverable trash, restore-trash, permanent-delete, refresh, and safe-cancellation Wails actions;
+   - Desktop progress projection from the authoritative M5.1 operation journal rather than a second task system;
+   - conservative startup trash reconciliation when the Desktop recovery service initializes;
+   - legacy Wails Profile deletion routed through recoverable trash while direct metadata deletion remains fail-closed;
+   - minimum Local recovery workspace with Profile actions, verified snapshot cards, trash cards, operation progress/history, exact irreversible confirmation, and recovery-required findings;
+   - browser preview remains non-operational and no general filesystem browser is introduced;
+   - Desktop service and frontend tests are being validated against the retained protected matrix.
 
 6. **Stage 6 — Integration, documentation, protected CI, and Closing Review handoff — blocked**
-   - Windows/Linux real-filesystem and failure-injection coverage;
-   - final scope review;
+   - Windows/Linux real-filesystem and failure-injection coverage review;
+   - final scope, safety, rollback, documentation, and regression review;
    - PR readiness and owner merge decision;
    - dedicated M5.2 Closing Review after merge.
 
-Do not begin a later stage until the current stage's relevant tests pass.
+Do not begin Stage 6 until the Stage 5 implementation and retained matrix pass.
 
-## Stage 4 allowed work
+## Stage 5 allowed work
 
-Stage 4 may add only:
+Stage 5 may add only:
 
-- archive requests and results mapped to the M5.1 journal;
-- reversible lifecycle transitions between `available` or `draft` and `archived` while preserving Profile metadata and managed browser data;
-- unarchive with state, lock, timestamp, and managed-directory validation;
-- trash requests that move one stopped Profile's managed browser directory into an operation-owned private trash or quarantine boundary before authoritative metadata is changed;
-- retention deadline, original managed directory, source identity, and recovery-reference recording;
-- restore-from-trash that verifies the private source, destination vacancy, lifecycle state, Profile metadata, and atomic move before making the Profile usable again;
-- explicit permanent cleanup only for one confirmed `trashed` Profile whose data remains inside the reviewed managed trash boundary;
-- bounded cleanup that never follows links and never removes Kernel, adapter, credential, Evidence, snapshot, runtime, or unrelated data;
-- deterministic rollback or `recovery-required` state for persistence failure, move failure, partial cleanup, interruption, or contradictory state;
-- startup reconciliation for owned archive, trash, restore-trash, and permanent-cleanup artifacts;
-- idempotency, conflict, active-session, dependent-operation, cancellation, Windows/Linux real-filesystem, and failure-injection tests;
-- Stage 4 documentation.
+- bounded Desktop/Wails methods for local snapshot, restore, archive, trash, retention, irreversible confirmation, cancellation, history, and recovery state;
+- preflight that reports lifecycle, runtime, lock, inventory, and trash blockers without replacing executor-side validation;
+- progress projection from existing M5.1 operations and Stage 2–4 progress callbacks;
+- minimum UI actions and state display extending the existing design;
+- exact Profile-ID confirmation before irreversible cleanup;
+- Desktop initialization of conservative Stage 4 reconciliation;
+- Wails routing of the existing delete affordance into recoverable trash;
+- Desktop service, frontend, Wails, and integration tests;
+- Stage 5 documentation.
 
-Stage 4 must not add automatic retention cleanup, orphan deletion, multi-Profile batch operations, a general filesystem browser, Desktop APIs, or UI actions.
+Stage 5 must not add a general filesystem browser, automatic retention cleanup, orphan deletion, remote APIs, multi-Profile batch operations, templates, portable transfer, or any Provider/Evidence expansion.
 
 ## Non-scope
 
@@ -159,7 +164,7 @@ The implementation PR must also pass:
 - frontend typecheck, tests, and production build;
 - Windows and Linux Wails builds;
 - strict schema and filesystem safety fixtures;
-- persistence, staging, activation, rollback, interruption, cancellation, and storage-failure tests as each stage becomes active;
+- persistence, staging, activation, rollback, interruption, cancellation, and storage-failure tests;
 - active-session, protected-operation, conflict, and idempotency tests;
 - Windows and Linux real-filesystem operation tests for every claimed stage;
 - artifact exclusion tests;
@@ -169,8 +174,8 @@ The implementation PR must also pass:
 
 ## Exact next task
 
-1. implement Stage 4 archive and unarchive transitions first;
-2. implement recoverable trash movement, restore-trash, explicit permanent cleanup, and startup reconciliation only after archive tests pass;
-3. add active-session, conflict, idempotency, cancellation, rollback, interruption, and Windows/Linux real-filesystem tests;
-4. run Stage 4 tests and the complete retained matrix;
-5. keep Stages 5–6, M5.3, and M5.4 blocked until Stage 4 passes.
+1. complete the Stage 5 Desktop service, Wails, minimum UI, and documentation validation;
+2. run the complete retained Governance and CI matrix on the final Stage 5 head;
+3. review the final Stage 5 diff for scope, secret, path, lifecycle, confirmation, and recovery-state regressions;
+4. mark Stage 5 complete only after the retained matrix passes;
+5. keep Stage 6, M5.3, and M5.4 blocked until then.
