@@ -1,17 +1,17 @@
 # Local Recovery Contracts
 
-Status: M5.2 Stage 4 implementation and validation
+Status: M5.2 Stages 1–5 implementation and validation
 Phase: Phase 5
 Milestone: M5.2 — Safe Local Recovery
 Authority: Issue #54
 
 ## Current boundary
 
-Stages 1–4 provide versioned local recovery records, verified same-machine snapshots, restore to a new limited identity, archive/unarchive, recoverable trash/restore, explicit irreversible cleanup, and conservative trash reconciliation.
+Stages 1–5 provide versioned local recovery records, verified same-machine snapshots, restore to a new limited identity, archive/unarchive, recoverable trash/restore, explicit irreversible cleanup, conservative trash reconciliation, bounded Desktop/Wails methods, and a minimum local recovery workspace.
 
 All operations reuse the M5.1 lifecycle journal, Profile locks, active-session and dependent-operation blockers, cancellation state, item results, managed references, and recovery codes. No parallel task system is introduced.
 
-Desktop/Wails APIs and UI actions remain outside this stage. Automatic retention cleanup, cross-machine portability, templates, batch operations, remote APIs, and Provider or Evidence expansion remain prohibited.
+Automatic retention cleanup, cross-machine portability, templates, batch operations, a general filesystem browser, remote APIs, and Provider or Evidence expansion remain prohibited.
 
 ## Shared integrity rules
 
@@ -179,6 +179,27 @@ For each Trash Record it compares:
 
 Healthy `stored` and `deleted` states remain unchanged. Interrupted `pending`, `restoring`, or `cleanup-pending` records, stale locks, duplicate source/trash copies, missing Profile metadata, changed Profile definitions, unsafe paths, or contradictory tombstones become `recovery-required` and receive bounded recovery findings.
 
+## Stage 5 — Desktop/Wails API and minimum UI
+
+The Desktop boundary opens the versioned catalogs, initializes conservative trash reconciliation, and projects the existing M5.1 operation journal into bounded progress state.
+
+It exposes:
+
+- local recovery state, snapshot and trash lists, snapshot details, and Profile preflight;
+- snapshot creation and restore to a new identity;
+- archive and unarchive;
+- recoverable trash and exact restore-trash;
+- permanent deletion with exact Profile-ID confirmation;
+- refresh/reconciliation and safe cancellation requests.
+
+Preflight reports lifecycle state, managed-storage inventory, active browser state, operation locks, matching trash identity, retention metadata, and action availability. It is advisory only; every executor performs authoritative validation again before changing state.
+
+The minimum Local recovery workspace provides Profile actions, verified snapshot cards, recoverable trash cards, operation stage/file/byte progress, bounded history, safe-cancellation availability, and recovery-required findings. Browser preview mode remains read-only and disabled for mutations.
+
+The existing Wails Profile delete affordance routes eligible stopped Profiles through recoverable trash. The lower-level direct metadata deletion path remains fail-closed.
+
+Full Desktop details are recorded in `docs/LOCAL_RECOVERY_DESKTOP.md`.
+
 ## Validation coverage
 
 The retained suite covers:
@@ -196,9 +217,11 @@ The retained suite covers:
 - exact irreversible confirmation and irreversible-cleanup failure;
 - bounded audit tombstones and idempotent retry;
 - healthy and contradictory startup reconciliation;
-- Windows and Linux unit and real-filesystem behavior;
-- frontend, Wails, official adapter, Linux browser, and exact Windows reviewed-Chromium regression checks.
+- Desktop preflight, archive/unarchive, snapshot listing, trash/restore, and failed irreversible confirmation;
+- frontend typecheck, unit tests, production build, and browser-preview gating;
+- Windows and Linux unit, real-filesystem, and Wails behavior;
+- official adapter, Linux browser, and exact Windows reviewed-Chromium identity, Evidence, Network Evidence, tamper, artifact, and cleanup regressions.
 
 Issue #49 remains a separate hosted-runner reliability risk. M5.2 does not weaken Sandbox, identity, Network Evidence, tamper, artifact, or cleanup requirements.
 
-Stage 5 remains blocked until the Stage 4 implementation, documentation, Windows/Linux validation, and retained matrix pass on the same current Head.
+Stage 6 may perform only final integration, documentation, scope review, protected-CI confirmation, PR readiness, and the post-merge Closing Review handoff. M5.3 and M5.4 remain blocked.
