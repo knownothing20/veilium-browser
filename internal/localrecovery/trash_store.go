@@ -87,7 +87,7 @@ func (s *TrashStore) Create(input TrashRecord) (TrashRecord, error) {
 		return TrashRecord{}, err
 	}
 	for _, record := range s.records {
-		if record.ProfileID == input.ProfileID && record.Status != TrashRecoveryRequired {
+		if record.ProfileID == input.ProfileID {
 			return TrashRecord{}, fmt.Errorf("%w: Profile %q already has trash record %q", ErrConflict, input.ProfileID, record.TrashID)
 		}
 		if record.TrashRef == input.TrashRef {
@@ -179,7 +179,7 @@ func (s *TrashStore) load() error {
 		if _, exists := records[record.TrashID]; exists {
 			return fmt.Errorf("%w: duplicate trash id %q", ErrInvalidRecord, record.TrashID)
 		}
-		if existing, exists := profiles[record.ProfileID]; exists && record.Status != TrashRecoveryRequired {
+		if existing, exists := profiles[record.ProfileID]; exists {
 			return fmt.Errorf("%w: Profile %q has trash records %q and %q", ErrInvalidRecord, record.ProfileID, existing, record.TrashID)
 		}
 		if existing, exists := refs[record.TrashRef]; exists {
