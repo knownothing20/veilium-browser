@@ -1,15 +1,15 @@
 # M5.2 Implementation Review
 
-Status: Pre-merge implementation review
+Status: Pre-merge implementation review complete
 Phase: Phase 5
 Milestone: M5.2 — Safe Local Recovery
 Implementation issue: #54
 Implementation PR: #56
-Reviewed baseline: `8035a4ac53c1cafe85c129b1239ad9677a5f8fbc`
+Reviewed implementation head: `74ad752d56d56f6c0350437b250172a900bb7e08`
 
 ## Review purpose
 
-Confirm that M5.2 Stages 1–5 satisfy the authorized same-machine recovery scope and that the implementation may enter final owner review without beginning M5.3 or M5.4.
+Confirm that M5.2 Stages 1–6 satisfy the authorized same-machine recovery scope and that the implementation may enter owner review without beginning M5.3 or M5.4.
 
 This is not the dedicated post-merge Closing Review. That review remains required after the owner approves and merges PR #56.
 
@@ -51,7 +51,7 @@ This is not the dedicated post-merge Closing Review. That review remains require
 
 ## Platform and validation review
 
-The reviewed head passed:
+The reviewed implementation head passed:
 
 - Governance;
 - Go formatting, vet, race/unit tests, and headless builds;
@@ -65,6 +65,8 @@ The reviewed head passed:
 
 The Windows reviewed-Chromium CI package keeps its exact archive, executable, and Package Tree identities. The CI-only ACL preparation grants temporary read/execute access to restricted Chromium Sandbox identities and then re-verifies the package; it does not use `--no-sandbox`, weaken assertions, increase product trust, or change production installation behavior.
 
+The final Linux real-browser review exposed Chromium retaining a loopback collector request beyond the declared graceful-shutdown deadline. The collector now keeps the caller deadline authoritative and force-closes only its bounded loopback HTTP server after graceful shutdown expires. A deterministic active-request test covers the fallback. This changes cleanup only: it does not weaken Evidence validation, extend timeouts, accept partial submissions, or hide server-close failures.
+
 ## Scope review
 
 The final changed-file set contains only:
@@ -72,7 +74,8 @@ The final changed-file set contains only:
 - M5.2 local recovery contracts, persistence, snapshot, restore, archive, trash, reconciliation, and tests;
 - bounded Desktop/Wails integration and tests;
 - minimum frontend recovery state, actions, navigation, styling, and documentation;
-- the narrow reviewed-Chromium CI test ACL reliability correction.
+- the narrow reviewed-Chromium CI test ACL reliability correction;
+- the bounded Evidence collector shutdown correction and its regression test.
 
 It contains no workflow file change and no temporary diagnostic artifact.
 
@@ -99,6 +102,6 @@ No inline review thread, PR review, or unresolved PR conversation is present at 
 
 **READY FOR OWNER REVIEW**
 
-M5.2 Stages 1–5 are implemented and the retained protected matrix passed on the reviewed head. Stage 6 may complete documentation synchronization, repeat the protected matrix on the final documentation head, and mark PR #56 ready for review.
+M5.2 Stages 1–6 are implemented and the complete retained protected matrix passed on the reviewed implementation head. The final documentation-only head must preserve that result before PR #56 is marked ready for review.
 
 The owner must make the merge decision. After merge, a dedicated M5.2 Closing Review must verify the merged main commit before governance may advance to M5.3.
