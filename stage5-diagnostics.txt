@@ -1,0 +1,14 @@
+## go vet
+go: downloading golang.org/x/net v0.35.0
+go: downloading github.com/gorilla/websocket v1.5.3
+# github.com/knownothing20/veilium-browser/internal/desktop
+# [github.com/knownothing20/veilium-browser/internal/desktop]
+vet: internal/desktop/local_recovery_service_test.go:72:46: undefined: localrecovery.CatalogVerified
+vet_status=1
+
+## desktop local recovery tests
+# github.com/knownothing20/veilium-browser/internal/desktop [github.com/knownothing20/veilium-browser/internal/desktop.test]
+internal/desktop/local_recovery_service_test.go:72:46: undefined: localrecovery.CatalogVerified
+FAIL	github.com/knownothing20/veilium-browser/internal/desktop [build failed]
+FAIL
+test_status=1
