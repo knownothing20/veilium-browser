@@ -1,13 +1,13 @@
 # Current Project Status
 
-Last updated: 2026-07-20
+Last updated: 2026-07-21
 Application version: 0.15.0-dev
 Main baseline SHA: 8097422edd06a648631394ab9ff8b987b0f7c313
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
 Current milestone: M5.2 — Safe Local Recovery
-Current task: Implement Issue #54 Stage 3 on branch `agent/m5-2-safe-local-recovery`
-Current implementation stage: Stage 3 — Restore to new identity
+Current task: Implement Issue #54 Stage 4 on branch `agent/m5-2-safe-local-recovery`
+Current implementation stage: Stage 4 — Local lifecycle storage operations
 
 ## Operational rule
 
@@ -66,15 +66,24 @@ Every development update must identify the current stage and the remaining stage
    - cancellation, source changes, insufficient space, rename failure, cleanup failure, and catalog-finalization failure produce truthful rollback or recovery state;
    - complete retained Governance and CI matrix passed on head `361c39e8168696bfeb99266714d8b3c1a100ceaa`.
 
-3. **Stage 3 — Restore to new identity — active**
-   - strict snapshot verification and same-machine applicability checks;
-   - dependency requirement resolution to current local records without copying source IDs or secrets;
-   - new Profile ID, managed directory, and fingerprint seed only;
-   - private staging, complete copy verification, atomic activation, limited lifecycle state, and rollback;
-   - no in-place overwrite or identity-preserving restore.
+3. **Stage 3 — Restore to new identity — complete**
+   - verified snapshots are completely revalidated before restore;
+   - restore applies only to the current operating system, architecture, and same-machine scope;
+   - current Kernel and adapter records are reverified before conservative dependency matching;
+   - local IDs, executable paths, secrets, source Evidence, source Profile ID, and source fingerprint seed are not copied;
+   - each idempotent restore receives one deterministic new Profile ID, managed directory, and fingerprint seed;
+   - restored Profiles remain `draft` with explicit limitations until current validation and dependencies pass;
+   - cancellation, snapshot tamper, target conflict, activation failure, metadata persistence failure, cleanup failure, and operation-finalization ambiguity produce truthful rollback or recovery state;
+   - implementation, Windows/Linux tests, documentation, Governance, and the complete retained CI matrix passed on head `711b10d0486a63df4f9c7bf43887fdd9f1855287`.
 
-4. **Stage 4 — Local lifecycle storage operations — blocked**
-   - archive and recovery state transitions, recoverable removal state, retention state, explicit final cleanup, and startup recovery.
+4. **Stage 4 — Local lifecycle storage operations — active**
+   - reversible archive and unarchive state transitions;
+   - recoverable trash movement into a private managed boundary;
+   - retention deadline and original managed identity preservation;
+   - restore from trash through verified atomic movement;
+   - explicit bounded permanent cleanup of trashed Profile data only;
+   - startup reconciliation and recovery-required state for interrupted moves or cleanup;
+   - no Desktop API or UI implementation.
 
 5. **Stage 5 — Desktop/Wails API and minimum UI — blocked**
    - bounded preflight, progress, results, history, cancellation availability, local recovery list, recovery state, and confirmations.
@@ -87,23 +96,24 @@ Every development update must identify the current stage and the remaining stage
 
 Do not begin a later stage until the current stage's relevant tests pass.
 
-## Stage 3 allowed work
+## Stage 4 allowed work
 
-Stage 3 may add only:
+Stage 4 may add only:
 
-- restore request, preflight, progress, result, dependency-resolution, and activation records mapped to the M5.1 journal;
-- strict revalidation of a verified local snapshot manifest and every included file;
-- same-user/same-machine platform applicability checks;
-- dependency requirement matching against current local Kernel, adapter, and credential records without copying source record IDs or secret values;
-- a newly generated Profile ID, managed directory, and fingerprint seed;
-- a new Profile definition derived from the snapshot through reviewed field replacement, not source identity reuse;
-- private restore staging, bounded file copying, staged verification, atomic activation, and rollback;
-- lifecycle creation as `draft` or another conservative limited state until current dependencies and validation pass;
-- deterministic `recovery-required` state for interrupted or partially activated restore work;
-- Windows/Linux real-filesystem and injected failure tests;
-- Stage 3 documentation.
+- archive requests and results mapped to the M5.1 journal;
+- reversible lifecycle transitions between `available` or `draft` and `archived` while preserving Profile metadata and managed browser data;
+- unarchive with state, lock, timestamp, and managed-directory validation;
+- trash requests that move one stopped Profile's managed browser directory into an operation-owned private trash or quarantine boundary before authoritative metadata is changed;
+- retention deadline, original managed directory, source identity, and recovery-reference recording;
+- restore-from-trash that verifies the private source, destination vacancy, lifecycle state, Profile metadata, and atomic move before making the Profile usable again;
+- explicit permanent cleanup only for one confirmed `trashed` Profile whose data remains inside the reviewed managed trash boundary;
+- bounded cleanup that never follows links and never removes Kernel, adapter, credential, Evidence, snapshot, runtime, or unrelated data;
+- deterministic rollback or `recovery-required` state for persistence failure, move failure, partial cleanup, interruption, or contradictory state;
+- startup reconciliation for owned archive, trash, restore-trash, and permanent-cleanup artifacts;
+- idempotency, conflict, active-session, dependent-operation, cancellation, Windows/Linux real-filesystem, and failure-injection tests;
+- Stage 4 documentation.
 
-Stage 3 must not overwrite an existing Profile, reuse the source Profile ID or fingerprint seed, import secrets, create Provider trust, make source Evidence applicable, archive or move the source Profile, expose Desktop APIs, or add UI actions.
+Stage 4 must not add automatic retention cleanup, orphan deletion, multi-Profile batch operations, a general filesystem browser, Desktop APIs, or UI actions.
 
 ## Non-scope
 
@@ -159,8 +169,8 @@ The implementation PR must also pass:
 
 ## Exact next task
 
-1. implement Stage 3 restore-to-new-identity behavior only;
-2. add dependency-resolution, identity-generation, rollback, and Windows/Linux real-filesystem tests;
-3. run Stage 3 tests and the complete retained matrix;
-4. keep Stages 4–6 blocked until Stage 3 passes;
-5. keep M5.3 and M5.4 blocked.
+1. implement Stage 4 archive and unarchive transitions first;
+2. implement recoverable trash movement, restore-trash, explicit permanent cleanup, and startup reconciliation only after archive tests pass;
+3. add active-session, conflict, idempotency, cancellation, rollback, interruption, and Windows/Linux real-filesystem tests;
+4. run Stage 4 tests and the complete retained matrix;
+5. keep Stages 5–6, M5.3, and M5.4 blocked until Stage 4 passes.
