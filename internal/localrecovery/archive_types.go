@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -14,7 +15,10 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/lifecycle"
 )
 
-var ErrLifecycleStorageRecoveryRequired = errors.New("local lifecycle storage operation requires recovery")
+var (
+	ErrLifecycleStorageCancelled        = errors.New("local lifecycle storage operation cancelled")
+	ErrLifecycleStorageRecoveryRequired = errors.New("local lifecycle storage operation requires recovery")
+)
 
 type ArchiveRequest struct {
 	OperationID        string
@@ -43,11 +47,27 @@ type ArchiveResult struct {
 	Record    lifecycle.Record
 }
 
+type archiveRecordStore interface {
+	Get(string) (lifecycle.Record, error)
+	Update(lifecycle.Record) (lifecycle.Record, error)
+	AddRecoveryCode(string, string) (lifecycle.Record, bool, error)
+}
+
+type archiveJournal interface {
+	Get(string) (lifecycle.Operation, error)
+	Update(lifecycle.Operation) (lifecycle.Operation, error)
+}
+
+type archiveCoordinator interface {
+	Begin(lifecycle.Operation) (lifecycle.Operation, bool, error)
+	Finish(string, lifecycle.OperationStatus, []lifecycle.OperationItemResult, []string, []string) (lifecycle.Operation, error)
+}
+
 type ArchiveExecutor struct {
 	dataRoot    string
-	records     *lifecycle.RecordStore
-	journal     *lifecycle.Journal
-	coordinator *lifecycle.Coordinator
+	records     archiveRecordStore
+	journal     archiveJournal
+	coordinator archiveCoordinator
 	now         func() time.Time
 }
 
@@ -58,8 +78,16 @@ func OpenArchiveExecutor(dataRoot string, records *lifecycle.RecordStore, journa
 	if records == nil || journal == nil || coordinator == nil {
 		return nil, fmt.Errorf("archive operations require lifecycle records, journal, and coordinator")
 	}
+	absolute, err := filepath.Abs(dataRoot)
+	if err != nil {
+		return nil, fmt.Errorf("resolve archive data root: %w", err)
+	}
+	absolute = filepath.Clean(absolute)
+	if err := inspectRealDirectory(absolute); err != nil {
+		return nil, err
+	}
 	return &ArchiveExecutor{
-		dataRoot:    dataRoot,
+		dataRoot:    absolute,
 		records:     records,
 		journal:     journal,
 		coordinator: coordinator,
@@ -87,6 +115,9 @@ func newArchiveOperation(operationType lifecycle.OperationType, request ArchiveR
 func checkArchiveContext(ctx context.Context) error {
 	select {
 	case <-ctx.Done():
+		if errors.Is(ctx.Err(), context.Canceled) {
+			return ErrLifecycleStorageCancelled
+		}
 		return ctx.Err()
 	default:
 		return nil
@@ -104,16 +135,25 @@ func archiveOriginCode(state lifecycle.State) (string, error) {
 	}
 }
 
-func archivedOrigin(record lifecycle.Record) (lifecycle.State, error) {
-	hasAvailable := containsString(record.LimitationCodes, "archive-origin-available")
-	hasDraft := containsString(record.LimitationCodes, "archive-origin-draft")
+func archivedOrigin(record lifecycle.Record) (lifecycle.State, string, error) {
+	hasAvailable := hasLifecycleCode(record.LimitationCodes, "archive-origin-available")
+	hasDraft := hasLifecycleCode(record.LimitationCodes, "archive-origin-draft")
 	if hasAvailable == hasDraft {
-		return "", fmt.Errorf("%w: archived Profile origin is missing or contradictory", ErrLifecycleStorageRecoveryRequired)
+		return "", "", fmt.Errorf("%w: archived Profile origin is missing or contradictory", ErrLifecycleStorageRecoveryRequired)
 	}
 	if hasDraft {
-		return lifecycle.StateDraft, nil
+		return lifecycle.StateDraft, "archive-origin-draft", nil
 	}
-	return lifecycle.StateAvailable, nil
+	return lifecycle.StateAvailable, "archive-origin-available", nil
+}
+
+func hasLifecycleCode(values []string, expected string) bool {
+	for _, value := range values {
+		if value == expected {
+			return true
+		}
+	}
+	return false
 }
 
 func addLifecycleCodes(values []string, additions ...string) []string {
