@@ -22,54 +22,25 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Capture Go format diagnostics
+      - name: Capture exact Go formatting
         shell: bash
         run: |
-          set +e
           go version | tee go-format-diagnostics.log
-          gofmt -l . | tee gofmt-files.txt | tee -a go-format-diagnostics.log
-          if test -s gofmt-files.txt; then
-            exit 1
-          fi
+          cp internal/localrecovery/restore_harness_test.go restore_harness_test.go.before
+          gofmt -w internal/localrecovery/restore_harness_test.go
+          git diff -- internal/localrecovery/restore_harness_test.go > gofmt.patch
+          cp internal/localrecovery/restore_harness_test.go restore_harness_test.go.formatted
+          cat gofmt.patch | tee -a go-format-diagnostics.log
 
-      - name: Upload Go format diagnostics
+      - name: Upload exact Go formatting
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: m5-2-go-format-diagnostics
+          name: m5-2-go-format-exact
           path: |
             go-format-diagnostics.log
-            gofmt-files.txt
-          retention-days: 1
-          if-no-files-found: error
-
-  windows-unit-diagnostics:
-    name: Windows unit diagnostics
-    runs-on: windows-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Capture Windows unit diagnostics
-        shell: pwsh
-        run: |
-          go version | Tee-Object -FilePath windows-unit-diagnostics.log
-          & go test -v ./cmd/... ./internal/... 2>&1 | Tee-Object -FilePath windows-unit-diagnostics.log -Append
-          $status = $LASTEXITCODE
-          exit $status
-
-      - name: Upload Windows unit diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: m5-2-windows-unit-diagnostics
-          path: windows-unit-diagnostics.log
+            gofmt.patch
+            restore_harness_test.go.before
+            restore_harness_test.go.formatted
           retention-days: 1
           if-no-files-found: error
