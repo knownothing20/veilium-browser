@@ -1,0 +1,75 @@
+name: M5.2 Diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  go-format-diagnostics:
+    name: Go format diagnostics
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Capture Go format diagnostics
+        shell: bash
+        run: |
+          set +e
+          go version | tee go-format-diagnostics.log
+          gofmt -l . | tee gofmt-files.txt | tee -a go-format-diagnostics.log
+          if test -s gofmt-files.txt; then
+            exit 1
+          fi
+
+      - name: Upload Go format diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-2-go-format-diagnostics
+          path: |
+            go-format-diagnostics.log
+            gofmt-files.txt
+          retention-days: 1
+          if-no-files-found: error
+
+  windows-unit-diagnostics:
+    name: Windows unit diagnostics
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Capture Windows unit diagnostics
+        shell: pwsh
+        run: |
+          go version | Tee-Object -FilePath windows-unit-diagnostics.log
+          & go test -v ./cmd/... ./internal/... 2>&1 | Tee-Object -FilePath windows-unit-diagnostics.log -Append
+          $status = $LASTEXITCODE
+          exit $status
+
+      - name: Upload Windows unit diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m5-2-windows-unit-diagnostics
+          path: windows-unit-diagnostics.log
+          retention-days: 1
+          if-no-files-found: error
