@@ -6,8 +6,8 @@ Main baseline SHA: 8097422edd06a648631394ab9ff8b987b0f7c313
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
 Current milestone: M5.2 — Safe Local Recovery
-Current task: Implement Issue #54 Stage 5 on branch `agent/m5-2-safe-local-recovery`
-Current implementation stage: Stage 5 — Desktop/Wails API and minimum UI
+Current task: Complete Issue #54 Stage 6 on branch `agent/m5-2-safe-local-recovery`
+Current implementation stage: Stage 6 — Integration, documentation, protected CI, and owner-review handoff
 
 ## Operational rule
 
@@ -29,7 +29,7 @@ The M5.1 lifecycle records, operation journal, locks, blockers, cancellation sta
 
 Issue #54 is the single M5.2 implementation task.
 
-M5.2 may implement only bounded same-machine recovery workflows described by Issue #54, `docs/PHASE_05_CONTRACTS.md`, `docs/LOCAL_RECOVERY_CONTRACTS.md`, and `docs/LOCAL_RECOVERY_DESKTOP.md`.
+M5.2 may implement only bounded same-machine recovery workflows described by Issue #54, `docs/PHASE_05_CONTRACTS.md`, `docs/LOCAL_RECOVERY.md`, and `docs/LOCAL_RECOVERY_DESKTOP.md`.
 
 All M5.2 work must:
 
@@ -86,7 +86,7 @@ Every development update must identify the current stage and the remaining stage
    - failure after a commit or irreversible boundary remains truthful through rollback or `recovery-required` state;
    - Governance and the complete retained CI matrix passed on head `4e3b0c39f561e1a00cf863663739dff5f6c49753`.
 
-5. **Stage 5 — Desktop/Wails API and minimum UI — active**
+5. **Stage 5 — Desktop/Wails API and minimum UI — complete**
    - bounded local recovery state, snapshot and trash listing, snapshot detail, and Profile preflight APIs;
    - snapshot, restore-to-new-identity, archive, unarchive, recoverable trash, restore-trash, permanent-delete, refresh, and safe-cancellation Wails actions;
    - Desktop progress projection from the authoritative M5.1 operation journal rather than a second task system;
@@ -94,31 +94,30 @@ Every development update must identify the current stage and the remaining stage
    - legacy Wails Profile deletion routed through recoverable trash while direct metadata deletion remains fail-closed;
    - minimum Local recovery workspace with Profile actions, verified snapshot cards, trash cards, operation progress/history, exact irreversible confirmation, and recovery-required findings;
    - browser preview remains non-operational and no general filesystem browser is introduced;
-   - Desktop service and frontend tests are being validated against the retained protected matrix.
+   - Desktop service tests, Go formatting/vet/unit/race/build, frontend typecheck/tests/build, Windows/Linux Wails builds, official adapters, Linux browser checks, and exact Windows reviewed-Chromium checks passed on head `8035a4ac53c1cafe85c129b1239ad9677a5f8fbc`.
 
-6. **Stage 6 — Integration, documentation, protected CI, and Closing Review handoff — blocked**
-   - Windows/Linux real-filesystem and failure-injection coverage review;
-   - final scope, safety, rollback, documentation, and regression review;
-   - PR readiness and owner merge decision;
+6. **Stage 6 — Integration, documentation, protected CI, and owner-review handoff — active**
+   - final contract and Desktop documentation synchronization;
+   - final changed-file, non-scope, secret, path, rollback, lifecycle, confirmation, and recovery-state review;
+   - review-thread and temporary-artifact check;
+   - protected Governance and CI confirmation on the final documentation head;
+   - PR description and readiness update;
+   - owner merge decision;
    - dedicated M5.2 Closing Review after merge.
 
-Do not begin Stage 6 until the Stage 5 implementation and retained matrix pass.
+Do not begin M5.3 or M5.4 during Stage 6.
 
-## Stage 5 allowed work
+## Stage 6 allowed work
 
-Stage 5 may add only:
+Stage 6 may add or change only:
 
-- bounded Desktop/Wails methods for local snapshot, restore, archive, trash, retention, irreversible confirmation, cancellation, history, and recovery state;
-- preflight that reports lifecycle, runtime, lock, inventory, and trash blockers without replacing executor-side validation;
-- progress projection from existing M5.1 operations and Stage 2–4 progress callbacks;
-- minimum UI actions and state display extending the existing design;
-- exact Profile-ID confirmation before irreversible cleanup;
-- Desktop initialization of conservative Stage 4 reconciliation;
-- Wails routing of the existing delete affordance into recoverable trash;
-- Desktop service, frontend, Wails, and integration tests;
-- Stage 5 documentation.
+- implementation-status and local recovery documentation;
+- the pre-merge implementation review record;
+- PR description, review readiness, and reviewer-facing evidence;
+- corrections discovered by the final M5.2 scope, safety, or protected-CI review;
+- test-only or CI-only corrections required to preserve existing protected assertions without broadening product scope.
 
-Stage 5 must not add a general filesystem browser, automatic retention cleanup, orphan deletion, remote APIs, multi-Profile batch operations, templates, portable transfer, or any Provider/Evidence expansion.
+Stage 6 must not add new product capability, automatic retention cleanup, orphan deletion, remote APIs, multi-Profile batch operations, templates, portable transfer, or any Provider/Evidence expansion.
 
 ## Non-scope
 
@@ -172,10 +171,17 @@ The implementation PR must also pass:
 - official adapter and browser Evidence checks;
 - exact Windows reviewed-Chromium identity, Network Evidence, tamper, artifact, and cleanup checks.
 
+## Current review evidence
+
+- Stage 5 protected Governance and CI passed on `8035a4ac53c1cafe85c129b1239ad9677a5f8fbc`.
+- No PR conversation comment or inline review thread is currently unresolved.
+- The final changed-file list contains no workflow file and no temporary diagnostic artifact.
+- `docs/M5_2_IMPLEMENTATION_REVIEW.md` records the pre-merge functional, safety, privacy, platform, and non-scope review.
+
 ## Exact next task
 
-1. complete the Stage 5 Desktop service, Wails, minimum UI, and documentation validation;
-2. run the complete retained Governance and CI matrix on the final Stage 5 head;
-3. review the final Stage 5 diff for scope, secret, path, lifecycle, confirmation, and recovery-state regressions;
-4. mark Stage 5 complete only after the retained matrix passes;
-5. keep Stage 6, M5.3, and M5.4 blocked until then.
+1. run Governance and the complete retained CI matrix on the final Stage 6 documentation head;
+2. confirm the PR diff and review state remain clean;
+3. mark Stage 6 complete and PR #56 ready for owner review;
+4. do not merge without the owner decision;
+5. after merge, create and perform the dedicated M5.2 Closing Review before any M5.3 handoff.
