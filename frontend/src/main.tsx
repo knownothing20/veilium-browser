@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { MultiProfileDock } from './components/MultiProfileDock'
 import './styles.css'
 import './kernel.css'
 import './runtime.css'
@@ -10,5 +11,6 @@ import './evidence.css'
 import './adapter.css'
 import './lifecycle.css'
 import './localRecovery.css'
+import './multiProfile.css'
 
-createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)
+createRoot(document.getElementById('root')!).render(<StrictMode><App /><MultiProfileDock /></StrictMode>)

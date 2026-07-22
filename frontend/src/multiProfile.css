@@ -1,0 +1,66 @@
+.multi-profile-dock-button {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 80;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: var(--accent, #6d5dfc);
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(20, 18, 48, 0.24);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.multi-profile-dock {
+  position: fixed;
+  inset: 24px 24px 84px auto;
+  z-index: 70;
+  width: min(760px, calc(100vw - 48px));
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--border, rgba(120, 120, 140, 0.24));
+  border-radius: 20px;
+  background: var(--surface, #fff);
+  box-shadow: 0 24px 70px rgba(20, 18, 48, 0.28);
+}
+
+.multi-profile-dock-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.multi-profile-dock-header h1 {
+  margin: 4px 0;
+  font-size: 24px;
+}
+
+.multi-profile-dock-header p {
+  margin: 0;
+}
+
+.multi-profile-dock .recovery-section {
+  margin: 0;
+  box-shadow: none;
+}
+
+@media (max-width: 720px) {
+  .multi-profile-dock {
+    inset: 12px 12px 76px;
+    width: auto;
+  }
+
+  .multi-profile-dock-button {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .multi-profile-dock-header {
+    flex-direction: column;
+  }
+}
