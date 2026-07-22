@@ -18,6 +18,7 @@ export function PortabilityWorkspace({ data, onRefresh }: { data: RecoveryWorksp
   const [kernelId, setKernelId] = useState('')
   const [adapterId, setAdapterId] = useState('')
   const [credentialId, setCredentialId] = useState('')
+  const [templateCredentialId, setTemplateCredentialId] = useState('')
   const [templates, setTemplates] = useState<PortableTemplate[]>([])
   const [templateName, setTemplateName] = useState('')
   const [busy, setBusy] = useState('')
@@ -25,6 +26,7 @@ export function PortabilityWorkspace({ data, onRefresh }: { data: RecoveryWorksp
   const [notice, setNotice] = useState('')
 
   const selectedProfile = data.profiles.find((item) => item.id === profileId)
+  const credentialTemplateCount = templates.filter((item) => item.payload.credentialRequired).length
 
   const loadTemplates = async () => {
     try { setTemplates(await portableProfileAPI.templates()) }
@@ -35,6 +37,9 @@ export function PortabilityWorkspace({ data, onRefresh }: { data: RecoveryWorksp
   useEffect(() => {
     if (!profileId && data.profiles[0]) setProfileId(data.profiles[0].id)
   }, [data.profiles, profileId])
+  useEffect(() => {
+    if (templateCredentialId && !data.credentials.some((item) => item.id === templateCredentialId)) setTemplateCredentialId('')
+  }, [data.credentials, templateCredentialId])
 
   const run = async (key: string, action: () => Promise<void>) => {
     setBusy(key)
@@ -63,7 +68,7 @@ export function PortabilityWorkspace({ data, onRefresh }: { data: RecoveryWorksp
     setIdentityMode(next.artifact.payload.identityMode || 'new-identity')
     setKernelId(next.kernelMatches[0]?.id || '')
     setAdapterId(next.adapterMatches[0]?.id || '')
-    setCredentialId(next.credentialRequired ? data.credentials[0]?.id || '' : '')
+    setCredentialId('')
   })
 
   const importProfile = () => run('import', async () => {
@@ -109,8 +114,10 @@ export function PortabilityWorkspace({ data, onRefresh }: { data: RecoveryWorksp
       && item.sha256.toLowerCase() === template.payload.adapter?.sha256.toLowerCase()
       && item.sizeBytes === template.payload.adapter?.sizeBytes) : undefined
     if (template.payload.adapter && !matchedAdapter) throw new Error('No verified local proxy adapter matches this template.')
-    const selectedCredential = template.payload.credentialRequired ? data.credentials[0] : undefined
-    if (template.payload.credentialRequired && !selectedCredential) throw new Error('Create a local vault credential before applying this template.')
+    const selectedCredential = template.payload.credentialRequired
+      ? data.credentials.find((item) => item.id === templateCredentialId)
+      : undefined
+    if (template.payload.credentialRequired && !selectedCredential) throw new Error('Select a local vault credential before applying this template.')
     const result = await portableProfileAPI.applyTemplate({
       templateId: template.id,
       name: `${template.payload.name} from template`,
@@ -169,12 +176,13 @@ export function PortabilityWorkspace({ data, onRefresh }: { data: RecoveryWorksp
       <input value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Template name" />
       <button className="button primary" disabled={!nativeMode || !selectedProfile || !templateName.trim() || Boolean(busy)} onClick={() => void createTemplate()}>{busy === 'template-create' ? 'Creating…' : 'Create from Profile'}</button>
     </div>
+    {credentialTemplateCount > 0 && <label>Credential for templates that require a route secret<select value={templateCredentialId} onChange={(event) => setTemplateCredentialId(event.target.value)}><option value="">Select local credential when applying</option>{data.credentials.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.username}</option>)}</select></label>}
     <div className="recovery-card-grid">
       {templates.length === 0 ? <div className="lifecycle-empty">No portable templates have been created.</div> : templates.map((template) => <article className="recovery-card" key={template.id}>
         <div className="recovery-card-head"><strong>{template.name}</strong><span className="lifecycle-operation-status passed">new identity</span></div>
         <code>{template.id}</code>
-        <dl><div><dt>Profile defaults</dt><dd>{template.payload.name}</dd></div><div><dt>Kernel requirement</dt><dd>{template.payload.kernel.provider} · {template.payload.kernel.version}</dd></div><div><dt>Route</dt><dd>{template.payload.proxyUrl || 'Direct'}</dd></div></dl>
-        <div className="recovery-card-actions"><button className="button primary" disabled={!nativeMode || Boolean(busy)} onClick={() => void applyTemplate(template)}>{busy === `template-apply-${template.id}` ? 'Applying…' : 'Create Profile'}</button><button className="button secondary danger-text" disabled={!nativeMode || Boolean(busy)} onClick={() => void deleteTemplate(template)}>{busy === `template-delete-${template.id}` ? 'Deleting…' : 'Delete'}</button></div>
+        <dl><div><dt>Profile defaults</dt><dd>{template.payload.name}</dd></div><div><dt>Kernel requirement</dt><dd>{template.payload.kernel.provider} · {template.payload.kernel.version}</dd></div><div><dt>Route</dt><dd>{template.payload.proxyUrl || 'Direct'}</dd></div><div><dt>Credential</dt><dd>{template.payload.credentialRequired ? 'Explicit local selection required' : 'Not required'}</dd></div></dl>
+        <div className="recovery-card-actions"><button className="button primary" disabled={!nativeMode || Boolean(busy) || (template.payload.credentialRequired && !templateCredentialId)} onClick={() => void applyTemplate(template)}>{busy === `template-apply-${template.id}` ? 'Applying…' : 'Create Profile'}</button><button className="button secondary danger-text" disabled={!nativeMode || Boolean(busy)} onClick={() => void deleteTemplate(template)}>{busy === `template-delete-${template.id}` ? 'Deleting…' : 'Delete'}</button></div>
       </article>)}
     </div>
   </section>
