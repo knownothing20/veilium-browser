@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/knownothing20/veilium-browser/internal/desktop"
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 func (a *DesktopApp) BulkUpdateProfileMetadata(request desktop.BulkMetadataUpdateRequest) (desktop.BulkMetadataUpdateResult, error) {
@@ -35,4 +36,16 @@ func (a *DesktopApp) ReviewStorageManagement() (desktop.StorageManagementReview,
 	ctx, cancel := context.WithTimeout(a.runtimeContext(), 30*time.Second)
 	defer cancel()
 	return a.service.ReviewStorageManagement(ctx)
+}
+
+func (a *DesktopApp) PickOperationReportFile(operationID string) (string, error) {
+	name := portableFilename(operationID)
+	return wailsruntime.SaveFileDialog(a.runtimeContext(), wailsruntime.SaveDialogOptions{
+		Title:           "Export Veilium operation report",
+		DefaultFilename: name + ".veilium-operation-report.json",
+	})
+}
+
+func (a *DesktopApp) ExportLifecycleOperationReport(request desktop.OperationReportExportRequest) (desktop.OperationReportExportResult, error) {
+	return a.service.ExportLifecycleOperationReport(request)
 }

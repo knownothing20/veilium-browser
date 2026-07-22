@@ -68,6 +68,20 @@ The fixed selection accepts only stopped Profiles without a lifecycle lock.
 
 Bulk start, scheduling, proxy rotation, and unattended automation are not included.
 
+## Operation history and redacted reports
+
+The **Phase 5 operation history** is projected directly from the authoritative M5.1 lifecycle journal. Each row shows the fixed Profile selection, current stage, terminal or running status, per-item outcome counts, and whether safe cancellation is available.
+
+Use **Export redacted report** to save a point-in-time `.veilium-operation-report.json` file for one operation. The report:
+
+- includes the operation type, selected Profile IDs, status, stage, timestamps, item outcomes, progress totals, limitations, recovery actions, application version, and platform;
+- includes a deterministic SHA-256 over the report payload so later edits are detectable;
+- excludes the idempotency key, local staging and quarantine references, browser contents, credential values, proxy secrets, runtime logs, and Evidence payloads;
+- replaces absolute or path-like output and recovery references with a redacted marker;
+- never overwrites an existing destination file.
+
+An operation report is diagnostic information only. It is not a portable Profile, browser-data backup, health certificate, Provider-trust record, compatibility proof, or Evidence export. A report exported while an operation is still running is a point-in-time snapshot and may differ from the final journal state.
+
 ## Storage inventory and manual plans
 
 The storage view counts opaque managed Profile files and reports missing, incomplete, orphaned, or unsafe entries. It also shows verified snapshot and recoverable-trash totals.

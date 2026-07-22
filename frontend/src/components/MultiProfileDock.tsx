@@ -6,6 +6,7 @@ import {
   type LifecycleOperation,
 } from '../lifecycle'
 import { backend } from '../lib/backend'
+import { multiProfileAPI, type OperationReportExportResult } from '../multiProfile'
 import { BulkLifecycleWorkspace } from './BulkLifecycleWorkspace'
 import { MultiProfileWorkspace } from './MultiProfileWorkspace'
 import { TemplateMaintenanceWorkspace } from './TemplateMaintenanceWorkspace'
@@ -51,6 +52,8 @@ export function MultiProfileDock() {
   const [data, setData] = useState<LifecycleBootstrap>(emptyData)
   const [loading, setLoading] = useState(false)
   const [cancelling, setCancelling] = useState('')
+  const [exportingReport, setExportingReport] = useState('')
+  const [reportResult, setReportResult] = useState<OperationReportExportResult>()
   const [error, setError] = useState('')
   const refreshing = useRef(false)
 
@@ -99,6 +102,29 @@ export function MultiProfileDock() {
     }
   }
 
+  const exportOperationReport = async (operation: LifecycleOperation) => {
+    if (!multiProfileAPI.isNative()) {
+      setError('Operation report export requires the Wails desktop runtime.')
+      return
+    }
+    setExportingReport(operation.id)
+    setReportResult(undefined)
+    setError('')
+    try {
+      const destinationPath = await multiProfileAPI.pickOperationReportFile(operation.id)
+      if (!destinationPath) return
+      const result = await multiProfileAPI.exportOperationReport({
+        operationId: operation.id,
+        destinationPath,
+      })
+      setReportResult(result)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason))
+    } finally {
+      setExportingReport('')
+    }
+  }
+
   return <>
     <button className="multi-profile-dock-button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
       {open ? 'Close Phase 5 tools' : 'Multi-Profile tools'}
@@ -109,11 +135,14 @@ export function MultiProfileDock() {
         <button className="button secondary" disabled={loading} onClick={() => void refresh()}>{loading ? 'Refreshing…' : 'Refresh data'}</button>
       </div>
       {error && <div className="form-error">{error}</div>}
+      {reportResult && <div className="info-banner"><strong>Operation report saved</strong><p>{reportResult.path}</p><code>{reportResult.payloadSha256}</code></div>}
       <Phase5OperationJournal
         data={data}
         operations={operations}
         cancelling={cancelling}
+        exportingReport={exportingReport}
         onCancel={cancelOperation}
+        onExportReport={exportOperationReport}
       />
       <BulkLifecycleWorkspace data={data} onRefresh={refresh} />
       <MultiProfileWorkspace data={data} onRefresh={refresh} />
@@ -126,16 +155,21 @@ function Phase5OperationJournal({
   data,
   operations,
   cancelling,
+  exportingReport,
   onCancel,
+  onExportReport,
 }: {
   data: LifecycleBootstrap
   operations: LifecycleOperation[]
   cancelling: string
+  exportingReport: string
   onCancel: (operation: LifecycleOperation) => Promise<void>
+  onExportReport: (operation: LifecycleOperation) => Promise<void>
 }) {
+  const nativeMode = multiProfileAPI.isNative()
   return <section className="panel recovery-section">
     <div className="panel-heading">
-      <div><span className="eyebrow">Authoritative M5.1 journal</span><h2>Phase 5 operation history</h2><p>Live status, fixed Profile selection, per-item outcome, safe cancellation, and recovery state from the existing lifecycle journal.</p></div>
+      <div><span className="eyebrow">Authoritative M5.1 journal</span><h2>Phase 5 operation history</h2><p>Live status, fixed Profile selection, per-item outcome, safe cancellation, recovery state, and redacted local report export from the existing lifecycle journal.</p></div>
       <span className="lifecycle-operation-status running">{operations.length} recent</span>
     </div>
     {operations.length === 0 ? <div className="lifecycle-empty">No portability, template, bulk, or recoverable lifecycle operation has been recorded.</div> : <ul className="lifecycle-operations">
@@ -155,9 +189,16 @@ function Phase5OperationJournal({
           </div>
           <div className="toolbar">
             <small>{cancellationAvailability(operation)}</small>
+            <button
+              className="button secondary"
+              disabled={!nativeMode || Boolean(cancelling) || Boolean(exportingReport)}
+              onClick={() => void onExportReport(operation)}
+            >
+              {exportingReport === operation.id ? 'Exporting report…' : 'Export redacted report'}
+            </button>
             {(cancellationAllowed || operation.cancellationRequested) && <button
               className="button secondary"
-              disabled={!cancellationAllowed || Boolean(cancelling)}
+              disabled={!cancellationAllowed || Boolean(cancelling) || Boolean(exportingReport)}
               onClick={() => void onCancel(operation)}
             >
               {operation.cancellationRequested

@@ -113,6 +113,19 @@ export interface StorageManagementReview {
   repairPlans: StorageRepairPlan[]
 }
 
+export interface OperationReportExportRequest {
+  operationId: string
+  destinationPath: string
+}
+
+export interface OperationReportExportResult {
+  operationId: string
+  path: string
+  payloadSha256: string
+  generatedAt: string
+  status: LifecycleOperationStatus
+}
+
 type NativeMultiProfileAPI = {
   BulkUpdateProfileMetadata(request: BulkMetadataUpdateRequest): Promise<BulkMetadataUpdateResult>
   BulkRefreshProfileHealth(request: BulkHealthRefreshRequest): Promise<BulkHealthRefreshResult>
@@ -121,6 +134,8 @@ type NativeMultiProfileAPI = {
   BulkExportPortableProfiles(request: BulkPortableExportRequest): Promise<BulkPortableExportResult>
   RefreshStorageManagement(): Promise<StorageManagementState>
   ReviewStorageManagement(): Promise<StorageManagementReview>
+  PickOperationReportFile(operationId: string): Promise<string>
+  ExportLifecycleOperationReport(request: OperationReportExportRequest): Promise<OperationReportExportResult>
 }
 
 function native(): NativeMultiProfileAPI | undefined {
@@ -147,4 +162,6 @@ export const multiProfileAPI = {
   exportProfiles: (request: BulkPortableExportRequest) => requireNative().BulkExportPortableProfiles(request),
   refreshStorage: () => requireNative().RefreshStorageManagement(),
   reviewStorage: () => requireNative().ReviewStorageManagement(),
+  pickOperationReportFile: (operationId: string) => requireNative().PickOperationReportFile(operationId),
+  exportOperationReport: (request: OperationReportExportRequest) => requireNative().ExportLifecycleOperationReport(request),
 }
