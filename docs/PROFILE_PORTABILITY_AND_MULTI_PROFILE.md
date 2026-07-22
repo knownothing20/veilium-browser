@@ -2,7 +2,7 @@
 
 Status: Phase 5 implementation in PR #59
 
-This guide describes the user-visible M5.3 and M5.4 desktop workflows. These features manage Profile definitions and metadata only. They do not export browser data, cookies, credentials, binaries, runtime logs, or Evidence.
+This guide describes the user-visible M5.3 and M5.4 desktop workflows. These features manage Profile definitions and lifecycle metadata only. They do not export browser data, cookies, credentials, binaries, runtime logs, or Evidence.
 
 ## Portable Profile export
 
@@ -39,6 +39,17 @@ Import never overwrites an existing Profile. The new Profile remains `draft` unt
 
 A template stores reusable non-secret defaults without a reusable fingerprint seed. Applying a template always creates a new Profile ID, managed directory, and seed. The result remains `draft` until current local validation passes. Templates never contain browser data or credential values.
 
+## Bounded lifecycle actions
+
+The **Bulk archive, unarchive, or trash** surface accepts a fixed set of stopped, unlocked Profiles and executes one authoritative M5.1/M5.2 lifecycle operation for each item.
+
+- **Archive** accepts `available` and `draft` Profiles and preserves the exact origin state for later unarchive.
+- **Unarchive** accepts only `archived` Profiles and restores the recorded `available` or `draft` origin state.
+- **Move to recoverable trash** accepts `available`, `draft`, or `archived` Profiles, requires an exact confirmation phrase, and retains the browser data under Veilium private trash with a bounded retention deadline.
+- Bulk permanent deletion is intentionally unavailable. Permanent deletion remains an explicit single-Profile action with exact confirmation.
+- Every child operation keeps its own journal record, lock, cancellation boundary, result, and recovery status. A repeated request reuses the same deterministic child operations.
+- Cancellation stops the next Profile from starting. A partial selection remains a truthful partial result rather than being reported as complete.
+
 ## Multi-Profile metadata and health
 
 The fixed selection accepts only stopped Profiles without a lifecycle lock.
@@ -70,3 +81,4 @@ Veilium does not automatically restore, move, quarantine, repair, or delete anyt
 - Keep credential values in the destination operating-system vault.
 - Review every preserve-identity warning.
 - Use Local recovery snapshot and trash functions for same-machine recovery, not portable definitions.
+- Use bulk trash only when every selected Profile is intended to leave ordinary use; restore and permanent deletion remain deliberate follow-up actions.

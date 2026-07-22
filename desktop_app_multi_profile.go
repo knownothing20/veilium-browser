@@ -15,6 +15,12 @@ func (a *DesktopApp) BulkRefreshProfileHealth(request desktop.BulkHealthRefreshR
 	return a.service.BulkRefreshProfileHealth(request)
 }
 
+func (a *DesktopApp) BulkApplyProfileLifecycle(request desktop.BulkLifecycleRequest) (desktop.BulkLifecycleResult, error) {
+	ctx, cancel := context.WithTimeout(a.runtimeContext(), 2*time.Hour)
+	defer cancel()
+	return a.service.BulkApplyProfileLifecycle(ctx, request)
+}
+
 func (a *DesktopApp) BulkExportPortableProfiles(request desktop.BulkPortableExportRequest) (desktop.BulkPortableExportResult, error) {
 	return a.service.BulkExportPortableProfiles(request)
 }

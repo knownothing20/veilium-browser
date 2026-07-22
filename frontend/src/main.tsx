@@ -12,5 +12,6 @@ import './adapter.css'
 import './lifecycle.css'
 import './localRecovery.css'
 import './multiProfile.css'
+import './bulkLifecycle.css'
 
 createRoot(document.getElementById('root')!).render(<StrictMode><App /><MultiProfileDock /></StrictMode>)

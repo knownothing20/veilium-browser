@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { normalizeLifecycleBootstrap, type LifecycleBootstrap } from '../lifecycle'
 import { backend } from '../lib/backend'
+import { BulkLifecycleWorkspace } from './BulkLifecycleWorkspace'
 import { MultiProfileWorkspace } from './MultiProfileWorkspace'
 
 const emptyData: LifecycleBootstrap = normalizeLifecycleBootstrap({
@@ -46,10 +47,11 @@ export function MultiProfileDock() {
     </button>
     {open && <aside className="multi-profile-dock" aria-label="Multi-Profile and storage tools">
       <div className="multi-profile-dock-header">
-        <div><span className="eyebrow">Phase 5 workspace</span><h1>Multi-Profile tools</h1><p>Bounded metadata changes and read-only storage inventory.</p></div>
+        <div><span className="eyebrow">Phase 5 workspace</span><h1>Multi-Profile tools</h1><p>Bounded metadata, recoverable lifecycle, portability, health, and storage review.</p></div>
         <button className="button secondary" disabled={loading} onClick={() => void refresh()}>{loading ? 'Refreshing…' : 'Refresh data'}</button>
       </div>
       {error && <div className="form-error">{error}</div>}
+      <BulkLifecycleWorkspace data={data} onRefresh={refresh} />
       <MultiProfileWorkspace data={data} onRefresh={refresh} />
     </aside>}
   </>

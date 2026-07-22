@@ -1,0 +1,99 @@
+.bulk-lifecycle-workspace {
+  margin: 0 0 18px;
+  padding: 18px;
+  border: 1px solid var(--border, rgba(120, 120, 140, 0.24));
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface, #fff) 96%, #6d5dfc 4%);
+}
+
+.bulk-lifecycle-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.bulk-lifecycle-controls .toolbar {
+  grid-column: 1 / -1;
+}
+
+.bulk-lifecycle-list,
+.bulk-lifecycle-results {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.bulk-lifecycle-row,
+.bulk-lifecycle-results article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--border, rgba(120, 120, 140, 0.24));
+  border-radius: 12px;
+  background: var(--surface, #fff);
+}
+
+.bulk-lifecycle-row.disabled {
+  opacity: 0.58;
+}
+
+.bulk-lifecycle-row > div,
+.bulk-lifecycle-results article > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.bulk-lifecycle-row span,
+.bulk-lifecycle-results small,
+.bulk-lifecycle-results article > div span {
+  overflow: hidden;
+  color: var(--muted, #6c6a78);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-lifecycle-results article.succeeded {
+  border-color: rgba(34, 156, 102, 0.34);
+}
+
+.bulk-lifecycle-results article.failed,
+.bulk-lifecycle-results article.recovery-required {
+  border-color: rgba(203, 65, 77, 0.38);
+}
+
+.bulk-lifecycle-results article.skipped,
+.bulk-lifecycle-results article.cancelled {
+  border-color: rgba(198, 139, 24, 0.38);
+}
+
+.bulk-trash-confirmation {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.bulk-trash-confirmation code {
+  font-weight: 800;
+}
+
+@media (max-width: 720px) {
+  .bulk-lifecycle-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .bulk-lifecycle-row,
+  .bulk-lifecycle-results article {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .bulk-lifecycle-row > .lifecycle-pill,
+  .bulk-lifecycle-results article > .lifecycle-operation-status {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

@@ -6,7 +6,7 @@ Main baseline SHA: ffcf25d94cd821c82f07cc49fc61130d3e02fcdb
 Current phase: Phase 5
 Current milestone: Consolidated M5.3 and M5.4 product completion
 Current task: Complete and validate PR #59 on `agent/handoff-m5-3`
-Current implementation stage: M5.3 product scope and the approved M5.4 metadata, bulk export, health, storage inventory, and manual repair-plan surfaces are implemented online and awaiting executable validation
+Current implementation stage: M5.3 product scope and the approved M5.4 metadata, recoverable lifecycle, bulk export, health, storage inventory, and manual repair-plan surfaces are implemented online and awaiting executable validation
 
 ## Operational rule
 
@@ -50,6 +50,18 @@ M5.2 is merged and frozen. It provides verified same-machine snapshots, restore 
 - cancellation checks before each next Profile;
 - truthful succeeded, skipped, cancelled, failed, partial, and idempotently reused item results;
 - no bulk start, scheduling, proxy rotation, browser-data mutation, or silent inclusion of newly created Profiles.
+
+### Bounded recoverable lifecycle actions
+
+- fixed deterministic Profile selection for archive, unarchive, or recoverable trash;
+- stopped-runtime, lifecycle-lock, Profile existence, and action-specific state preflight before each new child operation;
+- one existing M5.1/M5.2 journaled operation per selected Profile rather than a parallel bulk task system;
+- deterministic child idempotency so repeated bulk requests reuse the same authoritative item operations;
+- archive preserves the exact available/draft origin state and unarchive restores it;
+- bulk trash requires the exact fixed-selection confirmation phrase and supports only recoverable trash with bounded retention;
+- bulk permanent deletion remains prohibited;
+- cancellation prevents the next child operation from starting and aggregate completed/partial/cancelled/failed status is derived from item results;
+- visible Desktop action selection, eligibility, confirmation, and per-Profile result cards.
 
 ### Bounded multi-Profile portable export
 
@@ -97,6 +109,7 @@ M5.2 is merged and frozen. It provides verified same-machine snapshots, restore 
 - local IDs and absolute paths are not portable identities;
 - imported metadata cannot manufacture Provider trust, capability support, compatibility, health, or Evidence;
 - destructive work remains serialized per Profile and recoverable operations preserve the only healthy copy until verification;
+- bulk lifecycle exposes recoverable trash only and never bulk permanent deletion;
 - bulk export never overwrites an existing file and never stores destination paths in lifecycle item results;
 - health refresh is observational and cannot silently mutate a Profile, promote trust, or create Evidence;
 - storage inventory and repair plans are observational and never authorize automatic mutation;
@@ -104,6 +117,6 @@ M5.2 is merged and frozen. It provides verified same-machine snapshots, restore 
 
 ## Validation status
 
-The current online implementation has received static review for Go syntax and formatting, JSON field consistency, Wails method naming, TypeScript interface compatibility, lifecycle lock ownership, deterministic selection, idempotency, cancellation checkpoints, per-item result derivation, portable artifact identity, destination containment, health-check persistence, and non-destructive storage behavior.
+The current online implementation has received static review for Go syntax and formatting, JSON field consistency, Wails method naming, TypeScript interface compatibility, lifecycle lock ownership, deterministic selection, child-operation idempotency, cancellation checkpoints, per-item result derivation, portable artifact identity, destination containment, health-check persistence, recoverable-only lifecycle behavior, and non-destructive storage behavior.
 
 No GitHub Actions run was requested. The branch has not yet been fully compiled, executed, packaged, or manually smoke-tested in this connector environment, and PR #59 is not ready to merge until that validation is performed.
