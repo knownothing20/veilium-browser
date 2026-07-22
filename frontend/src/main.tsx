@@ -9,5 +9,6 @@ import './diagnostics.css'
 import './evidence.css'
 import './adapter.css'
 import './lifecycle.css'
+import './localRecovery.css'
 
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>)

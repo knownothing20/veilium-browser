@@ -127,8 +127,16 @@ func (c *Collector) Close(ctx context.Context) error {
 	c.closed = true
 	c.mu.Unlock()
 	if err := c.server.Shutdown(ctx); err != nil {
+		// Chromium may retain a loopback keep-alive request after submitting the
+		// one-shot Evidence payload. The caller's deadline remains authoritative:
+		// force-close the bounded local server rather than leaking it or extending
+		// the shutdown window. This does not affect the already validated payload.
+		closeErr := c.server.Close()
+		if closeErr == nil || errors.Is(closeErr, http.ErrServerClosed) || errors.Is(closeErr, net.ErrClosed) {
+			return nil
+		}
 		_ = c.listener.Close()
-		return fmt.Errorf("stop evidence collector: %w", err)
+		return fmt.Errorf("stop evidence collector: graceful shutdown: %v; forced close: %w", err, closeErr)
 	}
 	return nil
 }

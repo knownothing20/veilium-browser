@@ -1,0 +1,49 @@
+.recovery-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 18px; overflow: hidden; background: var(--line); gap: 1px; }
+.recovery-summary-item { display: grid; min-height: 105px; padding: 17px 19px; background: #fff; gap: 7px; }
+.recovery-summary-item > span { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .45px; text-transform: uppercase; }
+.recovery-summary-item > strong { font-size: 28px; letter-spacing: -.8px; }
+.recovery-summary-item > small { color: #8992a1; font-size: 9px; }
+.recovery-summary-item.warn > strong { color: var(--warning); }
+.recovery-section { margin-bottom: 18px; overflow: hidden; }
+.recovery-profile-list, .recovery-operation-list { display: grid; }
+.recovery-row { display: grid; grid-template-columns: minmax(220px, 1.2fr) minmax(170px, .8fr) auto; align-items: center; gap: 18px; padding: 14px 18px; border-top: 1px solid var(--line); }
+.recovery-identity { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.recovery-identity > div:last-child { min-width: 0; }
+.recovery-identity strong, .recovery-identity span { display: block; }
+.recovery-identity strong { font-size: 11px; }
+.recovery-identity span { margin-top: 3px; overflow: hidden; color: var(--muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.recovery-state { display: grid; gap: 5px; }
+.recovery-state small { color: var(--muted); font-size: 8px; }
+.recovery-actions, .recovery-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.recovery-actions .button, .recovery-card-actions .button, .recovery-operation .button { min-height: 30px; padding: 7px 10px; font-size: 9px; }
+.danger-text { color: var(--danger) !important; }
+.recovery-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 0 18px 18px; }
+.recovery-card { display: grid; align-content: start; gap: 12px; padding: 15px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.recovery-card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.recovery-card-head strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.recovery-card code { overflow: hidden; padding: 6px 8px; border-radius: 6px; color: #596174; background: #f4f5f8; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.recovery-card dl { display: grid; gap: 8px; margin: 0; }
+.recovery-card dl > div { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 10px; }
+.recovery-card dt { color: var(--muted); font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.recovery-card dd { overflow: hidden; margin: 0; color: #50596b; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.recovery-operation { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(220px, 1.4fr) auto auto; align-items: center; gap: 16px; padding: 12px 18px; border-top: 1px solid var(--line); }
+.recovery-operation > div > strong, .recovery-operation > div > span, .recovery-operation > div > small { display: block; }
+.recovery-operation > div > strong { font-size: 10px; }
+.recovery-operation > div > span, .recovery-operation > div > small { margin-top: 3px; overflow: hidden; color: var(--muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.recovery-progress > div { height: 5px; overflow: hidden; border-radius: 999px; background: #eceef3; }
+.recovery-progress > div > span { display: block; height: 100%; border-radius: inherit; background: #7567d8; transition: width .2s ease; }
+.page-heading.compact { margin-bottom: 16px; }
+
+@media (max-width: 1180px) {
+  .recovery-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .recovery-row { grid-template-columns: minmax(200px, 1fr) minmax(150px, .7fr); }
+  .recovery-actions { grid-column: 1 / -1; justify-content: flex-start; }
+  .recovery-operation { grid-template-columns: minmax(0, 1fr) auto; }
+  .recovery-progress { grid-column: 1 / -1; }
+}
+
+@media (max-width: 820px) {
+  .recovery-summary, .recovery-card-grid { grid-template-columns: 1fr; }
+  .recovery-row { grid-template-columns: 1fr; }
+  .recovery-actions { grid-column: auto; }
+}

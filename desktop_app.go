@@ -23,7 +23,10 @@ type DesktopApp struct {
 }
 
 func NewDesktopApp(service *desktop.Service) *DesktopApp { return &DesktopApp{service: service} }
-func (a *DesktopApp) startup(ctx context.Context)        { a.ctx = ctx }
+func (a *DesktopApp) startup(ctx context.Context) {
+	a.ctx = ctx
+	_, _ = a.service.LocalRecoveryState()
+}
 func (a *DesktopApp) Bootstrap() desktop.Bootstrap       { return a.service.Bootstrap() }
 func (a *DesktopApp) ListProfiles() []domain.Profile     { return a.service.ListProfiles() }
 func (a *DesktopApp) ListKernels() []kernel.Record       { return a.service.ListKernels() }
@@ -44,7 +47,15 @@ func (a *DesktopApp) UpdateProfile(input domain.Profile) (domain.Profile, error)
 func (a *DesktopApp) CloneProfile(id, name string) (domain.Profile, error) {
 	return a.service.CloneProfile(id, name)
 }
-func (a *DesktopApp) DeleteProfile(id string) error { return a.service.DeleteProfile(id) }
+func (a *DesktopApp) DeleteProfile(id string) error {
+	ctx, cancel := context.WithTimeout(a.runtimeContext(), 2*time.Hour)
+	defer cancel()
+	_, err := a.service.TrashProfile(ctx, desktop.TrashProfileRequest{
+		ProfileID: id, RetentionDays: 30,
+		IdempotencyKey: "desktop-delete-" + time.Now().UTC().Format("20060102T150405.000000000"),
+	})
+	return err
+}
 func (a *DesktopApp) SaveCredential(request credential.SaveRequest) (credential.Record, error) {
 	return a.service.SaveCredential(request)
 }

@@ -67,6 +67,7 @@ export function ProfileTable({
             const lifecycle = lifecycleRecordFor(lifecycleRecords, profile.id)
             const launchAllowed = lifecycleAllowsLaunch(lifecycle)
             const editAllowed = lifecycleAllowsEdit(lifecycle)
+            const trashAllowed = nativeMode && !active && !lifecycle?.lock && Boolean(lifecycle && ['available', 'draft', 'archived'].includes(lifecycle.state))
             const lifecycleReason = lifecycle?.lock?.operationId || lifecycle?.limitationCodes?.join(' · ') || lifecycle?.recoveryCodes?.join(' · ')
             const lifecycleClass = lifecycle?.state || 'missing'
             return (
@@ -103,7 +104,7 @@ export function ProfileTable({
                     <button title={launchAllowed ? 'Review launch plan' : `Lifecycle state blocks launch plan: ${lifecycleLabel(lifecycle)}`} disabled={!launchAllowed} onClick={() => onPlan(profile)}>≡</button>
                     <button title={active ? 'Stop browser before editing' : !editAllowed ? `Lifecycle state blocks editing: ${lifecycleLabel(lifecycle)}` : 'Edit'} disabled={active || !editAllowed} onClick={() => onEdit(profile)}>✎</button>
                     <button title={launchAllowed ? 'Clone' : `Lifecycle state blocks cloning: ${lifecycleLabel(lifecycle)}`} disabled={!launchAllowed} onClick={() => onClone(profile)}>⧉</button>
-                    <button className="danger-icon" title="Trash operations are not available until M5.2" disabled onClick={() => onDelete(profile)}>×</button>
+                    <button className="danger-icon" title={trashAllowed ? 'Move to recoverable trash' : 'Lifecycle state, active browser, or lock blocks trash'} disabled={!trashAllowed} onClick={() => onDelete(profile)}>×</button>
                   </div>
                 </td>
               </tr>

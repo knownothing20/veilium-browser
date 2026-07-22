@@ -49,7 +49,7 @@ export function LifecyclePanel({
       <div className="panel-heading">
         <div>
           <h2>Profile lifecycle</h2>
-          <p>Read-only M5.1 status. No archive, trash, restore, cancellation or permanent-delete actions are enabled.</p>
+          <p>M5.2 local recovery actions are available in the Local recovery workspace; lifecycle and storage blockers remain fail-closed.</p>
         </div>
         <span className={`lifecycle-overall ${limited || locked || recovery || missing || unsafe ? 'attention' : 'clear'}`}>
           {limited || locked || recovery || missing || unsafe ? 'Attention required' : 'No lifecycle blockers'}
@@ -66,7 +66,7 @@ export function LifecyclePanel({
         <strong>{formatBytes(inventory.summary.bytes)} · {inventory.summary.files} files</strong>
         <small>{inventory.incomplete ? 'Bounded scan incomplete' : `Generated ${formatTime(inventory.generatedAt)}`}</small>
       </div>
-      <div className="lifecycle-section-title"><strong>Operation journal</strong><span>State and cancellation availability only</span></div>
+      <div className="lifecycle-section-title"><strong>Operation journal</strong><span>State, safe cancellation and recovery outcome</span></div>
       {recentOperations.length > 0 ? (
         <ul className="lifecycle-operations">
           {recentOperations.map((operation) => (
@@ -80,7 +80,7 @@ export function LifecyclePanel({
       ) : (
         <div className="lifecycle-empty compact">No lifecycle operation has been recorded.</div>
       )}
-      <div className="lifecycle-section-title"><strong>Recovery and storage findings</strong><span>Read-only startup report</span></div>
+      <div className="lifecycle-section-title"><strong>Recovery and storage findings</strong><span>Conservative startup report</span></div>
       {findings.length > 0 ? (
         <ul className="lifecycle-findings">
           {findings.map((item) => <li className={item.tone} key={item.key}><strong>{item.title}</strong><span>{item.detail}</span></li>)}
