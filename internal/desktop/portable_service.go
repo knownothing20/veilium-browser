@@ -9,13 +9,15 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/adapter"
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/kernel"
+	"github.com/knownothing20/veilium-browser/internal/lifecycle"
 	"github.com/knownothing20/veilium-browser/internal/portableprofile"
 )
 
 type PortableExportRequest struct {
-	ProfileID    string                       `json:"profileId"`
-	Destination  string                       `json:"destination"`
-	IdentityMode portableprofile.IdentityMode `json:"identityMode"`
+	ProfileID      string                       `json:"profileId"`
+	Destination    string                       `json:"destination"`
+	IdentityMode   portableprofile.IdentityMode `json:"identityMode"`
+	IdempotencyKey string                       `json:"idempotencyKey,omitempty"`
 }
 
 type PortableExportResult struct {
@@ -38,65 +40,44 @@ type PortableDependencyOption struct {
 }
 
 type PortableImportPreview struct {
-	Path               string                          `json:"path"`
-	Artifact           portableprofile.Artifact        `json:"artifact"`
-	KernelMatches      []PortableDependencyOption      `json:"kernelMatches"`
-	AdapterMatches     []PortableDependencyOption      `json:"adapterMatches"`
-	CredentialRequired bool                            `json:"credentialRequired"`
-	Warnings           []string                        `json:"warnings"`
-	Ready              bool                            `json:"ready"`
+	Path               string                     `json:"path"`
+	Artifact           portableprofile.Artifact   `json:"artifact"`
+	KernelMatches      []PortableDependencyOption `json:"kernelMatches"`
+	AdapterMatches     []PortableDependencyOption `json:"adapterMatches"`
+	CredentialRequired bool                       `json:"credentialRequired"`
+	Warnings           []string                   `json:"warnings"`
+	Ready              bool                       `json:"ready"`
 }
 
 type PortableImportRequest struct {
-	Path         string                       `json:"path"`
-	Name         string                       `json:"name"`
-	IdentityMode portableprofile.IdentityMode `json:"identityMode"`
-	KernelID     string                       `json:"kernelId"`
-	AdapterID    string                       `json:"adapterId"`
-	CredentialID string                       `json:"credentialId"`
+	Path           string                       `json:"path"`
+	Name           string                       `json:"name"`
+	IdentityMode   portableprofile.IdentityMode `json:"identityMode"`
+	KernelID       string                       `json:"kernelId"`
+	AdapterID      string                       `json:"adapterId"`
+	CredentialID   string                       `json:"credentialId"`
+	IdempotencyKey string                       `json:"idempotencyKey,omitempty"`
 }
 
 type PortableImportResult struct {
-	Profile      domain.Profile                `json:"profile"`
+	Profile      domain.Profile               `json:"profile"`
 	IdentityMode portableprofile.IdentityMode `json:"identityMode"`
-	Warnings     []string                      `json:"warnings"`
+	Warnings     []string                     `json:"warnings"`
 }
 
 type PortableTemplateCreateRequest struct {
-	ProfileID string `json:"profileId"`
-	Name      string `json:"name"`
+	ProfileID      string `json:"profileId"`
+	Name           string `json:"name"`
+	IdempotencyKey string `json:"idempotencyKey,omitempty"`
 }
 
 type PortableTemplateApplyRequest struct {
-	TemplateID  string `json:"templateId"`
-	Name        string `json:"name"`
-	KernelID    string `json:"kernelId"`
-	AdapterID   string `json:"adapterId"`
-	CredentialID string `json:"credentialId"`
-}
-
-func (s *Service) ExportPortableProfile(request PortableExportRequest) (PortableExportResult, error) {
-	artifact, profile, err := s.buildPortableArtifact(request.ProfileID, request.IdentityMode)
-	if err != nil {
-		return PortableExportResult{}, err
-	}
-	if err := portableprofile.Write(request.Destination, artifact); err != nil {
-		return PortableExportResult{}, err
-	}
-	path := strings.TrimSpace(request.Destination)
-	if !strings.HasSuffix(strings.ToLower(path), ".json") {
-		path += ".json"
-	}
-	return PortableExportResult{
-		Path:          path,
-		ProfileID:     profile.ID,
-		ProfileName:   profile.Name,
-		IdentityMode:  artifact.Payload.IdentityMode,
-		PayloadSHA256: artifact.PayloadSHA256,
-		ExportedAt:    artifact.ExportedAt,
-		Exclusions:    append([]string(nil), artifact.Exclusions...),
-		Limitations:   append([]string(nil), artifact.Limitations...),
-	}, nil
+	TemplateID     string `json:"templateId"`
+	Name           string `json:"name"`
+	KernelID       string `json:"kernelId"`
+	AdapterID      string `json:"adapterId"`
+	CredentialID   string `json:"credentialId"`
+	IdempotencyKey string `json:"idempotencyKey,omitempty"`
 }
 
 func (s *Service) PreviewPortableImport(path string) (PortableImportPreview, error) {
@@ -130,60 +111,12 @@ func (s *Service) PreviewPortableImport(path string) (PortableImportPreview, err
 	return preview, nil
 }
 
-func (s *Service) ImportPortableProfile(request PortableImportRequest) (PortableImportResult, error) {
-	artifact, err := portableprofile.Read(request.Path)
-	if err != nil {
-		return PortableImportResult{}, err
-	}
-	mode := request.IdentityMode
-	if mode == "" {
-		mode = portableprofile.IdentityNew
-	}
-	profileInput, warnings, err := s.profileFromPortablePayload(artifact.Payload, request.Name, mode, request.KernelID, request.AdapterID, request.CredentialID)
-	if err != nil {
-		return PortableImportResult{}, err
-	}
-	created, err := s.CreateProfile(profileInput)
-	if err != nil {
-		return PortableImportResult{}, fmt.Errorf("create imported Profile: %w", err)
-	}
-	return PortableImportResult{Profile: created, IdentityMode: mode, Warnings: warnings}, nil
-}
-
 func (s *Service) ListPortableTemplates() ([]portableprofile.Template, error) {
 	catalog, err := portableprofile.LoadTemplates(s.portableTemplatePath())
 	if err != nil {
 		return nil, err
 	}
 	return append([]portableprofile.Template(nil), catalog.Templates...), nil
-}
-
-func (s *Service) CreatePortableTemplate(request PortableTemplateCreateRequest) (portableprofile.Template, error) {
-	artifact, _, err := s.buildPortableArtifact(request.ProfileID, portableprofile.IdentityNew)
-	if err != nil {
-		return portableprofile.Template{}, err
-	}
-	template, err := portableprofile.NewTemplate(request.Name, artifact.Payload, time.Now().UTC())
-	if err != nil {
-		return portableprofile.Template{}, err
-	}
-	catalog, err := portableprofile.LoadTemplates(s.portableTemplatePath())
-	if err != nil {
-		return portableprofile.Template{}, err
-	}
-	if len(catalog.Templates) >= portableprofile.MaxTemplates {
-		return portableprofile.Template{}, fmt.Errorf("template catalog is full")
-	}
-	for _, existing := range catalog.Templates {
-		if strings.EqualFold(strings.TrimSpace(existing.Name), strings.TrimSpace(template.Name)) {
-			return portableprofile.Template{}, fmt.Errorf("template name %q already exists", template.Name)
-		}
-	}
-	catalog.Templates = append(catalog.Templates, template)
-	if err := portableprofile.SaveTemplates(s.portableTemplatePath(), catalog); err != nil {
-		return portableprofile.Template{}, err
-	}
-	return template, nil
 }
 
 func (s *Service) DeletePortableTemplate(templateID string) error {
@@ -208,40 +141,16 @@ func (s *Service) DeletePortableTemplate(templateID string) error {
 	return portableprofile.SaveTemplates(s.portableTemplatePath(), catalog)
 }
 
-func (s *Service) ApplyPortableTemplate(request PortableTemplateApplyRequest) (PortableImportResult, error) {
-	catalog, err := portableprofile.LoadTemplates(s.portableTemplatePath())
-	if err != nil {
-		return PortableImportResult{}, err
-	}
-	var selected *portableprofile.Template
-	for index := range catalog.Templates {
-		if catalog.Templates[index].ID == strings.TrimSpace(request.TemplateID) {
-			copy := catalog.Templates[index]
-			selected = &copy
-			break
-		}
-	}
-	if selected == nil {
-		return PortableImportResult{}, fmt.Errorf("portable template %q was not found", request.TemplateID)
-	}
-	profileInput, warnings, err := s.profileFromPortablePayload(selected.Payload, request.Name, portableprofile.IdentityNew, request.KernelID, request.AdapterID, request.CredentialID)
-	if err != nil {
-		return PortableImportResult{}, err
-	}
-	created, err := s.CreateProfile(profileInput)
-	if err != nil {
-		return PortableImportResult{}, fmt.Errorf("create Profile from template: %w", err)
-	}
-	warnings = append(warnings, "Template application created a new Profile ID, managed directory, and fingerprint seed.")
-	return PortableImportResult{Profile: created, IdentityMode: portableprofile.IdentityNew, Warnings: warnings}, nil
+func (s *Service) buildPortableArtifact(profileID string, mode portableprofile.IdentityMode) (portableprofile.Artifact, domain.Profile, error) {
+	return s.buildPortableArtifactForOperation(profileID, mode, "")
 }
 
-func (s *Service) buildPortableArtifact(profileID string, mode portableprofile.IdentityMode) (portableprofile.Artifact, domain.Profile, error) {
+func (s *Service) buildPortableArtifactForOperation(profileID string, mode portableprofile.IdentityMode, operationID string) (portableprofile.Artifact, domain.Profile, error) {
 	profileID = strings.TrimSpace(profileID)
 	if s.supervisor.IsActive(profileID) {
 		return portableprofile.Artifact{}, domain.Profile{}, fmt.Errorf("Profile cannot be exported while its browser is running")
 	}
-	if _, err := s.requireLifecycleAvailable(profileID, "be exported"); err != nil {
+	if err := s.requirePortableSource(profileID, operationID); err != nil {
 		return portableprofile.Artifact{}, domain.Profile{}, err
 	}
 	item, err := s.store.Get(profileID)
@@ -284,6 +193,30 @@ func (s *Service) buildPortableArtifact(profileID string, mode portableprofile.I
 		return portableprofile.Artifact{}, domain.Profile{}, err
 	}
 	return artifact, item, nil
+}
+
+func (s *Service) requirePortableSource(profileID, operationID string) error {
+	if s.lifecycleRecords == nil {
+		return fmt.Errorf("lifecycle service is unavailable")
+	}
+	record, err := s.lifecycleRecords.Get(profileID)
+	if err != nil {
+		return err
+	}
+	if record.State != lifecycle.StateAvailable {
+		return fmt.Errorf("profile %q cannot be exported while lifecycle state is %q", profileID, record.State)
+	}
+	operationID = strings.TrimSpace(operationID)
+	if operationID == "" {
+		if record.Lock != nil {
+			return fmt.Errorf("profile %q is locked by lifecycle operation %q", profileID, record.Lock.OperationID)
+		}
+		return nil
+	}
+	if record.Lock == nil || record.Lock.OperationID != operationID {
+		return fmt.Errorf("%w: portable operation does not own the Profile lock", lifecycle.ErrConflict)
+	}
+	return nil
 }
 
 func (s *Service) profileFromPortablePayload(payload portableprofile.Payload, name string, mode portableprofile.IdentityMode, kernelID, adapterID, credentialID string) (domain.Profile, []string, error) {
