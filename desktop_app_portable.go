@@ -17,6 +17,12 @@ func (a *DesktopApp) PickPortableExportFile(profileName string) (string, error) 
 	})
 }
 
+func (a *DesktopApp) PickPortableExportDirectory() (string, error) {
+	return runtime.OpenDirectoryDialog(a.runtimeContext(), runtime.OpenDialogOptions{
+		Title: "Choose a folder for portable Veilium Profiles",
+	})
+}
+
 func (a *DesktopApp) PickPortableImportFile() (string, error) {
 	return runtime.OpenFileDialog(a.runtimeContext(), runtime.OpenDialogOptions{
 		Title: "Import portable Veilium Profile",

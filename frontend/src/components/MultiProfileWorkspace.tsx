@@ -5,9 +5,12 @@ import {
   multiProfileAPI,
   newMultiProfileKey,
   type BulkHealthRefreshResult,
+  type BulkPortableExportResult,
   type ProfileHealthReport,
   type StorageManagementState,
+  type StorageRepairPlan,
 } from '../multiProfile'
+import type { IdentityMode } from '../portableProfiles'
 
 export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorkspaceData; onRefresh: () => Promise<void> }) {
   const nativeMode = multiProfileAPI.isNative()
@@ -16,8 +19,12 @@ export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorks
   const [group, setGroupValue] = useState('')
   const [addTags, setAddTags] = useState('')
   const [removeTags, setRemoveTags] = useState('')
+  const [exportDirectory, setExportDirectory] = useState('')
+  const [exportMode, setExportMode] = useState<IdentityMode>('new-identity')
+  const [bulkExport, setBulkExport] = useState<BulkPortableExportResult>()
   const [health, setHealth] = useState<BulkHealthRefreshResult>()
   const [storage, setStorage] = useState<StorageManagementState>()
+  const [repairPlans, setRepairPlans] = useState<StorageRepairPlan[]>([])
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -27,6 +34,11 @@ export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorks
     const active = data.sessions.some((session) => session.profileId === profile.id && ['starting', 'ready', 'stopping'].includes(session.state))
     return Boolean(record && ['available', 'draft'].includes(record.state) && !record.lock && !active)
   }), [data.profiles, data.lifecycleRecords, data.sessions])
+
+  const exportReady = useMemo(() => selected.length > 0 && selected.every((profileId) => {
+    const record = lifecycleRecordFor(data.lifecycleRecords, profileId)
+    return record?.state === 'available' && !record.lock
+  }), [selected, data.lifecycleRecords])
 
   useEffect(() => {
     const known = new Set(data.profiles.map((profile) => profile.id))
@@ -69,6 +81,33 @@ export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorks
     await onRefresh()
   })
 
+  const chooseExportDirectory = () => run('pick-export-directory', async () => {
+    const path = await multiProfileAPI.pickExportDirectory()
+    if (!path) {
+      setNotice('Folder selection was cancelled.')
+      return
+    }
+    setExportDirectory(path)
+    setBulkExport(undefined)
+    setNotice('Export folder selected. Existing files are never overwritten.')
+  })
+
+  const exportProfiles = () => run('bulk-export', async () => {
+    if (!exportReady) throw new Error('Bulk export requires selected Profiles to be available, stopped, and unlocked.')
+    if (!exportDirectory) throw new Error('Choose an export folder first.')
+    const result = await multiProfileAPI.exportProfiles({
+      profileIds: selected,
+      destinationDirectory: exportDirectory,
+      identityMode: exportMode,
+      idempotencyKey: newMultiProfileKey(),
+    })
+    setBulkExport(result)
+    const succeeded = result.operation.items?.filter((item) => item.status === 'succeeded').length || 0
+    const remaining = (result.operation.items?.length || 0) - succeeded
+    setNotice(`Portable export ${result.operation.status}: ${succeeded} files written${remaining ? `, ${remaining} not written` : ''}.`)
+    await onRefresh()
+  })
+
   const refreshHealth = () => run('health', async () => {
     if (selected.length === 0) throw new Error('Select at least one eligible Profile.')
     const result = await multiProfileAPI.refreshHealth({
@@ -84,13 +123,14 @@ export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorks
   })
 
   const refreshStorage = () => run('storage', async () => {
-    const result = await multiProfileAPI.refreshStorage()
-    setStorage(result)
-    setNotice(`Storage inventory refreshed for ${result.inventory.profiles.length} Profile records.`)
+    const result = await multiProfileAPI.reviewStorage()
+    setStorage(result.state)
+    setRepairPlans(result.repairPlans)
+    setNotice(`Storage inventory refreshed for ${result.state.inventory.profiles.length} Profile records; ${result.repairPlans.length} manual review plans generated.`)
   })
 
   return <section className="panel recovery-section">
-    <div className="panel-heading"><div><h2>Multi-Profile and storage management</h2><p>Apply bounded changes to a fixed Profile selection, refresh local launch health, and inspect managed storage without automatic cleanup or repair.</p></div></div>
+    <div className="panel-heading"><div><h2>Multi-Profile and storage management</h2><p>Apply bounded changes to a fixed Profile selection, export non-secret definitions, refresh local launch health, and inspect managed storage without automatic cleanup or repair.</p></div></div>
     {!nativeMode && <div className="form-error">Multi-Profile and storage actions require the Wails desktop runtime.</div>}
     {error && <div className="form-error">{error}</div>}
     {notice && <div className="info-banner"><strong>Completed</strong><p>{notice}</p></div>}
@@ -125,6 +165,24 @@ export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorks
         <button className="button primary" disabled={!nativeMode || selected.length === 0 || Boolean(busy)} onClick={() => void updateMetadata()}>{busy === 'metadata' ? 'Updating…' : 'Apply bounded metadata update'}</button>
       </article>
 
+      <article className="panel setting-card bulk-export-card">
+        <div className="panel-heading"><div><h2>Bulk portable export</h2><p>Write one strict non-secret JSON definition per available Profile. Existing files are never overwritten.</p></div></div>
+        <label>Identity mode<select value={exportMode} disabled={Boolean(busy)} onChange={(event: ChangeEvent<HTMLSelectElement>) => setExportMode(event.target.value as IdentityMode)}>
+          <option value="new-identity">New identity (recommended)</option>
+          <option value="preserve-identity">Preserve identity (advanced)</option>
+        </select></label>
+        {exportMode === 'preserve-identity' && <div className="form-error">Preserved identity material must not be used simultaneously on multiple devices or Profiles. Evidence and trust are never exported.</div>}
+        <div className="bulk-export-folder">
+          <span title={exportDirectory}>{exportDirectory || 'No export folder selected'}</span>
+          <button className="button secondary" disabled={!nativeMode || Boolean(busy)} onClick={() => void chooseExportDirectory()}>{busy === 'pick-export-directory' ? 'Choosing…' : 'Choose folder'}</button>
+        </div>
+        {!exportReady && selected.length > 0 && <p className="muted">Draft Profiles remain selectable for metadata and health checks, but portable export requires lifecycle state <strong>available</strong>.</p>}
+        <button className="button primary" disabled={!nativeMode || !exportReady || !exportDirectory || Boolean(busy)} onClick={() => void exportProfiles()}>{busy === 'bulk-export' ? 'Exporting…' : `Export ${selected.length || ''} selected Profile${selected.length === 1 ? '' : 's'}`}</button>
+        {bulkExport && <div className="bulk-export-results">
+          {bulkExport.exports.map((item) => <article key={item.profileId}><strong>{item.profileName}</strong><span>{item.path}</span><code>{item.payloadSha256}</code></article>)}
+        </div>}
+      </article>
+
       <article className="panel setting-card bulk-health-card">
         <div className="panel-heading"><div><h2>Bulk health refresh</h2><p>Revalidate lifecycle, managed Kernel integrity, route dependencies, fingerprint policy, identity consistency, and managed browser-data containment.</p></div><button className="button secondary" disabled={!nativeMode || selected.length === 0 || Boolean(busy)} onClick={() => void refreshHealth()}>{busy === 'health' ? 'Refreshing…' : 'Refresh selected health'}</button></div>
         {!health ? <div className="lifecycle-empty">Select stopped Profiles and run a read-only health refresh.</div> : <div className="bulk-health-list">
@@ -132,8 +190,8 @@ export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorks
         </div>}
       </article>
 
-      <article className="panel setting-card">
-        <div className="panel-heading"><div><h2>Managed storage inventory</h2><p>Counts opaque Profile files and reports missing, orphaned, unsafe, or incomplete entries. It never deletes data.</p></div><button className="button secondary" disabled={!nativeMode || Boolean(busy)} onClick={() => void refreshStorage()}>{busy === 'storage' ? 'Scanning…' : 'Refresh inventory'}</button></div>
+      <article className="panel setting-card storage-management-card">
+        <div className="panel-heading"><div><h2>Managed storage inventory</h2><p>Counts opaque Profile files and reports missing, orphaned, unsafe, or incomplete entries. Suggested plans remain manual and never mutate data.</p></div><button className="button secondary" disabled={!nativeMode || Boolean(busy)} onClick={() => void refreshStorage()}>{busy === 'storage' ? 'Scanning…' : 'Refresh inventory'}</button></div>
         {!storage ? <div className="lifecycle-empty">Run a storage scan to inspect current managed Profile data.</div> : <>
           <dl>
             <div><dt>Profile storage</dt><dd>{storage.inventory.profiles.length} records · {formatBytes(storage.inventory.summary.bytes)}</dd></div>
@@ -152,6 +210,14 @@ export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorks
             {storage.inventory.orphans?.map((item) => <li className="warn" key={`orphan-${item.relativePath}`}><strong>Orphan candidate</strong><span>{item.relativePath} · {item.reasonCode}</span></li>)}
             {storage.inventory.unsafe?.map((item) => <li className="danger" key={`unsafe-${item.relativePath}`}><strong>Unsafe entry</strong><span>{item.relativePath} · {item.reasonCode}</span></li>)}
           </ul>}
+          <div className="storage-repair-plans">
+            <div className="panel-heading"><div><h3>Manual review plans</h3><p>These are recommendations only. Veilium never executes them automatically.</p></div><span>{repairPlans.length}</span></div>
+            {repairPlans.length === 0 ? <div className="lifecycle-empty">No repair or review plan is currently required.</div> : repairPlans.map((plan) => <article className={`storage-repair-plan ${plan.risk}`} key={plan.id}>
+              <div><strong>{repairPlanLabel(plan.kind)}</strong><span>{plan.profileId ? profileName(data, plan.profileId) : plan.relativePath || 'Inventory'}</span></div>
+              <p>{plan.description}</p>
+              <small>{plan.reasonCode} · Manual only</small>
+            </article>)}
+          </div>
           <ul className="plain-list">{storage.limitations?.map((item) => <li key={item}>{item}</li>)}</ul>
         </>}
       </article>
@@ -183,6 +249,17 @@ function healthCheckLabel(id: string): string {
     case 'consistency': return 'Identity consistency'
     case 'managed-data': return 'Managed browser data'
     default: return id
+  }
+}
+
+function repairPlanLabel(kind: string): string {
+  switch (kind) {
+    case 'review-snapshot-restore': return 'Review snapshot restore'
+    case 'inspect-missing-profile-data': return 'Inspect missing Profile data'
+    case 'review-orphan-ownership': return 'Review orphan ownership'
+    case 'manual-security-review': return 'Manual security review'
+    case 'rerun-bounded-inventory': return 'Rerun bounded inventory'
+    default: return kind
   }
 }
 

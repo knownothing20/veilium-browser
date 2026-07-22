@@ -1,4 +1,5 @@
 import type { LifecycleOperation, LifecycleState, StorageInventory } from './lifecycle'
+import type { IdentityMode, PortableExportResult } from './portableProfiles'
 import type { Profile } from './types'
 
 export interface BulkMetadataUpdateRequest {
@@ -43,6 +44,19 @@ export interface BulkHealthRefreshResult {
   reports: ProfileHealthReport[]
 }
 
+export interface BulkPortableExportRequest {
+  profileIds: string[]
+  destinationDirectory: string
+  identityMode: IdentityMode
+  idempotencyKey?: string
+}
+
+export interface BulkPortableExportResult {
+  operation: LifecycleOperation
+  destinationDirectory: string
+  exports: PortableExportResult[]
+}
+
 export interface StorageManagementState {
   inventory: StorageInventory
   snapshotCount: number
@@ -54,10 +68,29 @@ export interface StorageManagementState {
   limitations?: string[]
 }
 
+export interface StorageRepairPlan {
+  id: string
+  kind: string
+  profileId?: string
+  relativePath?: string
+  reasonCode: string
+  risk: 'danger' | 'warning' | 'info'
+  description: string
+  automatic: boolean
+}
+
+export interface StorageManagementReview {
+  state: StorageManagementState
+  repairPlans: StorageRepairPlan[]
+}
+
 type NativeMultiProfileAPI = {
   BulkUpdateProfileMetadata(request: BulkMetadataUpdateRequest): Promise<BulkMetadataUpdateResult>
   BulkRefreshProfileHealth(request: BulkHealthRefreshRequest): Promise<BulkHealthRefreshResult>
+  PickPortableExportDirectory(): Promise<string>
+  BulkExportPortableProfiles(request: BulkPortableExportRequest): Promise<BulkPortableExportResult>
   RefreshStorageManagement(): Promise<StorageManagementState>
+  ReviewStorageManagement(): Promise<StorageManagementReview>
 }
 
 function native(): NativeMultiProfileAPI | undefined {
@@ -79,5 +112,8 @@ export const multiProfileAPI = {
   isNative: () => Boolean(native()),
   updateMetadata: (request: BulkMetadataUpdateRequest) => requireNative().BulkUpdateProfileMetadata(request),
   refreshHealth: (request: BulkHealthRefreshRequest) => requireNative().BulkRefreshProfileHealth(request),
+  pickExportDirectory: () => requireNative().PickPortableExportDirectory(),
+  exportProfiles: (request: BulkPortableExportRequest) => requireNative().BulkExportPortableProfiles(request),
   refreshStorage: () => requireNative().RefreshStorageManagement(),
+  reviewStorage: () => requireNative().ReviewStorageManagement(),
 }

@@ -80,9 +80,18 @@ func (s *Service) ImportPortableProfile(request PortableImportRequest) (Portable
 		}
 		return s.reusedPortableImport(started, mode)
 	}
+	codes := []string{"portable-import-validation-required", "portable-import-evidence-absent"}
+	if mode == portableprofile.IdentityPreserve {
+		codes = append(codes, "portable-preserved-identity-warning")
+	}
+	if err := s.markPortableProfileDraft(created.ID, started.ID, artifact.PayloadSHA256, codes...); err != nil {
+		failed := s.failPortableOperation(started, created.ID, "portable-import-draft-state-failed", err)
+		return PortableImportResult{}, s.rollbackPortableProfile(created.ID, "rollback imported Profile", failed)
+	}
 	if err := s.finishPortableOperation(started, created.ID, created.ID); err != nil {
 		return PortableImportResult{}, err
 	}
+	warnings = append(warnings, "Imported Profile remains draft until current local validation passes.")
 	return PortableImportResult{Profile: created, IdentityMode: mode, Warnings: warnings}, nil
 }
 
@@ -177,9 +186,23 @@ func (s *Service) ApplyPortableTemplate(request PortableTemplateApplyRequest) (P
 		}
 		return s.reusedPortableImport(started, portableprofile.IdentityNew)
 	}
+	if err := s.markPortableProfileDraft(
+		created.ID,
+		started.ID,
+		selected.ID,
+		"portable-template-validation-required",
+		"portable-template-evidence-absent",
+	); err != nil {
+		failed := s.failPortableOperation(started, created.ID, "portable-template-draft-state-failed", err)
+		return PortableImportResult{}, s.rollbackPortableProfile(created.ID, "rollback template Profile", failed)
+	}
 	if err := s.finishPortableOperation(started, created.ID, created.ID); err != nil {
 		return PortableImportResult{}, err
 	}
-	warnings = append(warnings, "Template application created a new Profile ID, managed directory, and fingerprint seed.")
+	warnings = append(
+		warnings,
+		"Template application created a new Profile ID, managed directory, and fingerprint seed.",
+		"Template-created Profile remains draft until current local validation passes.",
+	)
 	return PortableImportResult{Profile: created, IdentityMode: portableprofile.IdentityNew, Warnings: warnings}, nil
 }

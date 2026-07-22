@@ -49,8 +49,54 @@
   box-shadow: none;
 }
 
-.bulk-health-card {
+.bulk-health-card,
+.bulk-export-card,
+.storage-management-card {
   grid-column: 1 / -1;
+}
+
+.bulk-export-folder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border, rgba(120, 120, 140, 0.24));
+  border-radius: 12px;
+  background: rgba(120, 120, 140, 0.06);
+}
+
+.bulk-export-folder span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted, #6c6a78);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-export-results {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bulk-export-results article {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(34, 156, 102, 0.08);
+}
+
+.bulk-export-results span,
+.bulk-export-results code {
+  overflow: hidden;
+  color: var(--muted, #6c6a78);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bulk-health-list {
@@ -181,6 +227,55 @@
   line-height: 1.4;
 }
 
+.storage-repair-plans {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.storage-repair-plans .panel-heading {
+  margin-bottom: 0;
+}
+
+.storage-repair-plans .panel-heading h3 {
+  margin: 0 0 4px;
+}
+
+.storage-repair-plan {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--border, rgba(120, 120, 140, 0.24));
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(120, 120, 140, 0.05);
+}
+
+.storage-repair-plan.danger {
+  border-color: rgba(203, 65, 77, 0.34);
+  background: rgba(203, 65, 77, 0.06);
+}
+
+.storage-repair-plan.warning {
+  border-color: rgba(198, 139, 24, 0.34);
+  background: rgba(198, 139, 24, 0.06);
+}
+
+.storage-repair-plan > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.storage-repair-plan span,
+.storage-repair-plan small {
+  color: var(--muted, #6c6a78);
+}
+
+.storage-repair-plan p {
+  margin: 0;
+  line-height: 1.45;
+}
+
 @media (max-width: 720px) {
   .multi-profile-dock {
     inset: 12px 12px 76px;
@@ -193,6 +288,12 @@
   }
 
   .multi-profile-dock-header {
+    flex-direction: column;
+  }
+
+  .bulk-export-folder,
+  .storage-repair-plan > div {
+    align-items: stretch;
     flex-direction: column;
   }
 

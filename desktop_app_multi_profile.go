@@ -15,8 +15,18 @@ func (a *DesktopApp) BulkRefreshProfileHealth(request desktop.BulkHealthRefreshR
 	return a.service.BulkRefreshProfileHealth(request)
 }
 
+func (a *DesktopApp) BulkExportPortableProfiles(request desktop.BulkPortableExportRequest) (desktop.BulkPortableExportResult, error) {
+	return a.service.BulkExportPortableProfiles(request)
+}
+
 func (a *DesktopApp) RefreshStorageManagement() (desktop.StorageManagementState, error) {
 	ctx, cancel := context.WithTimeout(a.runtimeContext(), 30*time.Second)
 	defer cancel()
 	return a.service.RefreshStorageManagement(ctx)
+}
+
+func (a *DesktopApp) ReviewStorageManagement() (desktop.StorageManagementReview, error) {
+	ctx, cancel := context.WithTimeout(a.runtimeContext(), 30*time.Second)
+	defer cancel()
+	return a.service.ReviewStorageManagement(ctx)
 }
