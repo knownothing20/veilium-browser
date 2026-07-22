@@ -4,6 +4,8 @@ import type { RecoveryWorkspaceData } from '../localRecovery'
 import {
   multiProfileAPI,
   newMultiProfileKey,
+  type BulkHealthRefreshResult,
+  type ProfileHealthReport,
   type StorageManagementState,
 } from '../multiProfile'
 
@@ -14,6 +16,7 @@ export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorks
   const [group, setGroupValue] = useState('')
   const [addTags, setAddTags] = useState('')
   const [removeTags, setRemoveTags] = useState('')
+  const [health, setHealth] = useState<BulkHealthRefreshResult>()
   const [storage, setStorage] = useState<StorageManagementState>()
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
@@ -66,6 +69,20 @@ export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorks
     await onRefresh()
   })
 
+  const refreshHealth = () => run('health', async () => {
+    if (selected.length === 0) throw new Error('Select at least one eligible Profile.')
+    const result = await multiProfileAPI.refreshHealth({
+      profileIds: selected,
+      idempotencyKey: newMultiProfileKey(),
+    })
+    setHealth(result)
+    const ready = result.reports.filter((item) => item.status === 'ready').length
+    const limited = result.reports.filter((item) => item.status === 'limited').length
+    const blocked = result.reports.filter((item) => item.status === 'blocked').length
+    setNotice(`Health refresh ${result.operation.status}: ${ready} ready, ${limited} limited, ${blocked} blocked.`)
+    await onRefresh()
+  })
+
   const refreshStorage = () => run('storage', async () => {
     const result = await multiProfileAPI.refreshStorage()
     setStorage(result)
@@ -73,14 +90,14 @@ export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorks
   })
 
   return <section className="panel recovery-section">
-    <div className="panel-heading"><div><h2>Multi-Profile and storage management</h2><p>Apply bounded group and tag changes to a fixed Profile selection, then inspect managed storage without automatic cleanup or repair.</p></div></div>
+    <div className="panel-heading"><div><h2>Multi-Profile and storage management</h2><p>Apply bounded changes to a fixed Profile selection, refresh local launch health, and inspect managed storage without automatic cleanup or repair.</p></div></div>
     {!nativeMode && <div className="form-error">Multi-Profile and storage actions require the Wails desktop runtime.</div>}
     {error && <div className="form-error">{error}</div>}
     {notice && <div className="info-banner"><strong>Completed</strong><p>{notice}</p></div>}
 
     <div className="settings-grid">
       <article className="panel setting-card">
-        <div className="panel-heading"><div><h2>Bulk metadata</h2><p>Only available or draft Profiles with no active browser or lifecycle lock can be selected.</p></div><span className="lifecycle-operation-status running">{selected.length} selected</span></div>
+        <div className="panel-heading"><div><h2>Fixed Profile selection</h2><p>Only available or draft Profiles with no active browser or lifecycle lock can be selected.</p></div><span className="lifecycle-operation-status running">{selected.length} selected</span></div>
         <div className="toolbar">
           <button className="button secondary" disabled={Boolean(busy) || eligible.length === 0} onClick={() => setSelected(eligible.map((item) => item.id))}>Select eligible</button>
           <button className="button secondary" disabled={Boolean(busy) || selected.length === 0} onClick={() => setSelected([])}>Clear</button>
@@ -97,11 +114,22 @@ export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorks
             </label>
           })}
         </div>
+      </article>
+
+      <article className="panel setting-card">
+        <div className="panel-heading"><div><h2>Bulk metadata</h2><p>Replace a group and add or remove bounded tags without changing browser data, routes, fingerprints, or credentials.</p></div></div>
         <label className="checkbox-line"><input type="checkbox" checked={setGroup} onChange={(event: ChangeEvent<HTMLInputElement>) => setSetGroup(event.target.checked)} /><span>Replace group for selected Profiles</span></label>
         <label>Group<input value={group} disabled={!setGroup} maxLength={128} onChange={(event: ChangeEvent<HTMLInputElement>) => setGroupValue(event.target.value)} placeholder="Blank clears the group" /></label>
         <label>Add tags<input value={addTags} onChange={(event: ChangeEvent<HTMLInputElement>) => setAddTags(event.target.value)} placeholder="Comma-separated tags" /></label>
         <label>Remove tags<input value={removeTags} onChange={(event: ChangeEvent<HTMLInputElement>) => setRemoveTags(event.target.value)} placeholder="Comma-separated tags" /></label>
         <button className="button primary" disabled={!nativeMode || selected.length === 0 || Boolean(busy)} onClick={() => void updateMetadata()}>{busy === 'metadata' ? 'Updating…' : 'Apply bounded metadata update'}</button>
+      </article>
+
+      <article className="panel setting-card bulk-health-card">
+        <div className="panel-heading"><div><h2>Bulk health refresh</h2><p>Revalidate lifecycle, managed Kernel integrity, route dependencies, fingerprint policy, identity consistency, and managed browser-data containment.</p></div><button className="button secondary" disabled={!nativeMode || selected.length === 0 || Boolean(busy)} onClick={() => void refreshHealth()}>{busy === 'health' ? 'Refreshing…' : 'Refresh selected health'}</button></div>
+        {!health ? <div className="lifecycle-empty">Select stopped Profiles and run a read-only health refresh.</div> : <div className="bulk-health-list">
+          {health.reports.map((report) => <HealthReport key={report.profileId} report={report} />)}
+        </div>}
       </article>
 
       <article className="panel setting-card">
@@ -129,6 +157,33 @@ export function MultiProfileWorkspace({ data, onRefresh }: { data: RecoveryWorks
       </article>
     </div>
   </section>
+}
+
+function HealthReport({ report }: { report: ProfileHealthReport }) {
+  return <article className={`bulk-health-report ${report.status}`}>
+    <div className="bulk-health-report-header">
+      <div><strong>{report.profileName}</strong><span>{report.lifecycleState} · {formatTime(report.refreshedAt)}</span></div>
+      <span className={`bulk-health-status ${report.status}`}>{report.status}</span>
+    </div>
+    <ul className="bulk-health-checks">
+      {report.checks.map((check) => <li className={check.status} key={check.id}>
+        <span className="bulk-health-check-icon">{check.status === 'pass' ? '✓' : check.status === 'warning' ? '!' : '×'}</span>
+        <div><strong>{healthCheckLabel(check.id)}</strong><p>{check.message}</p></div>
+      </li>)}
+    </ul>
+  </article>
+}
+
+function healthCheckLabel(id: string): string {
+  switch (id) {
+    case 'lifecycle': return 'Lifecycle'
+    case 'kernel': return 'Managed Kernel'
+    case 'route': return 'Route and credentials'
+    case 'fingerprint': return 'Fingerprint policy'
+    case 'consistency': return 'Identity consistency'
+    case 'managed-data': return 'Managed browser data'
+    default: return id
+  }
 }
 
 function splitTags(value: string): string[] {

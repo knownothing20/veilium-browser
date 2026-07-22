@@ -6,7 +6,7 @@ Main baseline SHA: ffcf25d94cd821c82f07cc49fc61130d3e02fcdb
 Current phase: Phase 5
 Current milestone: Consolidated M5.3 and M5.4 product completion
 Current task: Complete and validate PR #59 on `agent/handoff-m5-3`
-Current implementation stage: M5.3 product scope implemented; first M5.4 product slice implemented online and awaiting executable validation
+Current implementation stage: M5.3 product scope implemented; M5.4 metadata, read-only storage, and bulk health refresh implemented online and awaiting executable validation
 
 ## Operational rule
 
@@ -50,6 +50,16 @@ M5.2 is merged and frozen. It provides verified same-machine snapshots, restore 
 - truthful succeeded, skipped, cancelled, failed, partial, and idempotently reused item results;
 - no bulk start, scheduling, proxy rotation, browser-data mutation, or silent inclusion of newly created Profiles.
 
+### Bulk Profile health refresh
+
+- fixed stopped-Profile selection using the authoritative `bulk-health-refresh` lifecycle operation;
+- deterministic idempotency, complete-selection locks, revision revalidation, cancellation between Profiles, and per-item results;
+- read-only checks for lifecycle state, managed Kernel integrity, route/adapter/credential validation, fingerprint capability policy, identity/window consistency, and managed browser-data containment;
+- explicit `ready`, `limited`, and `blocked` reports with persisted bounded check codes for deterministic retry results;
+- a completed health assessment remains distinct from a healthy result, so a blocked Profile is reported truthfully without making the operation itself fail;
+- visible Desktop health cards and check-level explanations in the Multi-Profile tools dock;
+- service-level tests use real Profile and lifecycle stores to cover ready, blocked, and idempotently reused results.
+
 ### Read-only storage management
 
 - bounded refresh of the existing managed Profile inventory;
@@ -61,12 +71,11 @@ M5.2 is merged and frozen. It provides verified same-machine snapshots, restore 
 
 ## Remaining before merge
 
-1. Add focused service-level failure and idempotency tests that exercise real lifecycle stores and coordinator behavior.
-2. Review and complete any remaining approved M5.4 health-refresh or safe stop operation surface without adding bulk start or scheduling.
-3. Complete final Desktop integration, wording, and usage documentation.
-4. Perform a full changed-file and interface consistency review.
-5. Run Go formatting/vet/tests, frontend typecheck/tests/build, Wails development startup, Windows amd64 build, and manual smoke testing in an executable environment.
-6. Do not claim build, test, or package success until step 5 is actually completed.
+1. Complete final Desktop wording, usage documentation, and complete changed-file review.
+2. Review whether any additional approved M5.4 surface is necessary; do not add bulk start, scheduling, proxy rotation, or automatic storage repair.
+3. Perform a full interface, data-contract, and failure-path consistency review across the complete PR.
+4. Run Go formatting/vet/tests, frontend typecheck/tests/build, Wails development startup, Windows amd64 build, and manual smoke testing in an executable environment.
+5. Do not claim build, test, or package success until step 4 is actually completed.
 
 ## Frozen security boundaries
 
@@ -75,11 +84,12 @@ M5.2 is merged and frozen. It provides verified same-machine snapshots, restore 
 - local IDs and absolute paths are not portable identities;
 - imported metadata cannot manufacture Provider trust, capability support, compatibility, health, or Evidence;
 - destructive work remains serialized per Profile and recoverable operations preserve the only healthy copy until verification;
+- health refresh is observational and cannot silently mutate a Profile, promote trust, or create Evidence;
 - storage inventory is observational and never authorizes deletion;
 - unsupported, unsafe, contradictory, missing, modified, or unverifiable state fails closed or remains explicitly limited.
 
 ## Validation status
 
-The current online implementation has received static review for Go syntax and formatting, JSON field consistency, Wails method naming, TypeScript interface compatibility, lifecycle lock ownership, deterministic selection, idempotency, cancellation checkpoints, per-item result derivation, and non-destructive storage behavior.
+The current online implementation has received static review for Go syntax and formatting, JSON field consistency, Wails method naming, TypeScript interface compatibility, lifecycle lock ownership, deterministic selection, idempotency, cancellation checkpoints, per-item result derivation, health-check persistence, and non-destructive storage behavior.
 
-No GitHub Actions run was requested. The branch has not yet been compiled, executed, packaged, or manually smoke-tested in this connector environment, and PR #59 is not ready to merge until that validation is performed.
+No GitHub Actions run was requested. The branch has not yet been fully compiled, executed, packaged, or manually smoke-tested in this connector environment, and PR #59 is not ready to merge until that validation is performed.

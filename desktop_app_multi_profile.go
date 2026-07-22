@@ -11,6 +11,10 @@ func (a *DesktopApp) BulkUpdateProfileMetadata(request desktop.BulkMetadataUpdat
 	return a.service.BulkUpdateProfileMetadata(request)
 }
 
+func (a *DesktopApp) BulkRefreshProfileHealth(request desktop.BulkHealthRefreshRequest) (desktop.BulkHealthRefreshResult, error) {
+	return a.service.BulkRefreshProfileHealth(request)
+}
+
 func (a *DesktopApp) RefreshStorageManagement() (desktop.StorageManagementState, error) {
 	ctx, cancel := context.WithTimeout(a.runtimeContext(), 30*time.Second)
 	defer cancel()

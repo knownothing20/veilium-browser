@@ -1,4 +1,4 @@
-import type { LifecycleOperation, StorageInventory } from './lifecycle'
+import type { LifecycleOperation, LifecycleState, StorageInventory } from './lifecycle'
 import type { Profile } from './types'
 
 export interface BulkMetadataUpdateRequest {
@@ -15,6 +15,34 @@ export interface BulkMetadataUpdateResult {
   profiles: Profile[]
 }
 
+export type HealthCheckStatus = 'pass' | 'warning' | 'fail'
+export type ProfileHealthStatus = 'ready' | 'limited' | 'blocked'
+
+export interface BulkHealthRefreshRequest {
+  profileIds: string[]
+  idempotencyKey?: string
+}
+
+export interface ProfileHealthCheck {
+  id: string
+  status: HealthCheckStatus
+  message: string
+}
+
+export interface ProfileHealthReport {
+  profileId: string
+  profileName: string
+  lifecycleState: LifecycleState
+  status: ProfileHealthStatus
+  checks: ProfileHealthCheck[]
+  refreshedAt: string
+}
+
+export interface BulkHealthRefreshResult {
+  operation: LifecycleOperation
+  reports: ProfileHealthReport[]
+}
+
 export interface StorageManagementState {
   inventory: StorageInventory
   snapshotCount: number
@@ -28,6 +56,7 @@ export interface StorageManagementState {
 
 type NativeMultiProfileAPI = {
   BulkUpdateProfileMetadata(request: BulkMetadataUpdateRequest): Promise<BulkMetadataUpdateResult>
+  BulkRefreshProfileHealth(request: BulkHealthRefreshRequest): Promise<BulkHealthRefreshResult>
   RefreshStorageManagement(): Promise<StorageManagementState>
 }
 
@@ -49,5 +78,6 @@ export function newMultiProfileKey(): string {
 export const multiProfileAPI = {
   isNative: () => Boolean(native()),
   updateMetadata: (request: BulkMetadataUpdateRequest) => requireNative().BulkUpdateProfileMetadata(request),
+  refreshHealth: (request: BulkHealthRefreshRequest) => requireNative().BulkRefreshProfileHealth(request),
   refreshStorage: () => requireNative().RefreshStorageManagement(),
 }
