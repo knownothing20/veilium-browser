@@ -39,6 +39,14 @@ Import never overwrites an existing Profile. The new Profile remains `draft` unt
 
 A template stores reusable non-secret defaults without a reusable fingerprint seed. Applying a template always creates a new Profile ID, managed directory, and seed. The result remains `draft` until current local validation passes. Templates never contain browser data or credential values.
 
+The **Template maintenance** surface allows safe edits to:
+
+- the template name;
+- the default new-Profile name;
+- group, notes, and bounded tags.
+
+An update preserves the template ID and creation timestamp while advancing its update timestamp. It also preserves the reviewed Kernel and adapter requirements, route defaults, credential requirement, and Provider-compatible fingerprint settings. The seed remains blank and the template remains `new-identity` only. Case-insensitive duplicate template names, invalid text, and over-bound tag sets fail before the catalog is replaced. Create a new template from a validated Profile when dependency or route defaults must change.
+
 ## Bounded lifecycle actions
 
 The **Bulk archive, unarchive, or trash** surface accepts a fixed set of stopped, unlocked Profiles and executes one authoritative M5.1/M5.2 lifecycle operation for each item.

@@ -49,6 +49,10 @@ func (a *DesktopApp) CreatePortableTemplate(request desktop.PortableTemplateCrea
 	return a.service.CreatePortableTemplate(request)
 }
 
+func (a *DesktopApp) UpdatePortableTemplate(request desktop.PortableTemplateUpdateRequest) (portableprofile.Template, error) {
+	return a.service.UpdatePortableTemplate(request)
+}
+
 func (a *DesktopApp) DeletePortableTemplate(templateID string) error {
 	return a.service.DeletePortableTemplate(templateID)
 }

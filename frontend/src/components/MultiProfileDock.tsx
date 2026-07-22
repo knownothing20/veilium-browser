@@ -8,6 +8,7 @@ import {
 import { backend } from '../lib/backend'
 import { BulkLifecycleWorkspace } from './BulkLifecycleWorkspace'
 import { MultiProfileWorkspace } from './MultiProfileWorkspace'
+import { TemplateMaintenanceWorkspace } from './TemplateMaintenanceWorkspace'
 
 const emptyData: LifecycleBootstrap = normalizeLifecycleBootstrap({
   version: 'loading',
@@ -116,6 +117,7 @@ export function MultiProfileDock() {
       />
       <BulkLifecycleWorkspace data={data} onRefresh={refresh} />
       <MultiProfileWorkspace data={data} onRefresh={refresh} />
+      <TemplateMaintenanceWorkspace />
     </aside>}
   </>
 }

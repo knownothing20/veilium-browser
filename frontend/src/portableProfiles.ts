@@ -105,6 +105,15 @@ export interface PortableTemplateCreateRequest {
   name: string
 }
 
+export interface PortableTemplateUpdateRequest {
+  templateId: string
+  name: string
+  profileName: string
+  group?: string
+  notes?: string
+  tags?: string[]
+}
+
 export interface PortableTemplateApplyRequest {
   templateId: string
   name?: string
@@ -121,6 +130,7 @@ type NativePortableAPI = {
   ImportPortableProfile(request: PortableImportRequest): Promise<PortableImportResult>
   ListPortableTemplates(): Promise<PortableTemplate[]>
   CreatePortableTemplate(request: PortableTemplateCreateRequest): Promise<PortableTemplate>
+  UpdatePortableTemplate(request: PortableTemplateUpdateRequest): Promise<PortableTemplate>
   DeletePortableTemplate(templateId: string): Promise<void>
   ApplyPortableTemplate(request: PortableTemplateApplyRequest): Promise<PortableImportResult>
 }
@@ -144,6 +154,7 @@ export const portableProfileAPI = {
   importProfile: (request: PortableImportRequest) => requireNative().ImportPortableProfile(request),
   templates: async () => native() ? native()!.ListPortableTemplates() : [],
   createTemplate: (request: PortableTemplateCreateRequest) => requireNative().CreatePortableTemplate(request),
+  updateTemplate: (request: PortableTemplateUpdateRequest) => requireNative().UpdatePortableTemplate(request),
   deleteTemplate: (templateId: string) => requireNative().DeletePortableTemplate(templateId),
   applyTemplate: (request: PortableTemplateApplyRequest) => requireNative().ApplyPortableTemplate(request),
 }
