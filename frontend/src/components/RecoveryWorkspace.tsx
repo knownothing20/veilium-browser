@@ -7,6 +7,7 @@ import {
   type LocalRecoveryState,
   type RecoveryWorkspaceData,
 } from '../localRecovery'
+import { PortabilityWorkspace } from './PortabilityWorkspace'
 
 export function RecoveryWorkspace({ data, onRefresh }: { data: RecoveryWorkspaceData; onRefresh: () => Promise<void> }) {
   const [state, setState] = useState<LocalRecoveryState>(() => localRecoveryAPI.emptyState())
@@ -170,6 +171,8 @@ export function RecoveryWorkspace({ data, onRefresh }: { data: RecoveryWorkspace
         <div className="panel-heading"><div><h2>Recovery-required state</h2><p>Interrupted or contradictory storage is preserved for manual review; the application does not guess which copy is authoritative.</p></div></div>
         {(state.trashReconciliation.findings?.length || 0) === 0 ? <Empty text="No contradictory trash state was found." /> : <ul className="lifecycle-findings">{state.trashReconciliation.findings?.map((item) => <li className="warn" key={`${item.trashId}-${item.reasonCode}`}><strong>{item.reasonCode}</strong><span>{item.profileId} · source {item.sourceState} · trash {item.trashState} · metadata {item.profileState}</span></li>)}</ul>}
       </section>
+
+      <PortabilityWorkspace data={data} onRefresh={onRefresh} />
     </>
   )
 }
