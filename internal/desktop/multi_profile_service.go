@@ -65,6 +65,7 @@ func (s *Service) BulkUpdateProfileMetadata(request BulkMetadataUpdateRequest) (
 	}
 
 	preflight := make(map[string]time.Time, len(profileIDs))
+	prepared := make(map[string]domain.Profile, len(profileIDs))
 	keyParts := []string{strings.TrimSpace(request.IdempotencyKey), fmt.Sprintf("set-group=%t", mutation.setGroup), mutation.group, strings.Join(mutation.addTags, ","), strings.Join(mutation.removeTags, ",")}
 	for _, profileID := range profileIDs {
 		item, getErr := s.store.Get(profileID)
@@ -78,7 +79,12 @@ func (s *Service) BulkUpdateProfileMetadata(request BulkMetadataUpdateRequest) (
 		if record.State != lifecycle.StateAvailable && record.State != lifecycle.StateDraft {
 			return BulkMetadataUpdateResult{}, fmt.Errorf("profile %q cannot receive a bulk metadata update while lifecycle state is %q", profileID, record.State)
 		}
+		next, mutationErr := checkedBulkMetadataMutation(item, mutation)
+		if mutationErr != nil {
+			return BulkMetadataUpdateResult{}, fmt.Errorf("profile %q bulk metadata result is invalid: %w", profileID, mutationErr)
+		}
 		preflight[profileID] = item.UpdatedAt.UTC()
+		prepared[profileID] = next
 		keyParts = append(keyParts, profileID, item.UpdatedAt.UTC().Format(time.RFC3339Nano))
 	}
 
@@ -145,7 +151,15 @@ func (s *Service) BulkUpdateProfileMetadata(request BulkMetadataUpdateRequest) (
 			continue
 		}
 
-		next := applyBulkMetadataMutation(current, mutation)
+		next, preparedOK := prepared[profileID]
+		if !preparedOK {
+			completed := time.Now().UTC()
+			items = append(items, lifecycle.OperationItemResult{
+				ItemID: profileID, Status: lifecycle.ItemFailed, StartedAt: &itemStarted, CompletedAt: &completed,
+				CompletedStage: "metadata-preflight", ReasonCode: "metadata-result-unavailable",
+			})
+			continue
+		}
 		updated, updateErr := s.store.Update(next)
 		completed := time.Now().UTC()
 		if updateErr != nil {
@@ -310,6 +324,14 @@ func normalizeBulkTags(values []string) ([]string, error) {
 }
 
 func applyBulkMetadataMutation(input domain.Profile, mutation bulkMetadataMutation) domain.Profile {
+	result, err := checkedBulkMetadataMutation(input, mutation)
+	if err != nil {
+		return input
+	}
+	return result
+}
+
+func checkedBulkMetadataMutation(input domain.Profile, mutation bulkMetadataMutation) (domain.Profile, error) {
 	result := input
 	if mutation.setGroup {
 		result.Group = mutation.group
@@ -325,9 +347,12 @@ func applyBulkMetadataMutation(input domain.Profile, mutation bulkMetadataMutati
 		}
 	}
 	tags = append(tags, mutation.addTags...)
-	normalized, _ := normalizeBulkTags(tags)
+	normalized, err := normalizeBulkTags(tags)
+	if err != nil {
+		return domain.Profile{}, err
+	}
 	result.Tags = normalized
-	return result
+	return result, nil
 }
 
 func bulkOperationStatus(items []lifecycle.OperationItemResult) lifecycle.OperationStatus {
