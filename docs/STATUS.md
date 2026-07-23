@@ -4,119 +4,100 @@ Last updated: 2026-07-23
 Application version: 0.15.0-dev
 Main baseline SHA: ffcf25d94cd821c82f07cc49fc61130d3e02fcdb
 Current phase: Phase 5
-Current milestone: Consolidated M5.3 and M5.4 product completion
-Current task: Complete and validate PR #59 on `agent/handoff-m5-3`
-Current implementation stage: M5.3 product scope and the approved M5.4 metadata, recoverable lifecycle, bulk export, health, storage inventory, and manual repair-plan surfaces are implemented online and awaiting executable validation
+Current milestone: Consolidated M5.3, M5.4, and M5.5 product completion
+Current task: Implement and validate the Chinese browser workspace on PR #59 branch `agent/handoff-m5-3`
+Current implementation stage: M5.3/M5.4 services and desktop surfaces are implemented; M5.5 localization, task navigation, browser-environment workspace, guided editor, and batch-page integration are in active implementation
 
 ## Operational rule
 
-PR #59 and branch `agent/handoff-m5-3` are the only remaining Phase 5 development path. No additional development branch, handoff PR, Closing Review PR, temporary Issue, or workflow is authorized.
+PR #59 and branch `agent/handoff-m5-3` are the only remaining Phase 5 development path. No additional development branch, pull request, temporary issue, handoff PR, closing-review PR, or workflow is authorized.
 
-GitHub Actions remain unavailable and must not be created, enabled, modified, manually triggered, or rerun. Online connector development may continue in concentrated commits, but compilation, tests, Wails execution, and Windows packaging must be reported as unverified until they are actually run in a suitable environment.
+GitHub Actions remain unavailable and must not be created, enabled, modified, manually triggered, or rerun. Connector-side static work may continue in concentrated commits, but compilation, tests, Wails execution, Windows packaging, and manual smoke testing remain unverified until actually run in a suitable environment.
 
-## Completed baseline
+## Completed frozen baseline
 
 ### M5.1 — Lifecycle foundation
 
-M5.1 is merged and frozen. It provides versioned lifecycle records, the authoritative operation journal, per-Profile locks, active-session blockers, cancellation state, per-item results, bounded storage inventory, startup reconciliation, Desktop integration, and minimum lifecycle UI.
+Merged and frozen: versioned lifecycle records, authoritative operation journal, per-Profile locks, active-session blockers, cancellation state, per-item results, bounded storage inventory, startup reconciliation, Desktop integration, and lifecycle UI.
 
 ### M5.2 — Safe local recovery
 
-M5.2 is merged and frozen. It provides verified same-machine snapshots, restore to a new identity, archive/unarchive, recoverable trash, exact restore-trash, explicit permanent deletion, conservative reconciliation, and the Local recovery workspace.
+Merged and frozen: verified same-machine snapshots, restore to a new identity, archive/unarchive, recoverable trash, exact restore-trash, explicit permanent deletion, conservative reconciliation, and Local recovery workspace.
 
-## Implemented in PR #59
+## Implemented in PR #59 before M5.5
 
-### Portable Profile definitions and templates
+- strict portable Profile definitions with canonical integrity and exclusion of secrets, browser data, binaries, local IDs/paths, runtime data, logs, and Evidence;
+- import preview, dependency remapping, new-identity default, advanced preserve-identity mode, and private templates;
+- bounded bulk metadata, recoverable lifecycle, portable export, health refresh, storage inventory, manual repair plans, operation history, cancellation, and redacted report export;
+- visible Desktop surfaces for M5.3 and M5.4;
+- existing M5.1/M5.2 locks, journal, idempotency, per-item results, rollback, and recovery state reused rather than replaced.
 
-- strict versioned portable Profile JSON with canonical SHA-256 tamper detection;
-- exclusion of browser data, credentials, binaries, local IDs, local paths, runtime data, logs, and Evidence;
-- explicit new-identity and advanced preserve-identity modes;
-- exact fail-closed Kernel and adapter remapping;
-- explicit local operating-system vault credential selection;
-- import preview and creation of a new local Profile without implicit overwrite;
-- private template catalog with create, list, apply, and delete;
-- import and template results remain `draft` with explicit validation and Evidence limitations;
-- template application always creates a new Profile ID, managed directory, and fingerprint seed;
-- visible Wails Desktop UI for export, import preview, dependency selection, and templates;
-- M5.1 journal, idempotency, source/destination locks, per-item results, and rollback integration.
+## M5.5 authorized productization
 
-### Bounded multi-Profile metadata
+The owner directed implementation of `docs/CHINESE_BROWSER_WORKSPACE_DEVELOPMENT_PLAN.md` in PR #59. Authorized work includes:
 
-- fixed, normalized, deterministic selection of up to the lifecycle operation bound;
-- available/draft lifecycle and active-session preflight;
-- one authoritative `bulk-metadata-update` journal operation and locks for the complete accepted selection;
-- bounded group replacement plus case-insensitive tag add/remove;
-- source revision conflict detection after preflight;
-- cancellation checks before each next Profile;
-- truthful succeeded, skipped, cancelled, failed, partial, and idempotently reused item results;
-- no bulk start, scheduling, proxy rotation, browser-data mutation, or silent inclusion of newly created Profiles.
+- typed `zh-CN` messages with an English fallback;
+- Chinese document metadata, typography, formatting, common states, confirmations, and high-frequency errors;
+- browser environments as the default workspace;
+- primary navigation for environments, network, recovery, batch management, and settings;
+- advanced pages for runtime sessions, browser kernels, and credentials;
+- visible “打开浏览器” and “关闭浏览器” actions;
+- simplified environment rows with technical diagnostics moved behind “更多” and technical details;
+- guided Chinese create/edit environment flow using existing Profile and Provider contracts;
+- Multi-Profile tools integrated as a normal page instead of a floating dock;
+- responsive desktop layout for 1366×768 and 1920×1080;
+- no management-language coupling to Profile identity parameters.
 
-### Bounded recoverable lifecycle actions
+## Current implementation batch
 
-- fixed deterministic Profile selection for archive, unarchive, or recoverable trash;
-- stopped-runtime, lifecycle-lock, Profile existence, and action-specific state preflight before each new child operation;
-- one existing M5.1/M5.2 journaled operation per selected Profile rather than a parallel bulk task system;
-- deterministic child idempotency so repeated bulk requests reuse the same authoritative item operations;
-- archive preserves the exact available/draft origin state and unarchive restores it;
-- bulk trash requires the exact fixed-selection confirmation phrase and supports only recoverable trash with bounded retention;
-- bulk permanent deletion remains prohibited;
-- cancellation prevents the next child operation from starting and aggregate completed/partial/cancelled/failed status is derived from item results;
-- visible Desktop action selection, eligibility, confirmation, and per-Profile result cards.
+The active batch covers:
 
-### Bounded multi-Profile portable export
+1. governance alignment for M5.5;
+2. typed localization dictionaries and dictionary-shape test;
+3. Chinese application shell, five-item primary navigation, and advanced navigation;
+4. browser-environment default page, metrics, search/filter, Chinese empty states, and primary open/close actions;
+5. Chinese guided Profile editor with advanced Provider details progressively disclosed;
+6. Multi-Profile floating dock removal and full-page batch-management integration;
+7. CJK typography, readable table/action sizes, responsive sidebar, and product UI overrides;
+8. HTML language/title and startup/error fallback localization.
 
-- one fixed selection of available, stopped, unlocked Profiles;
-- one authoritative export journal operation with complete-selection locks and deterministic idempotency;
-- a user-selected existing directory and one collision-resistant JSON filename per Profile;
-- existing files, links, aliases, and special destinations are rejected rather than overwritten;
-- source revision and lock ownership are revalidated before each artifact is published;
-- cancellation prevents the next Profile export from starting;
-- per-item success, skip, cancellation, failure, partial aggregate status, and idempotent artifact verification;
-- explicit advanced preserve-identity warning while secrets, browser data, binaries, local IDs, paths, trust, and Evidence remain excluded.
-
-### Bulk Profile health refresh
-
-- fixed stopped-Profile selection using the authoritative `bulk-health-refresh` lifecycle operation;
-- deterministic idempotency, complete-selection locks, revision revalidation, cancellation between Profiles, and per-item results;
-- read-only checks for lifecycle state, managed Kernel integrity, route/adapter/credential validation, fingerprint capability policy, identity/window consistency, and managed browser-data containment;
-- explicit `ready`, `limited`, and `blocked` reports with persisted bounded check codes for deterministic retry results;
-- a completed health assessment remains distinct from a healthy result, so a blocked Profile is reported truthfully without making the operation itself fail;
-- visible Desktop health cards and check-level explanations in the Multi-Profile tools dock;
-- service-level tests use real Profile and lifecycle stores to cover ready, blocked, and idempotently reused results.
-
-### Read-only storage management and repair plans
-
-- bounded refresh of the existing managed Profile inventory;
-- visible Profile file/byte summaries and missing, incomplete, orphan, or unsafe findings;
-- verified snapshot and retained trash totals;
-- lifecycle operation history count;
-- snapshot-aware suggestions for missing Profile data;
-- explicit orphan ownership, unsafe entry, and incomplete-scan review plans;
-- every repair plan is manual and observational; no automatic cleanup, deletion, move, restore, orphan repair, or filesystem browser;
-- visible Desktop access through the Phase 5 Multi-Profile tools dock.
-
-## Remaining before merge
-
-1. Perform the final complete changed-file, interface, data-contract, and failure-path review.
-2. Run Go formatting/vet/tests, frontend typecheck/tests/build, Wails development startup, Windows amd64 build, and manual smoke testing in an executable environment.
-3. Fix any issues found by executable validation.
-4. Do not claim build, test, package, or manual-test success until those checks are actually completed.
-
-## Frozen security boundaries
+## Frozen boundaries
 
 - browser contents remain opaque and separate from Profile metadata;
 - vault secrets remain local and non-portable;
 - local IDs and absolute paths are not portable identities;
-- imported metadata cannot manufacture Provider trust, capability support, compatibility, health, or Evidence;
-- destructive work remains serialized per Profile and recoverable operations preserve the only healthy copy until verification;
+- UI text cannot manufacture Provider trust, capability support, compatibility, health, or Evidence;
 - bulk lifecycle exposes recoverable trash only and never bulk permanent deletion;
 - bulk export never overwrites an existing file and never stores destination paths in lifecycle item results;
-- health refresh is observational and cannot silently mutate a Profile, promote trust, or create Evidence;
-- storage inventory and repair plans are observational and never authorize automatic mutation;
+- health refresh, storage inventory, and repair plans remain observational;
+- application language remains separate from Profile language, timezone, platform, and fingerprint values;
 - unsupported, unsafe, contradictory, missing, modified, or unverifiable state fails closed or remains explicitly limited.
 
-## Validation status
+## Validation truth
 
-The current online implementation has received static review for Go syntax and formatting, JSON field consistency, Wails method naming, TypeScript interface compatibility, lifecycle lock ownership, deterministic selection, child-operation idempotency, cancellation checkpoints, per-item result derivation, portable artifact identity, destination containment, health-check persistence, recoverable-only lifecycle behavior, and non-destructive storage behavior.
+Completed in the connector environment:
 
-No GitHub Actions run was requested. The branch has not yet been fully compiled, executed, packaged, or manually smoke-tested in this connector environment, and PR #59 is not ready to merge until that validation is performed.
+- source-level review of the proposed TypeScript/TSX syntax;
+- localization dictionary structure test added;
+- existing backend contracts and Wails method names intentionally reused;
+- no workflow change requested.
+
+Not yet verified and must not be claimed as passed:
+
+- full frontend TypeScript typecheck;
+- frontend unit tests and production build;
+- Go formatting, vet, unit/race tests, and builds;
+- Wails development startup;
+- Windows amd64 package build;
+- real Chromium start/stop/cleanup after the M5.5 changes;
+- manual Chinese UI smoke testing and window-size review;
+- complete regression of recovery, portability, template, batch, proxy, and Evidence behavior.
+
+## Exact next task
+
+1. commit the active M5.5 implementation batch to PR #59;
+2. inspect the complete PR diff for TypeScript interface, route, CSS, security, and localization regressions;
+3. continue component-level Chinese localization for recovery, adapter, credential, runtime, diagnostics, Evidence, portability, templates, and batch child workspaces;
+4. run frontend typecheck/tests/build and fix every issue found;
+5. run Go and Wails validation plus Windows manual smoke testing;
+6. update this file with actual results and do not merge PR #59 until executable validation is complete.
