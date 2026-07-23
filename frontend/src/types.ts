@@ -212,6 +212,9 @@ export interface FingerprintConfig {
   timezone: string
   screenWidth: number
   screenHeight: number
+  windowWidth?: number
+  windowHeight?: number
+  deviceScaleFactor?: number
   hardwareConcurrency?: number
   deviceMemoryGb?: number
   webrtcPolicy: 'default' | 'proxy-only' | 'disabled'
@@ -358,18 +361,22 @@ export interface EvidenceRun {
   startedAt: string
   completedAt?: string
   expiresAt: string
-  observations: EvidenceObservation[]
-  limitations?: string[]
   failureCode?: string
   failureDetail?: string
+  limitations: string[]
+  observations: EvidenceObservation[]
 }
 
 export interface LaunchPlan {
   executable: string
   args: string[]
-  environment?: Record<string, string>
   proxyDisplay: string
+  credentialRequired: boolean
   requiresBridge: boolean
   bridgeKind?: string
-  warnings?: string[]
+  credentialRef?: string
+  adapterRef?: string
+  adapterKind?: string
+  providerCapabilities: Capabilities
+  warnings: string[]
 }
