@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 export type AppIconName =
   | 'environment'
   | 'network'
@@ -15,7 +17,7 @@ export type AppIconName =
   | 'more'
   | 'add'
 
-const paths: Record<AppIconName, React.ReactNode> = {
+const paths: Record<AppIconName, ReactNode> = {
   environment: <><rect x="3" y="4" width="8" height="7" rx="2" /><rect x="13" y="4" width="8" height="7" rx="2" /><rect x="3" y="13" width="8" height="7" rx="2" /><rect x="13" y="13" width="8" height="7" rx="2" /></>,
   network: <><circle cx="5" cy="12" r="2.5" /><circle cx="19" cy="6" r="2.5" /><circle cx="19" cy="18" r="2.5" /><path d="M7.5 11 16.5 7M7.5 13 16.5 17" /></>,
   recovery: <><path d="M4 10a8 8 0 1 1 2.4 8.1" /><path d="M4 4v6h6" /></>,
