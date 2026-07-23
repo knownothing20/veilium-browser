@@ -141,7 +141,7 @@ function native(): NativePortableAPI | undefined {
 
 function requireNative(): NativePortableAPI {
   const api = native()
-  if (!api) throw new Error('Portable Profile actions require the Wails desktop runtime.')
+  if (!api) throw new Error('便携环境与模板操作需要 Wails 桌面运行时。')
   return api
 }
 
