@@ -1,4 +1,4 @@
-import type { zhCN } from './zh-CN'
+import { zhCN } from './zh-CN'
 
 type MessageShape<T> = { [K in keyof T]: T[K] extends (...args: infer A) => unknown ? (...args: A) => string : T[K] extends string ? string : MessageShape<T[K]> }
 
