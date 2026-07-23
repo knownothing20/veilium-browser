@@ -66,7 +66,7 @@ export function StorageLocationsWorkspace() {
       </dl>
 
       <div className="recovery-card-grid">
-        {data.locations.map((item) => <article className="recovery-card" key={item.id}>
+        {(data.locations || []).map((item) => <article className="recovery-card" key={item.id}>
           <div className="recovery-card-head">
             <strong>{item.label}</strong>
             <span className={`lifecycle-operation-status ${statusClass(item)}`}>{statusLabel(item)}</span>
@@ -85,7 +85,7 @@ export function StorageLocationsWorkspace() {
 
       <div className="info-banner">
         <strong>Safety boundaries</strong>
-        <ul className="plain-list">{data.limitations.map((item) => <li key={item}>{item}</li>)}</ul>
+        <ul className="plain-list">{(data.limitations || []).map((item) => <li key={item}>{item}</li>)}</ul>
       </div>
     </>}
   </section>

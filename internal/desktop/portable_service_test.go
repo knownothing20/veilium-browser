@@ -11,17 +11,17 @@ import (
 
 func TestPortableKernelMatchingIsExactAndVerified(t *testing.T) {
 	requirement := portableprofile.KernelRequirement{
-		Provider: "custom-chromium",
-		Version: "148.0.0",
-		SHA256: strings.Repeat("a", 64),
+		Provider:  "custom-chromium",
+		Version:   "148.0.0",
+		SHA256:    strings.Repeat("a", 64),
 		SizeBytes: 100,
 	}
 	record := kernel.Record{
-		Provider: requirement.Provider,
-		Version: requirement.Version,
-		SHA256: requirement.SHA256,
+		Provider:  requirement.Provider,
+		Version:   requirement.Version,
+		SHA256:    requirement.SHA256,
 		SizeBytes: requirement.SizeBytes,
-		Status: kernel.StatusVerified,
+		Status:    kernel.StatusVerified,
 	}
 	if !kernelMatches(record, requirement) {
 		t.Fatal("expected exact verified Kernel to match")
@@ -39,17 +39,17 @@ func TestPortableKernelMatchingIsExactAndVerified(t *testing.T) {
 
 func TestPortableAdapterMatchingIsExactAndVerified(t *testing.T) {
 	requirement := portableprofile.AdapterRequirement{
-		Kind: "xray",
-		Version: "26.3.27",
-		SHA256: strings.Repeat("c", 64),
+		Kind:      "xray",
+		Version:   "26.3.27",
+		SHA256:    strings.Repeat("c", 64),
 		SizeBytes: 200,
 	}
 	record := adapter.Record{
-		Kind: requirement.Kind,
-		Version: requirement.Version,
-		SHA256: requirement.SHA256,
+		Kind:      requirement.Kind,
+		Version:   requirement.Version,
+		SHA256:    requirement.SHA256,
 		SizeBytes: requirement.SizeBytes,
-		Status: adapter.StatusVerified,
+		Status:    adapter.StatusVerified,
 	}
 	if !adapterMatches(record, requirement) {
 		t.Fatal("expected exact verified adapter to match")

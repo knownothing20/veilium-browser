@@ -18,6 +18,9 @@ import type {
   ProxyDiagnosticReport,
   RuntimeSession,
 } from "../types";
+import type {
+  LifecycleReconciliationReport,
+} from "../lifecycle";
 
 type WailsDesktopApp = {
   Bootstrap: () => Promise<Bootstrap>;
@@ -207,6 +210,24 @@ export const backend = {
           kernelPins: [],
           runtimePlatform: "browser",
           runtimeArch: "unknown",
+          lifecycleRecords: [],
+          lifecycleOperations: [],
+          lifecycleReconciliation: {
+            generatedAt: "",
+            compatibilityCreated: [],
+            actions: [],
+            inventory: {
+              generatedAt: "",
+              managedRoot: ".",
+              profiles: [],
+              orphans: [],
+              unsafe: [],
+              summary: { files: 0, bytes: 0 },
+              incomplete: false,
+              limitations: [],
+            },
+            limitations: [],
+          },
         };
   },
 

@@ -297,6 +297,9 @@ export interface Bootstrap {
   kernelPins: KernelReleasePin[]
   runtimePlatform: string
   runtimeArch: string
+  lifecycleRecords?: import('./lifecycle').LifecycleRecord[]
+  lifecycleOperations?: import('./lifecycle').LifecycleOperation[]
+  lifecycleReconciliation?: import('./lifecycle').LifecycleReconciliationReport
 }
 
 export type EvidenceRunStatus = 'pending' | 'running' | 'passed' | 'partial' | 'failed' | 'cancelled' | 'incomplete'

@@ -59,7 +59,7 @@ export function ProxyDiagnosticAction({ profile, nativeMode }: { profile: Profil
                     <div><dt>Completed</dt><dd>{new Date(report.completedAt).toLocaleString()}</dd></div>
                   </dl>
                   <div className="diagnostic-checks">
-                    {report.checks.map((check) => (
+                    {(report.checks || []).map((check) => (
                       <article className={`diagnostic-check ${check.status}`} key={check.id}>
                         <span className="diagnostic-check-icon">{checkIcon(check.status)}</span>
                         <div>
@@ -74,7 +74,7 @@ export function ProxyDiagnosticAction({ profile, nativeMode }: { profile: Profil
                   </div>
                   <div className="diagnostic-limitations">
                     <strong>What this test does not claim</strong>
-                    {report.limitations.map((item) => <p key={item}>{item}</p>)}
+                    {(report.limitations || []).map((item) => <p key={item}>{item}</p>)}
                   </div>
                   <div className="diagnostic-actions">
                     <button className="button secondary" onClick={() => void run()} disabled={busy}>Run again</button>

@@ -26,7 +26,7 @@ const (
 	MaxArtifactBytes    = 1 << 20
 	MaxTemplates        = 200
 	MaxTags             = 32
-	MaxTextBytes         = 16 << 10
+	MaxTextBytes        = 16 << 10
 )
 
 type IdentityMode string
@@ -51,17 +51,17 @@ type AdapterRequirement struct {
 }
 
 type Payload struct {
-	Name               string                `json:"name"`
-	Group              string                `json:"group,omitempty"`
-	Notes              string                `json:"notes,omitempty"`
-	Tags               []string              `json:"tags,omitempty"`
+	Name               string                   `json:"name"`
+	Group              string                   `json:"group,omitempty"`
+	Notes              string                   `json:"notes,omitempty"`
+	Tags               []string                 `json:"tags,omitempty"`
 	Fingerprint        domain.FingerprintConfig `json:"fingerprint"`
-	ProxyURL           string                `json:"proxyUrl,omitempty"`
-	RouteOmitted       bool                  `json:"routeOmitted,omitempty"`
-	CredentialRequired bool                  `json:"credentialRequired,omitempty"`
-	Kernel             KernelRequirement     `json:"kernel"`
-	Adapter            *AdapterRequirement   `json:"adapter,omitempty"`
-	IdentityMode       IdentityMode          `json:"identityMode"`
+	ProxyURL           string                   `json:"proxyUrl,omitempty"`
+	RouteOmitted       bool                     `json:"routeOmitted,omitempty"`
+	CredentialRequired bool                     `json:"credentialRequired,omitempty"`
+	Kernel             KernelRequirement        `json:"kernel"`
+	Adapter            *AdapterRequirement      `json:"adapter,omitempty"`
+	IdentityMode       IdentityMode             `json:"identityMode"`
 }
 
 type Artifact struct {

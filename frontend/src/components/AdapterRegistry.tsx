@@ -276,7 +276,7 @@ export function AdapterRegistry({
                   <span className={record.official ? "official-badge" : "custom-badge"}>{record.official ? `Official ${record.officialTag}` : "Custom local"}</span>
                 </div>
               </div>
-              <div className="adapter-protocols">{record.protocols.map((protocol) => <span key={protocol}>{protocol}</span>)}</div>
+              <div className="adapter-protocols">{(record.protocols || []).map((protocol) => <span key={protocol}>{protocol}</span>)}</div>
               <dl>
                 <div><dt>Executable SHA</dt><dd title={record.sha256}>{record.sha256.slice(0, 16)}…{record.sha256.slice(-8)}</dd></div>
                 <div><dt>Identity</dt><dd>{record.official ? `${record.officialAsset} · ${record.officialPlatform}/${record.officialArch}` : "No embedded official release match"}</dd></div>
@@ -284,7 +284,7 @@ export function AdapterRegistry({
                 <div><dt>Source</dt><dd title={record.sourceUrl}>{record.sourceUrl}</dd></div>
                 <div><dt>Managed path</dt><dd title={record.executable}>{record.executable}</dd></div>
               </dl>
-              {report && <div className="official-validation-report"><div><strong>Official configuration check passed</strong><span>{report.versionText.split("\n")[0]}</span></div><ul>{report.checks.map((check) => <li key={check.id}>✓ {check.label}</li>)}</ul></div>}
+              {report && <div className="official-validation-report"><div><strong>Official configuration check passed</strong><span>{report.versionText.split("\n")[0]}</span></div><ul>{(report.checks || []).map((check) => <li key={check.id}>✓ {check.label}</li>)}</ul></div>}
               <div className="kernel-actions">
                 <button className="button secondary" disabled={busy} onClick={() => void onVerify(record)}>Integrity check</button>
                 <button className="button secondary" disabled={busy || !nativeMode || !record.official || record.status !== "verified"} title={record.official ? "Run the official binary configuration checks" : "Only an exact pinned official binary can run this check"} onClick={() => void onValidate(record)}>Official check</button>

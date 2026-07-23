@@ -79,7 +79,7 @@ export function OfficialKernelCard({
     </div>
 
     <ul className="plain-list kernel-limitations">
-      {pin.limitations.map((item) => <li key={item}>{item}</li>)}
+      {(pin.limitations || []).map((item) => <li key={item}>{item}</li>)}
     </ul>
   </section>
 }

@@ -129,7 +129,7 @@ export function EvidenceAction({
                     {selected.failureDetail && <div className="evidence-failure"><strong>{selected.failureCode || 'collection-failed'}</strong><p>{selected.failureDetail}</p></div>}
                     {selected.limitations?.length ? <ul className="evidence-limitations">{selected.limitations.map((item) => <li key={item}>{item}</li>)}</ul> : null}
                     <div className="evidence-observations">
-                      {selected.observations.map((observation) => (
+                      {(selected.observations || []).map((observation) => (
                         <article key={`${observation.context}-${observation.id}`}>
                           <div><strong>{observation.id}</strong><span className={`observation-status ${observation.status}`}>{observation.status}</span></div>
                           <small>{observation.context}{observation.capabilityId ? ` · ${observation.capabilityId}` : ''}</small>

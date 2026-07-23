@@ -145,16 +145,32 @@ function requireNative(): NativePortableAPI {
   return api
 }
 
+function arr<T>(value: T[] | null | undefined): T[] {
+  return value || []
+}
+
+function normalizePortableExportResult(raw: PortableExportResult): PortableExportResult {
+  return { ...raw, exclusions: arr(raw.exclusions), limitations: arr(raw.limitations) }
+}
+
+function normalizePortableImportPreview(raw: PortableImportPreview): PortableImportPreview {
+  return { ...raw, kernelMatches: arr(raw.kernelMatches), adapterMatches: arr(raw.adapterMatches), warnings: arr(raw.warnings), artifact: { ...raw.artifact, exclusions: arr(raw.artifact?.exclusions), limitations: arr(raw.artifact?.limitations), payload: { ...raw.artifact?.payload, tags: arr(raw.artifact?.payload?.tags) } } }
+}
+
+function normalizePortableImportResult(raw: PortableImportResult): PortableImportResult {
+  return { ...raw, warnings: arr(raw.warnings) }
+}
+
 export const portableProfileAPI = {
   isNative: () => Boolean(native()),
   pickExport: (profileName: string) => requireNative().PickPortableExportFile(profileName),
   pickImport: () => requireNative().PickPortableImportFile(),
-  exportProfile: (request: PortableExportRequest) => requireNative().ExportPortableProfile(request),
-  previewImport: (path: string) => requireNative().PreviewPortableImport(path),
-  importProfile: (request: PortableImportRequest) => requireNative().ImportPortableProfile(request),
-  templates: async () => native() ? native()!.ListPortableTemplates() : [],
-  createTemplate: (request: PortableTemplateCreateRequest) => requireNative().CreatePortableTemplate(request),
+  exportProfile: async (request: PortableExportRequest) => normalizePortableExportResult(await requireNative().ExportPortableProfile(request)),
+  previewImport: async (path: string) => normalizePortableImportPreview(await requireNative().PreviewPortableImport(path)),
+  importProfile: async (request: PortableImportRequest) => normalizePortableImportResult(await requireNative().ImportPortableProfile(request)),
+  templates: async () => native() ? arr(await native()!.ListPortableTemplates()) : [],
+  createTemplate: async (request: PortableTemplateCreateRequest) => await requireNative().CreatePortableTemplate(request),
   updateTemplate: (request: PortableTemplateUpdateRequest) => requireNative().UpdatePortableTemplate(request),
   deleteTemplate: (templateId: string) => requireNative().DeletePortableTemplate(templateId),
-  applyTemplate: (request: PortableTemplateApplyRequest) => requireNative().ApplyPortableTemplate(request),
+  applyTemplate: async (request: PortableTemplateApplyRequest) => normalizePortableImportResult(await requireNative().ApplyPortableTemplate(request)),
 }

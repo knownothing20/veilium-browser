@@ -166,7 +166,7 @@ export function NetworkEvidenceAction({ profile, session, nativeMode }: { profil
                     <div><span>Expires</span><strong>{new Date(latest.expiresAt).toLocaleString()}</strong></div>
                   </div>
                   <div className="diagnostic-checks">
-                    {latest.observations.map((item) => (
+                    {(latest.observations || []).map((item) => (
                       <article className={`diagnostic-check ${item.status}`} key={item.id}>
                         <span className="diagnostic-check-icon">{icon(item.status)}</span>
                         <div><div className="diagnostic-check-title"><strong>{item.probeKind}</strong><span>{item.status}</span></div><p>{item.detail || item.reasonCode || (item.values || []).join(', ')}</p></div>

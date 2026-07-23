@@ -184,7 +184,7 @@ export function PortabilityWorkspace({ data, onRefresh }: { data: RecoveryWorksp
           <label>Verified Kernel<select value={kernelId} onChange={(event) => setKernelId(event.target.value)}><option value="">Select matching Kernel</option>{preview.kernelMatches.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.kind} {item.version}</option>)}</select></label>
           {preview.artifact.payload.adapter && <label>Verified adapter<select value={adapterId} onChange={(event) => setAdapterId(event.target.value)}><option value="">Select matching adapter</option>{preview.adapterMatches.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.kind} {item.version}</option>)}</select></label>}
           {preview.credentialRequired && <label>Local vault credential<select value={credentialId} onChange={(event) => setCredentialId(event.target.value)}><option value="">Select local credential</option>{data.credentials.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.username}</option>)}</select></label>}
-          <ul className="plain-list">{preview.warnings.map((item) => <li key={item}>{item}</li>)}</ul>
+          <ul className="plain-list">{(preview.warnings || []).map((item) => <li key={item}>{item}</li>)}</ul>
           <button className="button primary" disabled={!readiness || !importName.trim() || Boolean(busy)} onClick={() => void importProfile()}>{busy === 'import' ? 'Creating…' : 'Create imported Profile'}</button>
         </>}
       </article>

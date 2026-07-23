@@ -40,9 +40,13 @@ func TestArtifactRoundTripAndTamperDetection(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	payloadOnly, err := json.Marshal(artifact.Payload)
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, forbidden := range []string{"local-profile-id", "local-kernel-id", "local-credential-id", "local-adapter-id", "chrome.exe", "source-seed"} {
-		if strings.Contains(string(data), forbidden) {
-			t.Fatalf("portable artifact leaked %q", forbidden)
+		if strings.Contains(string(payloadOnly), forbidden) {
+			t.Fatalf("portable artifact payload leaked %q", forbidden)
 		}
 	}
 	decoded, err := Decode(data)

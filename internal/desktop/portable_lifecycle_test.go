@@ -10,9 +10,9 @@ import (
 
 func TestPreparePortableDraftRecordPreservesOwnedLockAndAddsLimitations(t *testing.T) {
 	record := lifecycle.Record{
-		ProfileID: "profile-1",
-		State: lifecycle.StateAvailable,
-		Lock: &lifecycle.OperationLock{OperationID: "operation-1", AcquiredAt: time.Now().UTC()},
+		ProfileID:       "profile-1",
+		State:           lifecycle.StateAvailable,
+		Lock:            &lifecycle.OperationLock{OperationID: "operation-1", AcquiredAt: time.Now().UTC()},
 		LimitationCodes: []string{"existing"},
 	}
 	got, err := preparePortableDraftRecord(
@@ -40,8 +40,8 @@ func TestPreparePortableDraftRecordPreservesOwnedLockAndAddsLimitations(t *testi
 func TestPreparePortableDraftRecordRejectsForeignLock(t *testing.T) {
 	record := lifecycle.Record{
 		ProfileID: "profile-1",
-		State: lifecycle.StateAvailable,
-		Lock: &lifecycle.OperationLock{OperationID: "other-operation", AcquiredAt: time.Now().UTC()},
+		State:     lifecycle.StateAvailable,
+		Lock:      &lifecycle.OperationLock{OperationID: "other-operation", AcquiredAt: time.Now().UTC()},
 	}
 	if _, err := preparePortableDraftRecord(record, "operation-1", "source"); err == nil {
 		t.Fatal("foreign lifecycle lock was accepted")
