@@ -64,12 +64,12 @@ export function EvidenceAction({ profile, session, nativeMode }: { profile: Prof
         <div className="evidence-layout">
           <aside className="evidence-run-list">
             {runs.length === 0 && <p className="evidence-empty">还没有本机浏览器检测报告。</p>}
-            {runs.map((run) => <button className={selected?.id === run.id ? 'selected' : ''} key={run.id} onClick={() => setSelectedID(run.id)}><strong>{localEvidenceStatus(run.status)}</strong><span>{formatDateTime(run.startedAt)}</span><small>{run.providerId} · {evidenceSummary(run)}</small></button>)}
+            {runs.map((run) => <button className={selected?.id === run.id ? 'selected' : ''} key={run.id} onClick={() => setSelectedID(run.id)}><strong>{evidenceStatusLabel(run.status)}</strong><span>{formatDateTime(run.startedAt)}</span><small>{run.providerId} · {evidenceSummary(run)}</small></button>)}
           </aside>
           <div className="evidence-report">
             {!selected ? <p className="evidence-empty">请选择或运行一份浏览器检测报告。</p> : <>
               <div className="evidence-report-head">
-                <div><span className={`status-pill ${evidenceStatusClass(selected.status)}`}>{localEvidenceStatus(selected.status)}</span><h3>{evidenceSummary(selected)}</h3><p>{selected.providerId} 修订 {selected.providerRevision} · {selected.providerTrust} · Chromium {selected.browserVersion}</p></div>
+                <div><span className={`status-pill ${evidenceStatusClass(selected.status)}`}>{evidenceStatusLabel(selected.status)}</span><h3>{evidenceSummary(selected)}</h3><p>{selected.providerId} 修订 {selected.providerRevision} · {trustLabel(selected.providerTrust)} · Chromium {selected.browserVersion}</p></div>
                 <button className="button secondary danger-text" onClick={() => void remove(selected)}>删除报告</button>
               </div>
               {selected.failureDetail && <div className="evidence-failure"><strong>{selected.failureCode || 'collection-failed'}</strong><p>{selected.failureDetail}</p></div>}
@@ -77,7 +77,7 @@ export function EvidenceAction({ profile, session, nativeMode }: { profile: Prof
               <div className="evidence-observations">
                 {(selected.observations || []).map((observation) => <article key={`${observation.context}-${observation.id}`}>
                   <div><strong>{observation.id}</strong><span className={`observation-status ${observation.status}`}>{observationStatusLabel(observation.status)}</span></div>
-                  <small>{observation.context}{observation.capabilityId ? ` · ${observation.capabilityId}` : ''}</small>
+                  <small>{contextLabel(observation.context)}{observation.capabilityId ? ` · ${observation.capabilityId}` : ''}</small>
                   {observation.expected && <p><b>预期：</b> {observation.expected}</p>}
                   {observation.observed && <p><b>实际：</b> {observation.observed}</p>}
                   {(observation.reasonCode || observation.detail) && <p className="observation-detail">{observation.reasonCode}{observation.detail ? ` — ${observation.detail}` : ''}</p>}
@@ -91,10 +91,7 @@ export function EvidenceAction({ profile, session, nativeMode }: { profile: Prof
   </>
 }
 
-function localEvidenceStatus(value: string): string {
-  const label = evidenceStatusLabel(value as EvidenceRun['status'])
-  const labels: Record<string, string> = { passed: '通过', failed: '失败', partial: '部分通过', running: '进行中', cancelled: '已取消', unsupported: '不支持', unavailable: '不可用' }
-  return labels[value] || labels[label.toLowerCase()] || label
-}
-function observationStatusLabel(value: string): string { const labels: Record<string, string> = { pass: '通过', fail: '失败', warn: '警告', unsupported: '不支持', unavailable: '不可用' }; return labels[value] || value }
+function observationStatusLabel(value: string): string { const labels: Record<string, string> = { passed: '通过', partial: '部分通过', failed: '失败', unavailable: '不可用', skipped: '已跳过' }; return labels[value] || value }
+function contextLabel(value: string): string { const labels: Record<string, string> = { 'top-level': '顶层页面', iframe: '内嵌页面', worker: '后台 Worker' }; return labels[value] || value }
+function trustLabel(value: string): string { const labels: Record<string, string> = { reviewed: '已审查', custom: '自定义', legacy: '兼容模式', disabled: '已禁用', invalid: '无效' }; return labels[value] || value }
 function errorText(reason: unknown): string { return reason instanceof Error ? reason.message : String(reason) }
