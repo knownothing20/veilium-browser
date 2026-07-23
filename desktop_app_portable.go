@@ -9,6 +9,8 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
+const maxPortableFilenameRunes = 80
+
 func (a *DesktopApp) PickPortableExportFile(profileName string) (string, error) {
 	name := portableFilename(profileName)
 	return runtime.SaveFileDialog(a.runtimeContext(), runtime.SaveDialogOptions{
@@ -67,19 +69,41 @@ func portableFilename(value string) string {
 		return "veilium-profile"
 	}
 	value = strings.Map(func(r rune) rune {
+		if r < ' ' {
+			return '-'
+		}
 		switch r {
-		case '<', '>', ':', '"', '/', '\\', '|', '?', '*', '\x00', '\r', '\n':
+		case '<', '>', ':', '"', '/', '\\', '|', '?', '*', '\x7f':
 			return '-'
 		default:
 			return r
 		}
 	}, value)
-	value = strings.Trim(strings.TrimSpace(value), ".")
+	value = strings.Trim(value, " .")
 	if value == "" {
 		return "veilium-profile"
 	}
-	if len(value) > 80 {
-		value = value[:80]
+	runes := []rune(value)
+	if len(runes) > maxPortableFilenameRunes {
+		value = strings.Trim(string(runes[:maxPortableFilenameRunes]), " .")
+	}
+	if value == "" {
+		return "veilium-profile"
+	}
+	if portableWindowsReservedName(value) {
+		value = "_" + value
 	}
 	return filepath.Base(value)
+}
+
+func portableWindowsReservedName(value string) bool {
+	base := strings.ToUpper(strings.SplitN(strings.Trim(value, " ."), ".", 2)[0])
+	switch base {
+	case "CON", "PRN", "AUX", "NUL":
+		return true
+	}
+	if len(base) == 4 && (strings.HasPrefix(base, "COM") || strings.HasPrefix(base, "LPT")) {
+		return base[3] >= '1' && base[3] <= '9'
+	}
+	return false
 }
