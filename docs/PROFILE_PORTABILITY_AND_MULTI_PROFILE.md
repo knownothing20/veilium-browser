@@ -96,6 +96,19 @@ Repair plans are recommendations only:
 
 Veilium does not automatically restore, move, quarantine, repair, or delete anything from these plans.
 
+## Managed storage locations
+
+The **Storage locations** surface shows the fixed local paths Veilium derives from its configured data root, including Profile browser data, browser Kernels, adapter packages and runtime state, logs, lifecycle records, snapshots, recoverable trash, credential metadata, and portable templates.
+
+- It reports the data-root volume and, on Windows, whether that volume matches the detected system volume.
+- Each expected location is reported as present, not yet created, an unsafe link, an unexpected entry type, or unavailable for inspection.
+- A missing optional location normally means that feature has not created its directory or catalog yet; it is not created merely by opening this view.
+- **Copy path** copies the displayed fixed path for local diagnostics.
+- The view does not enumerate arbitrary directories, open a filesystem browser, move data, change the data root, create links, clean storage, repair findings, or delete files.
+- These absolute local paths remain installation-specific and are excluded from portable Profile artifacts and redacted operation reports.
+
+Use this view before installing large Chromium packages or creating many Profiles to confirm which drive will hold Veilium-managed data. Changing the data root is not part of this Phase 5 surface.
+
 ## Safety
 
 - Do not point Veilium at a daily Chrome or Edge user-data directory.
