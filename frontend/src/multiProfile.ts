@@ -149,7 +149,7 @@ function native(): NativeMultiProfileAPI | undefined {
 
 function requireNative(): NativeMultiProfileAPI {
   const api = native()
-  if (!api) throw new Error('Multi-Profile and storage actions require the Wails desktop runtime.')
+  if (!api) throw new Error('多环境与存储操作需要 Wails 桌面运行时。')
   return api
 }
 
