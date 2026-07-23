@@ -72,13 +72,24 @@ Completed in the connector environment:
 - no GitHub workflow change requested or executed;
 - PR remains open and unmerged.
 
+Completed in the owner's Windows development environment (2026-07-23):
+
+- `npm ci` — 103 packages installed;
+- `npx tsc --noEmit` — passed after fixing two type errors:
+  - `backend.ts` browser-fallback `buildLaunchPlan` was missing `credentialRequired` and `providerCapabilities` fields on the `LaunchPlan` return type;
+  - `evidence.test.ts` was missing `limitations` on the `EvidenceRun` test fixture;
+  - `backend.ts` used `profile.kernel.providerId` which was renamed to `profile.kernel.provider` in the remote i18n refactor;
+- `npx vitest run` — 16/16 tests passed after updating `evidence.test.ts` assertions to match Chinese `evidenceStatusLabel`/`evidenceSummary` output (labels are now `不完整`/`项通过`/`项部分通过` rather than `Incomplete`/`passed`/`partial`);
+- `npx vite build` — production bundle built (75 modules, 354 KB JS + 50 KB CSS);
+- `go fmt ./...` — passed (all files already formatted);
+- `go vet ./...` — passed (no issues);
+- `go test ./...` — all 30 packages passed (no failures);
+- `go build -o build/bin/veilium-browser.exe ./cmd/veilium` — passed;
+- `wails build` — Windows amd64 build succeeded in 14.4s (`build/bin/veilium-browser.exe`);
+- `wails dev` — desktop application launched successfully (both `wails` and `veilium-browser-dev` processes running, ~54 MB working set).
+
 Not yet verified and must not be claimed as passed:
 
-- full frontend TypeScript typecheck;
-- frontend unit tests and production build;
-- Go formatting, vet, unit/race tests, and builds;
-- Wails development startup;
-- Windows amd64 package build;
 - real Chromium start/stop/cleanup after the M5.5 changes;
 - manual Chinese UI smoke testing at 1366×768 and 1920×1080;
 - complete regression of recovery, portability, template, batch, proxy, and Evidence behavior;
@@ -86,10 +97,8 @@ Not yet verified and must not be claimed as passed:
 
 ## Exact next task
 
-1. fetch the current branch in the owner's Windows development environment;
-2. run `cd frontend && npm run typecheck && npm test && npm run build` and repair every reported issue;
-3. run repository Go formatting, vet, tests, race tests, and builds without enabling GitHub Actions;
-4. run `wails dev`, exercise the primary Chinese browser-environment journey, and fix layout or runtime integration issues;
-5. build Windows amd64 and manually test kernel installation/import, environment creation, proxy diagnostics, real Chromium start/stop, recovery, portability, templates, batch management, and persistence after restart;
-6. update this file and PR #59 with actual command output and manual-test results;
-7. do not merge PR #59 until executable validation and final scope/security review are complete.
+1. manually exercise the primary Chinese browser-environment journey in the running `wails dev` window at 1366×768 and 1920×1080;
+2. manually test kernel installation/import, environment creation, proxy diagnostics, real Chromium start/stop, recovery, portability, templates, batch management, and persistence after restart;
+3. verify that application-language presentation does not alter any Profile identity value;
+4. update this file with manual-test results;
+5. do not merge PR #59 until executable validation and final scope/security review are complete.

@@ -323,6 +323,7 @@ export const backend = {
     return {
       executable: profile.kernel.executable,
       proxyDisplay: profile.proxy.url || "direct://",
+      credentialRequired: Boolean(profile.proxy.credentialRef),
       requiresBridge: Boolean(profile.proxy.credentialRef),
       bridgeKind: profile.proxy.adapterRef
         ? "managed-adapter"
@@ -333,6 +334,15 @@ export const backend = {
         `--user-data-dir=${profile.userDataDir}`,
         "--remote-debugging-address=127.0.0.1",
       ],
+      providerCapabilities: {
+        schemaVersion: 1,
+        provider: profile.kernel.provider,
+        revision: 1,
+        trustStatus: "custom",
+        majorVersion: 0,
+        capabilities: {},
+        limitations: [],
+      },
       warnings: ["Browser preview mode: no native process will be launched."],
     };
   },
