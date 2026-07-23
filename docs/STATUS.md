@@ -5,8 +5,8 @@ Application version: 0.15.0-dev
 Main baseline SHA: ffcf25d94cd821c82f07cc49fc61130d3e02fcdb
 Current phase: Phase 5
 Current milestone: Consolidated M5.3, M5.4, and M5.5 product completion
-Current task: Implement and validate the Chinese browser workspace on PR #59 branch `agent/handoff-m5-3`
-Current implementation stage: M5.3/M5.4 services and desktop surfaces are implemented; M5.5 localization, task navigation, browser-environment workspace, guided editor, and batch-page integration are in active implementation
+Current task: Execute full local validation and repair any build or runtime issues on PR #59 branch `agent/handoff-m5-3`
+Current implementation stage: M5.3/M5.4 services and desktop surfaces are implemented; the first complete source-level M5.5 Chinese browser workspace implementation is committed and awaits executable validation
 
 ## Operational rule
 
@@ -32,34 +32,23 @@ Merged and frozen: verified same-machine snapshots, restore to a new identity, a
 - visible Desktop surfaces for M5.3 and M5.4;
 - existing M5.1/M5.2 locks, journal, idempotency, per-item results, rollback, and recovery state reused rather than replaced.
 
-## M5.5 authorized productization
+## M5.5 source implementation committed
 
-The owner directed implementation of `docs/CHINESE_BROWSER_WORKSPACE_DEVELOPMENT_PLAN.md` in PR #59. Authorized work includes:
+The owner directed implementation of `docs/CHINESE_BROWSER_WORKSPACE_DEVELOPMENT_PLAN.md` in PR #59. The branch now contains:
 
-- typed `zh-CN` messages with an English fallback;
-- Chinese document metadata, typography, formatting, common states, confirmations, and high-frequency errors;
-- browser environments as the default workspace;
-- primary navigation for environments, network, recovery, batch management, and settings;
-- advanced pages for runtime sessions, browser kernels, and credentials;
-- visible “打开浏览器” and “关闭浏览器” actions;
-- simplified environment rows with technical diagnostics moved behind “更多” and technical details;
-- guided Chinese create/edit environment flow using existing Profile and Provider contracts;
-- Multi-Profile tools integrated as a normal page instead of a floating dock;
-- responsive desktop layout for 1366×768 and 1920×1080;
-- no management-language coupling to Profile identity parameters.
-
-## Current implementation batch
-
-The active batch covers:
-
-1. governance alignment for M5.5;
-2. typed localization dictionaries and dictionary-shape test;
-3. Chinese application shell, five-item primary navigation, and advanced navigation;
-4. browser-environment default page, metrics, search/filter, Chinese empty states, and primary open/close actions;
-5. Chinese guided Profile editor with advanced Provider details progressively disclosed;
-6. Multi-Profile floating dock removal and full-page batch-management integration;
-7. CJK typography, readable table/action sizes, responsive sidebar, and product UI overrides;
-8. HTML language/title and startup/error fallback localization.
+- typed `zh-CN` messages, an English fallback dictionary, dictionary-shape test, Chinese status/size/date helpers, and `zh-CN` document metadata;
+- Chinese CJK typography, larger readable table and action sizes, responsive sidebar behavior, and product-specific UI overrides;
+- a five-item task-oriented primary navigation: browser environments, proxy/network, data/recovery, batch management, and settings;
+- advanced navigation for runtime sessions, browser kernels, and credentials;
+- browser environments as the default page with metrics, search, group filter, first-use guidance, visible “打开浏览器”/“关闭浏览器”, edit, and a progressive “更多” menu;
+- an internal SVG icon set replacing Unicode characters as the only operation signal in primary workflows;
+- a five-section Chinese create/edit environment flow covering basic information, browser/kernel, identity, network, and review, with Provider details progressively disclosed;
+- official and custom browser-kernel management localized in Chinese;
+- proxy adapter installation/import, credential storage, runtime sessions, launch details, proxy diagnostics, browser Evidence, Network Evidence, and identity consistency surfaces localized in Chinese;
+- data/recovery, local snapshots, restore, archive, trash, permanent-delete confirmation, portability/import/export, and template flows localized in Chinese;
+- the floating Multi-Profile dock removed from application rendering and integrated as a normal full-page batch-management workspace;
+- bulk operation history, recoverable lifecycle, metadata, health, portable export, managed storage, fixed locations, and template maintenance localized in Chinese;
+- optional managed-window frontend fields aligned with the existing consistency UI so TypeScript can represent those values without changing translation or persistence semantics.
 
 ## Frozen boundaries
 
@@ -77,10 +66,11 @@ The active batch covers:
 
 Completed in the connector environment:
 
-- source-level review of the proposed TypeScript/TSX syntax;
+- source-level review of changed TypeScript/TSX interfaces, imports, enum values, routes, Wails method references, and component composition;
 - localization dictionary structure test added;
 - existing backend contracts and Wails method names intentionally reused;
-- no workflow change requested.
+- no GitHub workflow change requested or executed;
+- PR remains open and unmerged.
 
 Not yet verified and must not be claimed as passed:
 
@@ -90,14 +80,16 @@ Not yet verified and must not be claimed as passed:
 - Wails development startup;
 - Windows amd64 package build;
 - real Chromium start/stop/cleanup after the M5.5 changes;
-- manual Chinese UI smoke testing and window-size review;
-- complete regression of recovery, portability, template, batch, proxy, and Evidence behavior.
+- manual Chinese UI smoke testing at 1366×768 and 1920×1080;
+- complete regression of recovery, portability, template, batch, proxy, and Evidence behavior;
+- final proof that changing application-language presentation does not alter any Profile identity value.
 
 ## Exact next task
 
-1. commit the active M5.5 implementation batch to PR #59;
-2. inspect the complete PR diff for TypeScript interface, route, CSS, security, and localization regressions;
-3. continue component-level Chinese localization for recovery, adapter, credential, runtime, diagnostics, Evidence, portability, templates, and batch child workspaces;
-4. run frontend typecheck/tests/build and fix every issue found;
-5. run Go and Wails validation plus Windows manual smoke testing;
-6. update this file with actual results and do not merge PR #59 until executable validation is complete.
+1. fetch the current branch in the owner's Windows development environment;
+2. run `cd frontend && npm run typecheck && npm test && npm run build` and repair every reported issue;
+3. run repository Go formatting, vet, tests, race tests, and builds without enabling GitHub Actions;
+4. run `wails dev`, exercise the primary Chinese browser-environment journey, and fix layout or runtime integration issues;
+5. build Windows amd64 and manually test kernel installation/import, environment creation, proxy diagnostics, real Chromium start/stop, recovery, portability, templates, batch management, and persistence after restart;
+6. update this file and PR #59 with actual command output and manual-test results;
+7. do not merge PR #59 until executable validation and final scope/security review are complete.
