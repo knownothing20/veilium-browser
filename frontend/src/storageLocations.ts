@@ -34,7 +34,7 @@ export const storageLocationAPI = {
   isNative: () => Boolean(native()),
   get: async (): Promise<ManagedStorageLocations> => {
     const api = native()
-    if (!api) throw new Error('Managed storage locations require the Wails desktop runtime.')
+    if (!api) throw new Error('查看受管存储位置需要 Wails 桌面运行时。')
     return api.GetManagedStorageLocations()
   },
 }
