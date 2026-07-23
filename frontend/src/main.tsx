@@ -1,7 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import { MultiProfileDock } from './components/MultiProfileDock'
 import './styles.css'
 import './kernel.css'
 import './runtime.css'
@@ -13,14 +12,16 @@ import './lifecycle.css'
 import './localRecovery.css'
 import './multiProfile.css'
 import './bulkLifecycle.css'
+import './product.css'
 
 window.addEventListener('error', (event) => {
   const el = document.getElementById('root')
-  if (el) el.innerHTML = `<div style="padding:24px;color:#c00;font-family:monospace;white-space:pre-wrap"><b>JS Error</b>\n${event.message}\n${event.filename}:${event.lineno}:${event.colno}\n\n${event.error?.stack || ''}</div>`
+  if (el) el.innerHTML = `<div style="padding:24px;color:#c00;font-family:monospace;white-space:pre-wrap"><b>界面脚本错误</b>\n${event.message}\n${event.filename}:${event.lineno}:${event.colno}\n\n${event.error?.stack || ''}</div>`
 })
+
 window.addEventListener('unhandledrejection', (event) => {
   const el = document.getElementById('root')
-  if (el) el.innerHTML = `<div style="padding:24px;color:#c00;font-family:monospace;white-space:pre-wrap"><b>Unhandled Promise Rejection</b>\n${event.reason}\n\n${event.reason?.stack || ''}</div>`
+  if (el) el.innerHTML = `<div style="padding:24px;color:#c00;font-family:monospace;white-space:pre-wrap"><b>未处理的异步错误</b>\n${event.reason}\n\n${event.reason?.stack || ''}</div>`
 })
 
 const diagnostics: string[] = []
@@ -45,14 +46,14 @@ try {
   diagDiv.style.cssText = 'display:none;padding:8px;font-family:monospace;font-size:11px;background:#ff0;color:#000;white-space:pre-wrap'
   diagDiv.textContent = diagnostics.join('\n')
   root.appendChild(diagDiv)
-  window.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'D') {
-      const d = document.getElementById('wails-diag')
-      if (d) d.style.display = d.style.display === 'none' ? 'block' : 'none'
+  window.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+      const diagnostic = document.getElementById('wails-diag')
+      if (diagnostic) diagnostic.style.display = diagnostic.style.display === 'none' ? 'block' : 'none'
     }
   })
-  createRoot(root).render(<StrictMode><App /><MultiProfileDock /></StrictMode>)
+  createRoot(root).render(<StrictMode><App /></StrictMode>)
 } catch (err) {
   const el = document.getElementById('root')
-  if (el) el.innerHTML = `<div style="padding:24px;color:#c00;font-family:monospace;white-space:pre-wrap"><b>Render Error</b>\n${err}\n\n${(err as Error)?.stack || ''}</div>`
+  if (el) el.innerHTML = `<div style="padding:24px;color:#c00;font-family:monospace;white-space:pre-wrap"><b>界面渲染错误</b>\n${err}\n\n${(err as Error)?.stack || ''}</div>`
 }
