@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { lifecycleRecordFor, type LifecycleBootstrap, type LifecycleState } from '../lifecycle'
+import { lifecycleStateLabel } from '../i18n/format'
 import {
   multiProfileAPI,
   newMultiProfileKey,
@@ -35,30 +36,18 @@ export function BulkLifecycleWorkspace({ data, onRefresh }: { data: LifecycleBoo
     const known = new Set(selectable.map((profile) => profile.id))
     setSelected((current) => current.filter((profileId) => known.has(profileId)))
   }, [selectable])
+  useEffect(() => { setConfirmation('') }, [action, selected.length])
+  useEffect(() => { setResult(undefined) }, [action])
 
-  useEffect(() => {
-    setConfirmation('')
-  }, [action, selected.length])
-
-  useEffect(() => {
-    setResult(undefined)
-  }, [action])
-
-  const toggle = (profileId: string) => {
-    setSelected((current) => current.includes(profileId)
-      ? current.filter((item) => item !== profileId)
-      : [...current, profileId])
-  }
+  const toggle = (profileId: string) => setSelected((current) => current.includes(profileId) ? current.filter((item) => item !== profileId) : [...current, profileId])
 
   const apply = async () => {
     setBusy(true)
     setError('')
     setNotice('')
     try {
-      if (!ready) throw new Error(`Every selected Profile must be stopped, unlocked, and eligible for ${action}.`)
-      if (action === 'trash' && confirmation !== expectedConfirmation) {
-        throw new Error(`Type ${expectedConfirmation} exactly to confirm recoverable trash.`)
-      }
+      if (!ready) throw new Error(`每个选中的环境都必须已停止、未锁定并且允许执行“${actionLabel(action)}”。`)
+      if (action === 'trash' && confirmation !== expectedConfirmation) throw new Error(`请完整输入 ${expectedConfirmation} 以确认移入可恢复回收站。`)
       const response = await multiProfileAPI.applyLifecycle({
         profileIds: selected,
         action,
@@ -69,68 +58,63 @@ export function BulkLifecycleWorkspace({ data, onRefresh }: { data: LifecycleBoo
       setResult(response)
       const succeeded = response.items.filter((item) => item.status === 'succeeded').length
       const remaining = response.items.length - succeeded
-      setNotice(`${label(action)} ${response.status}: ${succeeded} succeeded${remaining ? `, ${remaining} need review` : ''}.`)
+      setNotice(`${actionLabel(action)}：${succeeded} 个成功${remaining ? `，${remaining} 个需要检查` : ''}。`)
       setSelected([])
       setConfirmation('')
       await onRefresh()
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason))
-    } finally {
-      setBusy(false)
-    }
+    } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)) }
+    finally { setBusy(false) }
   }
 
   return <section className="panel bulk-lifecycle-workspace">
     <div className="panel-heading">
-      <div><span className="eyebrow">Recoverable lifecycle</span><h2>Bulk archive, unarchive, or trash</h2><p>Run one authoritative M5.1/M5.2 lifecycle operation per selected Profile. Bulk permanent deletion is never available.</p></div>
-      <span className="lifecycle-operation-status running">{selected.length} selected</span>
+      <div><span className="eyebrow">可恢复生命周期操作</span><h2>批量归档、取消归档或移入回收站</h2><p>每个环境仍使用现有权威生命周期操作。批量永久删除始终不可用。</p></div>
+      <span className="lifecycle-operation-status running">已选择 {selected.length} 个</span>
     </div>
-    {!nativeMode && <div className="form-error">Bulk lifecycle actions require the Wails desktop runtime.</div>}
+    {!nativeMode && <div className="form-error">批量生命周期操作需要 Wails 桌面运行时。</div>}
     {error && <div className="form-error">{error}</div>}
-    {notice && <div className="info-banner"><strong>Completed</strong><p>{notice}</p></div>}
+    {notice && <div className="info-banner"><strong>操作完成</strong><p>{notice}</p></div>}
 
     <div className="bulk-lifecycle-controls">
-      <label>Action<select value={action} disabled={busy} onChange={(event: ChangeEvent<HTMLSelectElement>) => setAction(event.target.value as BulkLifecycleAction)}>
-        <option value="archive">Archive selected Profiles</option>
-        <option value="unarchive">Unarchive selected Profiles</option>
-        <option value="trash">Move selected Profiles to recoverable trash</option>
+      <label>操作<select value={action} disabled={busy} onChange={(event: ChangeEvent<HTMLSelectElement>) => setAction(event.target.value as BulkLifecycleAction)}>
+        <option value="archive">归档选中的环境</option>
+        <option value="unarchive">取消归档选中的环境</option>
+        <option value="trash">将选中的环境移入可恢复回收站</option>
       </select></label>
-      {action === 'trash' && <label>Retention days<input type="number" min={0} max={365} value={retentionDays} disabled={busy} onChange={(event: ChangeEvent<HTMLInputElement>) => setRetentionDays(Math.max(0, Math.min(365, Number(event.target.value) || 0)))} /></label>}
+      {action === 'trash' && <label>保留天数<input type="number" min={0} max={365} value={retentionDays} disabled={busy} onChange={(event: ChangeEvent<HTMLInputElement>) => setRetentionDays(Math.max(0, Math.min(365, Number(event.target.value) || 0)))} /></label>}
       <div className="toolbar">
         <button className="button secondary" disabled={busy || selectable.length === 0} onClick={() => setSelected(selectable.filter((profile) => {
           const record = lifecycleRecordFor(data.lifecycleRecords, profile.id)
           return Boolean(record && lifecycleStateAllowed(action, record.state))
-        }).map((profile) => profile.id))}>Select eligible for {action}</button>
-        <button className="button secondary" disabled={busy || selected.length === 0} onClick={() => setSelected([])}>Clear</button>
+        }).map((profile) => profile.id))}>选择所有符合条件的环境</button>
+        <button className="button secondary" disabled={busy || selected.length === 0} onClick={() => setSelected([])}>清空选择</button>
       </div>
     </div>
 
     <div className="bulk-lifecycle-list">
-      {selectable.length === 0 ? <div className="lifecycle-empty">No stopped and unlocked Profiles are available.</div> : selectable.map((profile) => {
+      {selectable.length === 0 ? <div className="lifecycle-empty">没有已停止且未锁定的环境可供选择。</div> : selectable.map((profile) => {
         const record = lifecycleRecordFor(data.lifecycleRecords, profile.id)
         const allowed = Boolean(record && lifecycleStateAllowed(action, record.state))
         return <label className={`bulk-lifecycle-row ${allowed ? '' : 'disabled'}`} key={profile.id}>
           <input type="checkbox" checked={selected.includes(profile.id)} disabled={busy || !allowed} onChange={() => toggle(profile.id)} />
-          <div><strong>{profile.name}</strong><span>{profile.group || 'No group'} · {(profile.tags || []).join(', ') || 'No tags'}</span></div>
-          <span className={`lifecycle-pill ${record?.state || 'missing'}`}>{record?.state || 'missing'}</span>
+          <div><strong>{profile.name}</strong><span>{profile.group || '无分组'} · {(profile.tags || []).join('、') || '无标签'}</span></div>
+          <span className={`lifecycle-pill ${record?.state || 'missing'}`}>{lifecycleStateLabel(record?.state)}</span>
         </label>
       })}
     </div>
 
     {action === 'trash' && <div className="bulk-trash-confirmation">
-      <div className="form-error"><strong>Recoverable, not permanent</strong><p>Browser data moves into Veilium private trash. Restore remains available until an explicit single-Profile permanent deletion.</p></div>
-      <label>Type <code>{expectedConfirmation}</code><input value={confirmation} disabled={busy || selected.length === 0} onChange={(event: ChangeEvent<HTMLInputElement>) => setConfirmation(event.target.value)} /></label>
+      <div className="form-error"><strong>这是可恢复操作，不是永久删除</strong><p>浏览器数据会移动到 Veilium 私有回收站。只有单个环境经过精确确认后才能永久删除。</p></div>
+      <label>请完整输入 <code>{expectedConfirmation}</code><input value={confirmation} disabled={busy || selected.length === 0} onChange={(event: ChangeEvent<HTMLInputElement>) => setConfirmation(event.target.value)} /></label>
     </div>}
 
-    {!ready && selected.length > 0 && <p className="muted">The fixed selection contains a Profile that is not eligible for {action}. Change the action or selection.</p>}
-    <button className={`button ${action === 'trash' ? 'danger' : 'primary'}`} disabled={!nativeMode || busy || !ready || (action === 'trash' && confirmation !== expectedConfirmation)} onClick={() => void apply()}>
-      {busy ? 'Applying…' : `${label(action)} ${selected.length || ''} selected Profile${selected.length === 1 ? '' : 's'}`}
-    </button>
+    {!ready && selected.length > 0 && <p className="muted">固定选择中包含不允许执行“{actionLabel(action)}”的环境，请修改操作或选择。</p>}
+    <button className={`button ${action === 'trash' ? 'danger' : 'primary'}`} disabled={!nativeMode || busy || !ready || (action === 'trash' && confirmation !== expectedConfirmation)} onClick={() => void apply()}>{busy ? '正在执行…' : `${actionLabel(action)} ${selected.length || ''} 个环境`}</button>
 
     {result && <div className="bulk-lifecycle-results">
       {result.items.map((item) => <article className={item.status} key={`${result.requestId}-${item.profileId}`}>
-        <div><strong>{profileName(data, item.profileId)}</strong><span>{item.lifecycleState || 'unknown'}</span></div>
-        <span className={`lifecycle-operation-status ${item.status}`}>{item.status}</span>
+        <div><strong>{profileName(data, item.profileId)}</strong><span>{lifecycleStateLabel(item.lifecycleState)}</span></div>
+        <span className={`lifecycle-operation-status ${item.status}`}>{itemStatusLabel(item.status)}</span>
         {item.reasonCode && <small>{item.reasonCode}</small>}
       </article>)}
       <ul className="plain-list">{result.limitations?.map((item) => <li key={item}>{item}</li>)}</ul>
@@ -146,16 +130,6 @@ function lifecycleStateAllowed(action: BulkLifecycleAction, state: LifecycleStat
   }
   return false
 }
-
-function label(action: BulkLifecycleAction): string {
-  switch (action) {
-    case 'archive': return 'Archive'
-    case 'unarchive': return 'Unarchive'
-    case 'trash': return 'Move to trash'
-  }
-  return action
-}
-
-function profileName(data: LifecycleBootstrap, profileId: string): string {
-  return data.profiles.find((profile) => profile.id === profileId)?.name || profileId
-}
+function actionLabel(action: BulkLifecycleAction): string { if (action === 'archive') return '归档'; if (action === 'unarchive') return '取消归档'; if (action === 'trash') return '移入回收站'; return action }
+function itemStatusLabel(status: string): string { const labels: Record<string, string> = { succeeded: '成功', skipped: '已跳过', cancelled: '已取消', failed: '失败', pending: '等待中', running: '进行中' }; return labels[status] || status }
+function profileName(data: LifecycleBootstrap, profileId: string): string { return data.profiles.find((profile) => profile.id === profileId)?.name || profileId }
