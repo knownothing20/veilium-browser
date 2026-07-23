@@ -40,6 +40,8 @@ const phase5OperationTypes = new Set([
   'trash',
 ])
 
+type Phase5Section = 'operations' | 'lifecycle' | 'profiles' | 'storage' | 'templates'
+
 type NativeLifecycleAPI = {
   CancelLocalRecoveryOperation(operationId: string): Promise<unknown>
 }
@@ -48,8 +50,17 @@ function nativeLifecycleAPI(): NativeLifecycleAPI | undefined {
   return (window as unknown as { go?: { main?: { DesktopApp?: NativeLifecycleAPI } } }).go?.main?.DesktopApp
 }
 
+const sections: Array<{ key: Phase5Section; label: string; detail: string }> = [
+  { key: 'operations', label: 'Operations', detail: 'History, progress, reports, and safe cancellation' },
+  { key: 'lifecycle', label: 'Lifecycle', detail: 'Bounded archive, unarchive, and recoverable trash' },
+  { key: 'profiles', label: 'Profiles', detail: 'Metadata, portable export, health, and storage inventory' },
+  { key: 'storage', label: 'Locations', detail: 'Fixed managed paths and system-volume visibility' },
+  { key: 'templates', label: 'Templates', detail: 'Inspect and maintain reusable non-secret defaults' },
+]
+
 export function MultiProfileDock() {
   const [open, setOpen] = useState(false)
+  const [section, setSection] = useState<Phase5Section>('operations')
   const [data, setData] = useState<LifecycleBootstrap>(emptyData)
   const [loading, setLoading] = useState(false)
   const [cancelling, setCancelling] = useState('')
@@ -80,10 +91,13 @@ export function MultiProfileDock() {
     return () => window.clearInterval(timer)
   }, [open, refresh])
 
-  const operations = useMemo(() => [...data.lifecycleOperations]
+  const phase5Operations = useMemo(() => [...data.lifecycleOperations]
     .filter((operation) => phase5OperationTypes.has(operation.type))
-    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
-    .slice(0, 12), [data.lifecycleOperations])
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)), [data.lifecycleOperations])
+  const operations = phase5Operations.slice(0, 12)
+  const runningCount = phase5Operations.filter((operation) => ['pending', 'running'].includes(operation.status)).length
+  const recoveryCount = phase5Operations.filter((operation) => operation.status === 'recovery-required').length
+  const reviewCount = phase5Operations.filter((operation) => ['partial', 'failed'].includes(operation.status)).length
 
   const cancelOperation = async (operation: LifecycleOperation) => {
     const api = nativeLifecycleAPI()
@@ -127,30 +141,56 @@ export function MultiProfileDock() {
   }
 
   return <>
-    <button className="multi-profile-dock-button" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
+    <button className="multi-profile-dock-button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="phase5-tools-workspace">
       {open ? 'Close Phase 5 tools' : 'Multi-Profile tools'}
     </button>
-    {open && <aside className="multi-profile-dock" aria-label="Multi-Profile and storage tools">
+    {open && <aside id="phase5-tools-workspace" className="multi-profile-dock" aria-label="Multi-Profile and storage tools">
       <div className="multi-profile-dock-header">
-        <div><span className="eyebrow">Phase 5 workspace</span><h1>Multi-Profile tools</h1><p>Bounded metadata, recoverable lifecycle, portability, health, and storage review.</p></div>
+        <div><span className="eyebrow">Phase 5 workspace</span><h1>Multi-Profile tools</h1><p>One bounded desktop path for portability, recoverable lifecycle, health, templates, operation history, and managed storage.</p></div>
         <button className="button secondary" disabled={loading} onClick={() => void refresh()}>{loading ? 'Refreshing…' : 'Refresh data'}</button>
       </div>
       {error && <div className="form-error">{error}</div>}
       {reportResult && <div className="info-banner"><strong>Operation report saved</strong><p>{reportResult.path}</p><code>{reportResult.payloadSha256}</code></div>}
-      <Phase5OperationJournal
-        data={data}
-        operations={operations}
-        cancelling={cancelling}
-        exportingReport={exportingReport}
-        onCancel={cancelOperation}
-        onExportReport={exportOperationReport}
-      />
-      <BulkLifecycleWorkspace data={data} onRefresh={refresh} />
-      <MultiProfileWorkspace data={data} onRefresh={refresh} />
-      <StorageLocationsWorkspace />
-      <TemplateMaintenanceWorkspace />
+
+      <nav className="toolbar" aria-label="Phase 5 tool sections">
+        {sections.map((item) => <button
+          key={item.key}
+          className={`button ${section === item.key ? 'primary' : 'secondary'}`}
+          aria-pressed={section === item.key}
+          title={item.detail}
+          onClick={() => setSection(item.key)}
+        >
+          {item.label}
+        </button>)}
+      </nav>
+      <p className="muted">{sections.find((item) => item.key === section)?.detail}</p>
+
+      {section === 'operations' && <>
+        <section className="panel recovery-summary" aria-label="Phase 5 operation summary">
+          <Summary label="Profiles" value={data.profiles.length} detail="Current local records" />
+          <Summary label="Running" value={runningCount} detail="Pending or active operations" warn={runningCount > 0} />
+          <Summary label="Needs review" value={reviewCount} detail="Partial or failed operations" warn={reviewCount > 0} />
+          <Summary label="Recovery required" value={recoveryCount} detail="Preserved ambiguous state" warn={recoveryCount > 0} />
+        </section>
+        <Phase5OperationJournal
+          data={data}
+          operations={operations}
+          cancelling={cancelling}
+          exportingReport={exportingReport}
+          onCancel={cancelOperation}
+          onExportReport={exportOperationReport}
+        />
+      </>}
+      {section === 'lifecycle' && <BulkLifecycleWorkspace data={data} onRefresh={refresh} />}
+      {section === 'profiles' && <MultiProfileWorkspace data={data} onRefresh={refresh} />}
+      {section === 'storage' && <StorageLocationsWorkspace />}
+      {section === 'templates' && <TemplateMaintenanceWorkspace />}
     </aside>}
   </>
+}
+
+function Summary({ label: title, value, detail, warn = false }: { label: string; value: number; detail: string; warn?: boolean }) {
+  return <div className={`recovery-summary-item ${warn ? 'warn' : ''}`}><span>{title}</span><strong>{value}</strong><small>{detail}</small></div>
 }
 
 function Phase5OperationJournal({
