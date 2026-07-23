@@ -1,3 +1,4 @@
+import { formatBytes } from '../i18n/format'
 import type { KernelInstallRequest, KernelRecord, KernelReleasePin } from '../types'
 
 type Props = {
@@ -38,24 +39,24 @@ export function OfficialKernelCard({
   return <section className="panel kernel-import official-kernel-card">
     <div className="panel-heading">
       <div>
-        <h2>Reviewed official Chromium Snapshot</h2>
-        <p>One fixed Windows x64 package. Veilium never resolves latest or silently updates it.</p>
+        <h2>已审查的官方 Chromium 快照</h2>
+        <p>固定的 Windows x64 浏览器包。Veilium 不会自动解析最新版，也不会静默更新。</p>
       </div>
       <span className={`kernel-status ${installed ? 'verified' : available ? 'available' : 'missing'}`}>
-        {installed ? 'installed' : available ? 'available' : 'unavailable'}
+        {installed ? '已安装' : available ? '可安装' : '当前平台不可用'}
       </span>
     </div>
 
     <dl className="kernel-pin-grid">
-      <div><dt>Chromium</dt><dd>{pin.browserVersion}</dd></div>
-      <div><dt>Snapshot revision</dt><dd>{pin.snapshotRevision}</dd></div>
-      <div><dt>Archive</dt><dd>{(pin.archiveSizeBytes / 1024 / 1024).toFixed(1)} MB</dd></div>
-      <div><dt>Package identity</dt><dd>{pin.packageFileCount} files · {pin.packageTreeSha256.slice(0, 16)}…</dd></div>
+      <div><dt>Chromium 版本</dt><dd>{pin.browserVersion}</dd></div>
+      <div><dt>快照修订号</dt><dd>{pin.snapshotRevision}</dd></div>
+      <div><dt>压缩包大小</dt><dd>{formatBytes(pin.archiveSizeBytes)}</dd></div>
+      <div><dt>完整包身份</dt><dd>{pin.packageFileCount} 个文件 · {pin.packageTreeSha256.slice(0, 16)}…</dd></div>
     </dl>
 
     <div className="info-banner">
-      <strong>Exact reviewed boundary</strong>
-      <p>Reviewed status applies only to this revision, archive SHA-256, complete package tree, executable, Windows amd64, and accepted Evidence. Stock Chromium fingerprint overrides remain unsupported.</p>
+      <strong>精确的审查边界</strong>
+      <p>“已审查”只适用于这个修订号、压缩包 SHA-256、完整目录树、可执行文件、Windows amd64 平台和已接受的真实运行证据。原版 Chromium 不支持的指纹覆盖不会因为安装此包而变成可用。</p>
     </div>
 
     <label className="checkbox-row kernel-license-row">
@@ -65,7 +66,7 @@ export function OfficialKernelCard({
         onChange={(event) => onAcceptedChange(event.target.checked)}
         disabled={!available || installed}
       />
-      <span>I acknowledge the Chromium BSD-3-Clause license, <code>chrome://credits/</code> third-party notices, snapshot limitations, and this explicit download.</span>
+      <span>我已了解 Chromium BSD-3-Clause 许可证、<code>chrome://credits/</code> 第三方声明、快照限制，并明确同意下载此固定版本。</span>
     </label>
 
     <div className="kernel-actions official-kernel-actions">
@@ -74,7 +75,7 @@ export function OfficialKernelCard({
         disabled={disabled}
         onClick={() => onInstall({ providerId: pin.providerId, version: pin.browserVersion, licenseAccepted: accepted })}
       >
-        {busy ? 'Downloading and verifying…' : installed ? 'Installed and verified' : available ? 'Download, verify, and install' : 'Windows x64 only'}
+        {busy ? '正在下载并验证…' : installed ? '已安装并通过验证' : available ? '下载、验证并安装' : '仅支持 Windows x64'}
       </button>
     </div>
 
