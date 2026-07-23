@@ -5,6 +5,8 @@ import {
   type LifecycleBootstrap,
   type LifecycleOperation,
 } from '../lifecycle'
+import { ui } from '../i18n'
+import { formatDateTime } from '../i18n/format'
 import { backend } from '../lib/backend'
 import { multiProfileAPI, type OperationReportExportResult } from '../multiProfile'
 import { BulkLifecycleWorkspace } from './BulkLifecycleWorkspace'
@@ -51,15 +53,14 @@ function nativeLifecycleAPI(): NativeLifecycleAPI | undefined {
 }
 
 const sections: Array<{ key: Phase5Section; label: string; detail: string }> = [
-  { key: 'operations', label: 'Operations', detail: 'History, progress, reports, and safe cancellation' },
-  { key: 'lifecycle', label: 'Lifecycle', detail: 'Bounded archive, unarchive, and recoverable trash' },
-  { key: 'profiles', label: 'Profiles', detail: 'Metadata, portable export, health, and storage inventory' },
-  { key: 'storage', label: 'Locations', detail: 'Fixed managed paths and system-volume visibility' },
-  { key: 'templates', label: 'Templates', detail: 'Inspect and maintain reusable non-secret defaults' },
+  { key: 'operations', label: ui.batch.operations, detail: '查看进度、结果、脱敏报告和安全取消状态' },
+  { key: 'lifecycle', label: ui.batch.lifecycle, detail: '受限的归档、取消归档和可恢复回收站操作' },
+  { key: 'profiles', label: ui.batch.profiles, detail: '批量元数据、健康检查、便携导出和存储盘点' },
+  { key: 'storage', label: ui.batch.locations, detail: '查看固定受管路径与系统卷信息' },
+  { key: 'templates', label: ui.batch.templates, detail: '检查和维护不包含秘密的环境模板' },
 ]
 
-export function MultiProfileDock() {
-  const [open, setOpen] = useState(false)
+export function MultiProfileToolsPage() {
   const [section, setSection] = useState<Phase5Section>('operations')
   const [data, setData] = useState<LifecycleBootstrap>(emptyData)
   const [loading, setLoading] = useState(false)
@@ -85,11 +86,10 @@ export function MultiProfileDock() {
   }, [])
 
   useEffect(() => {
-    if (!open) return
     void refresh()
-    const timer = window.setInterval(() => void refresh(), 2000)
+    const timer = window.setInterval(() => void refresh(), 2500)
     return () => window.clearInterval(timer)
-  }, [open, refresh])
+  }, [refresh])
 
   const phase5Operations = useMemo(() => [...data.lifecycleOperations]
     .filter((operation) => phase5OperationTypes.has(operation.type))
@@ -102,7 +102,7 @@ export function MultiProfileDock() {
   const cancelOperation = async (operation: LifecycleOperation) => {
     const api = nativeLifecycleAPI()
     if (!api) {
-      setError('Operation cancellation requires the Wails desktop runtime.')
+      setError('取消操作需要 Wails 桌面运行时。')
       return
     }
     setCancelling(operation.id)
@@ -119,7 +119,7 @@ export function MultiProfileDock() {
 
   const exportOperationReport = async (operation: LifecycleOperation) => {
     if (!multiProfileAPI.isNative()) {
-      setError('Operation report export requires the Wails desktop runtime.')
+      setError('导出操作报告需要 Wails 桌面运行时。')
       return
     }
     setExportingReport(operation.id)
@@ -128,10 +128,7 @@ export function MultiProfileDock() {
     try {
       const destinationPath = await multiProfileAPI.pickOperationReportFile(operation.id)
       if (!destinationPath) return
-      const result = await multiProfileAPI.exportOperationReport({
-        operationId: operation.id,
-        destinationPath,
-      })
+      const result = await multiProfileAPI.exportOperationReport({ operationId: operation.id, destinationPath })
       setReportResult(result)
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason))
@@ -140,53 +137,50 @@ export function MultiProfileDock() {
     }
   }
 
-  return <>
-    <button className="multi-profile-dock-button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls="phase5-tools-workspace">
-      {open ? 'Close Phase 5 tools' : 'Multi-Profile tools'}
-    </button>
-    {open && <aside id="phase5-tools-workspace" className="multi-profile-dock" aria-label="Multi-Profile and storage tools">
-      <div className="multi-profile-dock-header">
-        <div><span className="eyebrow">Phase 5 workspace</span><h1>Multi-Profile tools</h1><p>One bounded desktop path for portability, recoverable lifecycle, health, templates, operation history, and managed storage.</p></div>
-        <button className="button secondary" disabled={loading} onClick={() => void refresh()}>{loading ? 'Refreshing…' : 'Refresh data'}</button>
-      </div>
-      {error && <div className="form-error">{error}</div>}
-      {reportResult && <div className="info-banner"><strong>Operation report saved</strong><p>{reportResult.path}</p><code>{reportResult.payloadSha256}</code></div>}
+  return <div className="multi-profile-page">
+    <div className="multi-profile-dock-header">
+      <div><span className="eyebrow">{ui.batch.eyebrow}</span><h1>{ui.batch.title}</h1><p>{ui.batch.description}</p></div>
+      <button className="button secondary" disabled={loading} onClick={() => void refresh()}>{loading ? ui.batch.refreshing : ui.batch.refreshData}</button>
+    </div>
+    {error && <div className="form-error page-form-error">{error}</div>}
+    {reportResult && <div className="info-banner"><strong>操作报告已保存</strong><p>{reportResult.path}</p><code>{reportResult.payloadSha256}</code></div>}
 
-      <nav className="toolbar" aria-label="Phase 5 tool sections">
-        {sections.map((item) => <button
-          key={item.key}
-          className={`button ${section === item.key ? 'primary' : 'secondary'}`}
-          aria-pressed={section === item.key}
-          title={item.detail}
-          onClick={() => setSection(item.key)}
-        >
-          {item.label}
-        </button>)}
-      </nav>
-      <p className="muted">{sections.find((item) => item.key === section)?.detail}</p>
+    <nav className="batch-section-tabs" aria-label="批量管理功能">
+      {sections.map((item) => <button
+        key={item.key}
+        className={section === item.key ? 'active' : ''}
+        aria-pressed={section === item.key}
+        title={item.detail}
+        onClick={() => setSection(item.key)}
+      >{item.label}</button>)}
+    </nav>
+    <p className="batch-section-detail">{sections.find((item) => item.key === section)?.detail}</p>
 
-      {section === 'operations' && <>
-        <section className="panel recovery-summary" aria-label="Phase 5 operation summary">
-          <Summary label="Profiles" value={data.profiles.length} detail="Current local records" />
-          <Summary label="Running" value={runningCount} detail="Pending or active operations" warn={runningCount > 0} />
-          <Summary label="Needs review" value={reviewCount} detail="Partial or failed operations" warn={reviewCount > 0} />
-          <Summary label="Recovery required" value={recoveryCount} detail="Preserved ambiguous state" warn={recoveryCount > 0} />
-        </section>
-        <Phase5OperationJournal
-          data={data}
-          operations={operations}
-          cancelling={cancelling}
-          exportingReport={exportingReport}
-          onCancel={cancelOperation}
-          onExportReport={exportOperationReport}
-        />
-      </>}
-      {section === 'lifecycle' && <BulkLifecycleWorkspace data={data} onRefresh={refresh} />}
-      {section === 'profiles' && <MultiProfileWorkspace data={data} onRefresh={refresh} />}
-      {section === 'storage' && <StorageLocationsWorkspace />}
-      {section === 'templates' && <TemplateMaintenanceWorkspace />}
-    </aside>}
-  </>
+    {section === 'operations' && <>
+      <section className="panel recovery-summary" aria-label="批量操作摘要">
+        <Summary label="环境" value={data.profiles.length} detail="当前本机环境记录" />
+        <Summary label="进行中" value={runningCount} detail="等待或正在执行的操作" warn={runningCount > 0} />
+        <Summary label="需要检查" value={reviewCount} detail="部分完成或失败的操作" warn={reviewCount > 0} />
+        <Summary label="需要恢复" value={recoveryCount} detail="已保留的模糊状态" warn={recoveryCount > 0} />
+      </section>
+      <Phase5OperationJournal
+        data={data}
+        operations={operations}
+        cancelling={cancelling}
+        exportingReport={exportingReport}
+        onCancel={cancelOperation}
+        onExportReport={exportOperationReport}
+      />
+    </>}
+    {section === 'lifecycle' && <BulkLifecycleWorkspace data={data} onRefresh={refresh} />}
+    {section === 'profiles' && <MultiProfileWorkspace data={data} onRefresh={refresh} />}
+    {section === 'storage' && <StorageLocationsWorkspace />}
+    {section === 'templates' && <TemplateMaintenanceWorkspace />}
+  </div>
+}
+
+export function MultiProfileDock() {
+  return null
 }
 
 function Summary({ label: title, value, detail, warn = false }: { label: string; value: number; detail: string; warn?: boolean }) {
@@ -209,46 +203,23 @@ function Phase5OperationJournal({
   onExportReport: (operation: LifecycleOperation) => Promise<void>
 }) {
   const nativeMode = multiProfileAPI.isNative()
-  return <section className="panel recovery-section">
+  return <section className="panel recovery-section batch-operation-journal">
     <div className="panel-heading">
-      <div><span className="eyebrow">Authoritative M5.1 journal</span><h2>Phase 5 operation history</h2><p>Live status, fixed Profile selection, per-item outcome, safe cancellation, recovery state, and redacted local report export from the existing lifecycle journal.</p></div>
-      <span className="lifecycle-operation-status running">{operations.length} recent</span>
+      <div><span className="eyebrow">权威生命周期日志</span><h2>批量操作记录</h2><p>状态、固定环境选择、逐项结果、安全取消和脱敏报告均来自现有操作日志。</p></div>
+      <span className="lifecycle-operation-status running">最近 {operations.length} 条</span>
     </div>
-    {operations.length === 0 ? <div className="lifecycle-empty">No portability, template, bulk, or recoverable lifecycle operation has been recorded.</div> : <ul className="lifecycle-operations">
+    {operations.length === 0 ? <div className="lifecycle-empty">还没有便携导入导出、模板、批量或可恢复生命周期操作记录。</div> : <ul className="lifecycle-operations">
       {operations.map((operation) => {
         const cancellationAllowed = canCancel(operation)
         const summary = itemSummary(operation)
         return <li key={operation.id}>
-          <div>
-            <strong>{label(operation.type)}</strong>
-            <span>{profileSelectionLabel(data, operation)} · updated {formatTime(operation.updatedAt)}</span>
-            <code title={operation.id}>{operation.id}</code>
-          </div>
-          <span className={`lifecycle-operation-status ${operation.status}`}>{operation.status}</span>
-          <div className="lifecycle-operation-detail">
-            <strong>{label(operation.stage)}</strong>
-            <span>{summary || cancellationAvailability(operation)}</span>
-          </div>
-          <div className="toolbar">
-            <small>{cancellationAvailability(operation)}</small>
-            <button
-              className="button secondary"
-              disabled={!nativeMode || Boolean(cancelling) || Boolean(exportingReport)}
-              onClick={() => void onExportReport(operation)}
-            >
-              {exportingReport === operation.id ? 'Exporting report…' : 'Export redacted report'}
-            </button>
-            {(cancellationAllowed || operation.cancellationRequested) && <button
-              className="button secondary"
-              disabled={!cancellationAllowed || Boolean(cancelling) || Boolean(exportingReport)}
-              onClick={() => void onCancel(operation)}
-            >
-              {operation.cancellationRequested
-                ? 'Cancellation requested'
-                : cancelling === operation.id
-                  ? 'Requesting…'
-                  : 'Cancel safely'}
-            </button>}
+          <div><strong>{operationLabel(operation.type)}</strong><span>{profileSelectionLabel(data, operation)} · 更新于 {formatDateTime(operation.updatedAt)}</span><code title={operation.id}>{operation.id}</code></div>
+          <span className={`lifecycle-operation-status ${operation.status}`}>{operationStatusLabel(operation.status)}</span>
+          <div className="lifecycle-operation-detail"><strong>{operationLabel(operation.stage)}</strong><span>{summary || cancellationText(operation)}</span></div>
+          <div className="toolbar batch-operation-actions">
+            <small>{cancellationText(operation)}</small>
+            <button className="button secondary" disabled={!nativeMode || Boolean(cancelling) || Boolean(exportingReport)} onClick={() => void onExportReport(operation)}>{exportingReport === operation.id ? '正在导出报告…' : '导出脱敏报告'}</button>
+            {(cancellationAllowed || operation.cancellationRequested) && <button className="button secondary" disabled={!cancellationAllowed || Boolean(cancelling) || Boolean(exportingReport)} onClick={() => void onCancel(operation)}>{operation.cancellationRequested ? '已请求取消' : cancelling === operation.id ? '正在请求…' : '安全取消'}</button>}
           </div>
         </li>
       })}
@@ -257,9 +228,7 @@ function Phase5OperationJournal({
 }
 
 function canCancel(operation: LifecycleOperation): boolean {
-  return ['pending', 'running'].includes(operation.status)
-    && !operation.cancellationRequested
-    && Boolean(operation.safeCancellationStage)
+  return ['pending', 'running'].includes(operation.status) && !operation.cancellationRequested && Boolean(operation.safeCancellationStage)
 }
 
 function itemSummary(operation: LifecycleOperation): string {
@@ -267,20 +236,42 @@ function itemSummary(operation: LifecycleOperation): string {
   if (items.length === 0) return ''
   const counts = new Map<string, number>()
   for (const item of items) counts.set(item.status, (counts.get(item.status) || 0) + 1)
-  return [...counts.entries()].map(([status, count]) => `${count} ${label(status).toLowerCase()}`).join(' · ')
+  return [...counts.entries()].map(([status, count]) => `${count} 个${operationStatusLabel(status)}`).join(' · ')
 }
 
 function profileSelectionLabel(data: LifecycleBootstrap, operation: LifecycleOperation): string {
   const names = operation.profileIds.map((profileId) => data.profiles.find((profile) => profile.id === profileId)?.name || profileId)
-  if (names.length <= 3) return names.join(', ')
-  return `${names.slice(0, 3).join(', ')} +${names.length - 3} more`
+  if (names.length <= 3) return names.join('、') || '没有环境'
+  return `${names.slice(0, 3).join('、')} 等 ${names.length} 个环境`
 }
 
-function label(value: string): string {
-  return value.split('-').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ')
+function operationLabel(value: string): string {
+  const labels: Record<string, string> = {
+    'export-definition': '导出环境定义',
+    'import-definition': '导入环境定义',
+    'create-template': '创建模板',
+    'apply-template': '应用模板',
+    'bulk-metadata-update': '批量更新元数据',
+    'bulk-health-refresh': '批量健康检查',
+    'storage-reconcile': '存储检查',
+    archive: '归档环境',
+    unarchive: '取消归档',
+    trash: '移入回收站',
+  }
+  return labels[value] || value.split('-').join(' ')
 }
 
-function formatTime(value: string): string {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
+function operationStatusLabel(value: string): string {
+  const labels: Record<string, string> = {
+    pending: '等待中', running: '进行中', completed: '已完成', partial: '部分完成', cancelled: '已取消', failed: '失败', 'recovery-required': '需要恢复', recovered: '已恢复', succeeded: '成功', skipped: '已跳过',
+  }
+  return labels[value] || value
+}
+
+function cancellationText(operation: LifecycleOperation): string {
+  if (operation.cancellationRequested) return '已请求取消，将在安全边界生效'
+  if (!['pending', 'running'].includes(operation.status)) return '操作已结束，不能取消'
+  if (operation.safeCancellationStage) return `可在 ${operationLabel(operation.safeCancellationStage)} 安全取消`
+  const fallback = cancellationAvailability(operation)
+  return fallback ? '当前阶段暂不能取消' : '当前阶段暂不能取消'
 }
