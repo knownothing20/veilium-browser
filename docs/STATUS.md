@@ -4,6 +4,7 @@ Last updated: 2026-07-23
 Application version: 0.15.0-dev
 Main baseline SHA: ffcf25d94cd821c82f07cc49fc61130d3e02fcdb
 Current phase: Phase 5
+Current phase document: docs/PHASE_05.md
 Current milestone: Consolidated M5.3, M5.4, and M5.5 product completion
 Current task: Execute full local validation and repair any build or runtime issues on PR #59 branch `agent/handoff-m5-3`
 Current implementation stage: M5.3/M5.4 services and desktop surfaces are implemented; the first complete source-level M5.5 Chinese browser workspace implementation is committed and awaits executable validation
@@ -75,7 +76,7 @@ Completed in the connector environment:
 Completed in the owner's Windows development environment (2026-07-23):
 
 - `npm ci` — 103 packages installed;
-- `npx tsc --noEmit` — passed after fixing two type errors:
+- `npx tsc --noEmit` — passed after fixing three TypeScript issues:
   - `backend.ts` browser-fallback `buildLaunchPlan` was missing `credentialRequired` and `providerCapabilities` fields on the `LaunchPlan` return type;
   - `evidence.test.ts` was missing `limitations` on the `EvidenceRun` test fixture;
   - `backend.ts` used `profile.kernel.providerId` which was renamed to `profile.kernel.provider` in the remote i18n refactor;
@@ -84,12 +85,16 @@ Completed in the owner's Windows development environment (2026-07-23):
 - `go fmt ./...` — passed (all files already formatted);
 - `go vet ./...` — passed (no issues);
 - `go test ./...` — all 30 packages passed (no failures);
+- `go test -race ./...` — not run: requires GCC (cgo) which is not installed on this Windows environment; race detection must be verified in an environment with MinGW-w64 or equivalent before merge;
 - `go build -o build/bin/veilium-browser.exe ./cmd/veilium` — passed;
 - `wails build` — Windows amd64 build succeeded in 14.4s (`build/bin/veilium-browser.exe`);
-- `wails dev` — desktop application launched successfully (both `wails` and `veilium-browser-dev` processes running, ~54 MB working set).
+- `wails dev` — desktop application launched successfully (both `wails` and `veilium-browser-dev` processes running, ~54 MB working set);
+- `python scripts/check_project_governance.py` — passed after adding missing `Current phase document` metadata field;
+- `main.tsx` global error handling — repaired: replaced all `innerHTML` injection with safe DOM construction (`textContent`/`createElement`); `unhandledrejection` now shows a dismissible banner instead of replacing the entire application root.
 
 Not yet verified and must not be claimed as passed:
 
+- `go test -race ./...` (blocked by missing GCC/cgo on this Windows host);
 - real Chromium start/stop/cleanup after the M5.5 changes;
 - manual Chinese UI smoke testing at 1366×768 and 1920×1080;
 - complete regression of recovery, portability, template, batch, proxy, and Evidence behavior;
