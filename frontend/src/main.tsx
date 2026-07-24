@@ -77,7 +77,7 @@ try {
   diagDiv.id = 'wails-diag'
   diagDiv.style.cssText = 'display:none;padding:8px;font-family:monospace;font-size:11px;background:#ff0;color:#000;white-space:pre-wrap'
   diagDiv.textContent = diagnostics.join('\n')
-  root.appendChild(diagDiv)
+  document.body.appendChild(diagDiv)
   window.addEventListener('keydown', (event) => {
     if (event.ctrlKey && event.shiftKey && event.key === 'D') {
       const diagnostic = document.getElementById('wails-diag')

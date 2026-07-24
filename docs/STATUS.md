@@ -94,7 +94,6 @@ Completed in the owner's Windows development environment (2026-07-23):
 
 Not yet verified and must not be claimed as passed:
 
-- ~~`go test -race ./...` (blocked by missing GCC/cgo on this Windows host)~~ — **passed 2026-07-24** after copying MinGW-w64 to `D:\mw64` (gcc/ld relative-path resolution breaks on spaces in `D:\Program Files`);
 - real Chromium start/stop/cleanup after the M5.5 changes;
 - manual Chinese UI smoke testing at 1366×768 and 1920×1080;
 - complete regression of recovery, portability, template, batch, proxy, and Evidence behavior;
