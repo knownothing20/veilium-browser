@@ -1,184 +1,108 @@
 # Current Project Status
 
-Last updated: 2026-07-21
+Last updated: 2026-07-24
 Application version: 0.15.0-dev
-Main baseline SHA: 8097422edd06a648631394ab9ff8b987b0f7c313
+Main baseline SHA: ffcf25d94cd821c82f07cc49fc61130d3e02fcdb
 Current phase: Phase 5
 Current phase document: docs/PHASE_05.md
-Current milestone: M5.2 — Safe Local Recovery
-Current task: Owner review and merge decision for PR #56
-Current implementation stage: M5.2 Stages 1–6 complete — ready for owner review
+Current milestone: Consolidated M5.3, M5.4, and M5.5 product completion
+Current task: Execute full local validation and repair any build or runtime issues on PR #59 branch `agent/handoff-m5-3`
+Current implementation stage: M5.3/M5.4 services and desktop surfaces are implemented; the first complete source-level M5.5 Chinese browser workspace implementation is committed and awaits executable validation
 
 ## Operational rule
 
-Phase 5 remains `Active`. Product implementation remains limited to Issue #54 until PR #56 is merged and M5.2 passes its dedicated Closing Review.
+PR #59 and branch `agent/handoff-m5-3` are the only remaining Phase 5 development path. No additional development branch, pull request, temporary issue, handoff PR, closing-review PR, or workflow is authorized.
 
-M5.3 and M5.4 remain blocked until that post-merge review passes and a separate documentation-only handoff advances this file.
+GitHub Actions remain unavailable and must not be created, enabled, modified, manually triggered, or rerun. Connector-side static work may continue in concentrated commits, but compilation, tests, Wails execution, Windows packaging, and manual smoke testing remain unverified until actually run in a suitable environment.
 
-## Completed M5.1 handoff
+## Completed frozen baseline
 
-M5.1 is complete:
+### M5.1 — Lifecycle foundation
 
-- Issue #45 closed;
-- PR #52 squash-merged as `51c469e51ec4cab4ade99efd83c2e6c26145f266`;
-- Closing Review #53 passed and closed.
+Merged and frozen: versioned lifecycle records, authoritative operation journal, per-Profile locks, active-session blockers, cancellation state, per-item results, bounded storage inventory, startup reconciliation, Desktop integration, and lifecycle UI.
 
-The M5.1 lifecycle records, operation journal, locks, blockers, cancellation state, storage inventory, startup recovery, Desktop integration, UI, tests, and documentation remain the frozen foundation for M5.2.
+### M5.2 — Safe local recovery
 
-## Current authority
+Merged and frozen: verified same-machine snapshots, restore to a new identity, archive/unarchive, recoverable trash, exact restore-trash, explicit permanent deletion, conservative reconciliation, and Local recovery workspace.
 
-Issue #54 is the single M5.2 implementation task.
+## Implemented in PR #59 before M5.5
 
-M5.2 implements only bounded same-machine recovery workflows described by Issue #54, `docs/PHASE_05_CONTRACTS.md`, `docs/LOCAL_RECOVERY.md`, and `docs/LOCAL_RECOVERY_DESKTOP.md`.
+- strict portable Profile definitions with canonical integrity and exclusion of secrets, browser data, binaries, local IDs/paths, runtime data, logs, and Evidence;
+- import preview, dependency remapping, new-identity default, advanced preserve-identity mode, and private templates;
+- bounded bulk metadata, recoverable lifecycle, portable export, health refresh, storage inventory, manual repair plans, operation history, cancellation, and redacted report export;
+- visible Desktop surfaces for M5.3 and M5.4;
+- existing M5.1/M5.2 locks, journal, idempotency, per-item results, rollback, and recovery state reused rather than replaced.
 
-All M5.2 work:
+## M5.5 source implementation committed
 
-- uses the M5.1 journal, locks, blockers, cancellation state, inventory, and recovery records;
-- requires stopped runtime and protected dependent work;
-- treats browser files as opaque data;
-- rejects unsafe, duplicate, linked, special, absolute, or out-of-root paths;
-- enforces reviewed file, size, space, duration, manifest, and path bounds;
-- uses private staging, complete verification, atomic activation, and rollback;
-- preserves the only healthy copy until replacement state validates;
-- restores to a new Profile ID, managed directory, and fingerprint seed by default;
-- remaps dependency requirements without copying secrets or source record IDs;
-- never broadens Provider trust, health, compatibility, or Evidence applicability;
-- preserves interrupted or partial work as explicit recovery state.
+The owner directed implementation of `docs/CHINESE_BROWSER_WORKSPACE_DEVELOPMENT_PLAN.md` in PR #59. The branch now contains:
 
-## M5.2 implementation stages
-
-1. **Stage 1 — Contracts and persistence — complete**
-   - versioned manifest and catalog contracts;
-   - canonical relative paths and deterministic file-tree identity;
-   - non-secret dependency requirement records;
-   - strict JSON boundaries, resource bounds, immutable manifest publication, atomic catalog persistence, explicit transitions, and rollback tests;
-   - complete retained Governance and CI matrix passed on head `8cf514d3ea25685ee30903ba19e8f6f7eccf815e`.
-
-2. **Stage 2 — Local snapshot creation — complete**
-   - M5.1 operation locks, blockers, journal state, idempotency, and cancellation are reused;
-   - bounded managed-directory preflight rejects path escape, links, reparse points, special entries, and hard-link ambiguity;
-   - destination-space, file-count, per-file, total-byte, manifest, and duration bounds are enforced;
-   - private staging copies opaque files with stable source identity and SHA-256 verification;
-   - source and staged file sets are completely reverified before publication;
-   - verified snapshots are atomically activated and catalogued;
-   - cancellation, source changes, insufficient space, rename failure, cleanup failure, and catalog-finalization failure produce truthful rollback or recovery state;
-   - complete retained Governance and CI matrix passed on head `361c39e8168696bfeb99266714d8b3c1a100ceaa`.
-
-3. **Stage 3 — Restore to new identity — complete**
-   - verified snapshots are completely revalidated before restore;
-   - restore applies only to the current operating system, architecture, and same-machine scope;
-   - current Kernel and adapter records are reverified before conservative dependency matching;
-   - local IDs, executable paths, secrets, source Evidence, source Profile ID, and source fingerprint seed are not copied;
-   - each idempotent restore receives one deterministic new Profile ID, managed directory, and fingerprint seed;
-   - restored Profiles remain `draft` with explicit limitations until current validation and dependencies pass;
-   - cancellation, snapshot tamper, target conflict, activation failure, metadata persistence failure, cleanup failure, and operation-finalization ambiguity produce truthful rollback or recovery state;
-   - implementation, Windows/Linux tests, documentation, Governance, and the complete retained CI matrix passed on head `711b10d0486a63df4f9c7bf43887fdd9f1855287`.
-
-4. **Stage 4 — Local lifecycle storage operations — complete**
-   - reversible archive and unarchive preserve the exact origin lifecycle state;
-   - recoverable trash moves only the Profile-owned managed browser directory into a private verified boundary;
-   - retention deadline and original managed identity are preserved;
-   - restore-trash completely revalidates and atomically restores the exact original managed location and lifecycle metadata;
-   - explicit permanent cleanup requires exact Profile confirmation and removes only verified owned trash data and matching Profile metadata;
-   - startup reconciliation reports interrupted and contradictory states without moving or deleting data automatically;
-   - failure after a commit or irreversible boundary remains truthful through rollback or `recovery-required` state;
-   - Governance and the complete retained CI matrix passed on head `4e3b0c39f561e1a00cf863663739dff5f6c49753`.
-
-5. **Stage 5 — Desktop/Wails API and minimum UI — complete**
-   - bounded local recovery state, snapshot and trash listing, snapshot detail, and Profile preflight APIs;
-   - snapshot, restore-to-new-identity, archive, unarchive, recoverable trash, restore-trash, permanent-delete, refresh, and safe-cancellation Wails actions;
-   - Desktop progress projection from the authoritative M5.1 operation journal rather than a second task system;
-   - conservative startup trash reconciliation when the Desktop recovery service initializes;
-   - legacy Wails Profile deletion routed through recoverable trash while direct metadata deletion remains fail-closed;
-   - minimum Local recovery workspace with Profile actions, verified snapshot cards, trash cards, operation progress/history, exact irreversible confirmation, and recovery-required findings;
-   - browser preview remains non-operational and no general filesystem browser is introduced;
-   - Desktop service tests, Go formatting/vet/unit/race/build, frontend typecheck/tests/build, Windows/Linux Wails builds, official adapters, Linux browser checks, and exact Windows reviewed-Chromium checks passed on head `8035a4ac53c1cafe85c129b1239ad9677a5f8fbc`.
-
-6. **Stage 6 — Integration, documentation, protected CI, and owner-review handoff — complete**
-   - contract, Desktop, status, and pre-merge review documentation are synchronized;
-   - final changed-file, non-scope, secret, path, rollback, lifecycle, confirmation, and recovery-state review passed;
-   - no temporary workflow or diagnostic artifact remains in the changed-file set;
-   - no PR conversation comment or inline review thread remains unresolved;
-   - the Evidence collector keeps its declared shutdown deadline authoritative and force-closes only the bounded loopback server if Chromium retains an active request; a deterministic regression test covers this cleanup boundary;
-   - Governance and the complete retained CI matrix passed on head `74ad752d56d56f6c0350437b250172a900bb7e08`;
-   - `docs/M5_2_IMPLEMENTATION_REVIEW.md` records the pre-merge verdict `READY FOR OWNER REVIEW`;
-   - PR #56 may be marked ready for review after the final documentation-only head remains green, but the owner retains the merge decision;
-   - a dedicated M5.2 Closing Review remains mandatory after merge.
-
-## Completed scope
-
-M5.2 provides:
-
-- versioned same-machine full snapshot records and strict catalogs;
-- bounded, staged, verified, atomic snapshot creation;
-- restore to a new limited identity with current local dependency remapping;
-- reversible archive/unarchive;
-- recoverable trash, exact restore-trash, retention metadata, and explicit irreversible cleanup;
-- conservative startup reconciliation;
-- bounded Desktop/Wails preflight, state, progress, history, cancellation, and action APIs;
-- a minimum Local recovery workspace extending the existing design;
-- Windows/Linux, failure-path, persistence, frontend, Wails, official-adapter, and reviewed-Chromium regression coverage.
-
-## Non-scope
-
-Issue #54 does not authorize and PR #56 does not implement:
-
-- portable cross-machine Profile transfer;
-- cross-platform full browser-state claims;
-- identity-preserving portable transfer;
-- templates;
-- Cookie or extension management;
-- secret export;
-- multi-Profile batch operations;
-- automatic retention or orphan cleanup;
-- a general filesystem browser;
-- remote APIs, MCP, cloud sync, or general automation;
-- Provider, Kernel, adapter, fingerprint, proxy-protocol, compatibility, or Evidence expansion;
-- macOS support claims;
-- release and updater work.
+- typed `zh-CN` messages, an English fallback dictionary, dictionary-shape test, Chinese status/size/date helpers, and `zh-CN` document metadata;
+- Chinese CJK typography, larger readable table and action sizes, responsive sidebar behavior, and product-specific UI overrides;
+- a five-item task-oriented primary navigation: browser environments, proxy/network, data/recovery, batch management, and settings;
+- advanced navigation for runtime sessions, browser kernels, and credentials;
+- browser environments as the default page with metrics, search, group filter, first-use guidance, visible “打开浏览器”/“关闭浏览器”, edit, and a progressive “更多” menu;
+- an internal SVG icon set replacing Unicode characters as the only operation signal in primary workflows;
+- a five-section Chinese create/edit environment flow covering basic information, browser/kernel, identity, network, and review, with Provider details progressively disclosed;
+- official and custom browser-kernel management localized in Chinese;
+- proxy adapter installation/import, credential storage, runtime sessions, launch details, proxy diagnostics, browser Evidence, Network Evidence, and identity consistency surfaces localized in Chinese;
+- data/recovery, local snapshots, restore, archive, trash, permanent-delete confirmation, portability/import/export, and template flows localized in Chinese;
+- the floating Multi-Profile dock removed from application rendering and integrated as a normal full-page batch-management workspace;
+- bulk operation history, recoverable lifecycle, metadata, health, portable export, managed storage, fixed locations, and template maintenance localized in Chinese;
+- optional managed-window frontend fields aligned with the existing consistency UI so TypeScript can represent those values without changing translation or persistence semantics.
 
 ## Frozen boundaries
 
-Phase 4 and M5.1 remain frozen:
+- browser contents remain opaque and separate from Profile metadata;
+- vault secrets remain local and non-portable;
+- local IDs and absolute paths are not portable identities;
+- UI text cannot manufacture Provider trust, capability support, compatibility, health, or Evidence;
+- bulk lifecycle exposes recoverable trash only and never bulk permanent deletion;
+- bulk export never overwrites an existing file and never stores destination paths in lifecycle item results;
+- health refresh, storage inventory, and repair plans remain observational;
+- application language remains separate from Profile language, timezone, platform, and fingerprint values;
+- unsupported, unsafe, contradictory, missing, modified, or unverifiable state fails closed or remains explicitly limited.
 
-- reviewed browser trust remains restricted to the approved Windows amd64 package;
-- custom and legacy Providers remain unpromoted;
-- lifecycle artifacts cannot create reviewed trust or applicable Evidence;
-- restored dependencies must map to current local verified records;
-- vault secrets remain non-portable;
-- lifecycle state remains independent from runtime, health, trust, compatibility, and Evidence;
-- unsupported, missing, unsafe, partial, contradictory, and unverifiable state fails closed or remains explicitly limited.
+## Validation truth
 
-Issue #49 remains a separate hosted-runner reliability investigation. PR #56 does not weaken Sandbox or Evidence requirements.
+Completed in the connector environment:
 
-## Required validation
+- source-level review of changed TypeScript/TSX interfaces, imports, enum values, routes, Wails method references, and component composition;
+- localization dictionary structure test added;
+- existing backend contracts and Wails method names intentionally reused;
+- no GitHub workflow change requested or executed;
+- PR remains open and unmerged.
 
-The reviewed implementation passed:
+Completed in the owner's Windows development environment (2026-07-23):
 
-```bash
-python scripts/check_project_governance.py
-make check
-```
+- `npm ci` — 103 packages installed;
+- `npx tsc --noEmit` — passed after fixing three TypeScript issues:
+  - `backend.ts` browser-fallback `buildLaunchPlan` was missing `credentialRequired` and `providerCapabilities` fields on the `LaunchPlan` return type;
+  - `evidence.test.ts` was missing `limitations` on the `EvidenceRun` test fixture;
+  - `backend.ts` used `profile.kernel.providerId` which was renamed to `profile.kernel.provider` in the remote i18n refactor;
+- `npx vitest run` — 16/16 tests passed after updating `evidence.test.ts` assertions to match Chinese `evidenceStatusLabel`/`evidenceSummary` output (labels are now `不完整`/`项通过`/`项部分通过` rather than `Incomplete`/`passed`/`partial`);
+- `npx vite build` — production bundle built (75 modules, 354 KB JS + 50 KB CSS);
+- `go fmt ./...` — passed (all files already formatted);
+- `go vet ./...` — passed (no issues);
+- `go test ./...` — all 30 packages passed (no failures);
+- `go test -race ./...` — all 30 packages passed (no data races detected); MinGW-w64 gcc 16.1.0 copied to `D:\mw64` (gcc/ld cannot resolve relative paths containing spaces when installed under `D:\Program Files`; original winget installation at `D:\Program Files\mingw64\mingw64` is preserved);
+- `go build -o build/bin/veilium-browser.exe ./cmd/veilium` — passed;
+- `wails build` — Windows amd64 build succeeded in 14.4s (`build/bin/veilium-browser.exe`);
+- `wails dev` — desktop application launched successfully (both `wails` and `veilium-browser-dev` processes running, ~54 MB working set);
+- `python scripts/check_project_governance.py` — passed after adding missing `Current phase document` metadata field;
+- `main.tsx` global error handling — repaired: replaced all `innerHTML` injection with safe DOM construction (`textContent`/`createElement`); `unhandledrejection` now shows a dismissible banner instead of replacing the entire application root.
 
-The protected matrix also passed:
+Not yet verified and must not be claimed as passed:
 
-- Go formatting, vet, race/unit tests, and builds;
-- frontend typecheck, tests, and production build;
-- Windows and Linux Wails builds;
-- strict schema and filesystem safety fixtures;
-- persistence, staging, activation, rollback, interruption, cancellation, and storage-failure tests;
-- active-session, protected-operation, conflict, and idempotency tests;
-- Windows and Linux real-filesystem operation tests;
-- artifact exclusion tests;
-- Phase 4 and M5.1 regression tests;
-- official adapter and browser Evidence checks, including bounded collector shutdown;
-- exact Windows reviewed-Chromium identity, Network Evidence, tamper, artifact, and cleanup checks.
+- real Chromium start/stop/cleanup after the M5.5 changes;
+- manual Chinese UI smoke testing at 1366×768 and 1920×1080;
+- complete regression of recovery, portability, template, batch, proxy, and Evidence behavior;
+- final proof that changing application-language presentation does not alter any Profile identity value.
 
 ## Exact next task
 
-1. confirm the final documentation-only head passes Governance and protected CI;
-2. mark PR #56 ready for owner review;
-3. owner reviews the complete PR and chooses whether to squash-merge it;
-4. do not start M5.3 or M5.4 before merge and dedicated Closing Review;
-5. after merge, create a dedicated M5.2 Closing Review against the merged main commit;
-6. only a separate documentation-only handoff may authorize the next milestone.
+1. manually exercise the primary Chinese browser-environment journey in the running `wails dev` window at 1366×768 and 1920×1080;
+2. manually test kernel installation/import, environment creation, proxy diagnostics, real Chromium start/stop, recovery, portability, templates, batch management, and persistence after restart;
+3. verify that application-language presentation does not alter any Profile identity value;
+4. update this file with manual-test results;
+5. do not merge PR #59 until executable validation and final scope/security review are complete.

@@ -136,19 +136,62 @@ const emptyInventory: StorageInventory = {
   limitations: [],
 }
 
+function arrayOrEmpty<T>(value: T[] | null | undefined): T[] {
+  return value || []
+}
+
+export function normalizeLifecycleOperation(op: LifecycleOperation): LifecycleOperation {
+  return {
+    ...op,
+    profileIds: arrayOrEmpty(op.profileIds),
+    items: arrayOrEmpty(op.items),
+    limitations: arrayOrEmpty(op.limitations),
+    recoveryActions: arrayOrEmpty(op.recoveryActions),
+  }
+}
+
+function normalizeRecord(rec: LifecycleRecord): LifecycleRecord {
+  return {
+    ...rec,
+    recoveryCodes: arrayOrEmpty(rec.recoveryCodes),
+    limitationCodes: arrayOrEmpty(rec.limitationCodes),
+  }
+}
+
 export function normalizeLifecycleBootstrap(input: Bootstrap): LifecycleBootstrap {
   const lifecycle = input as Partial<LifecycleBootstrap>
+  const rec = lifecycle.lifecycleReconciliation || {
+    generatedAt: '',
+    compatibilityCreated: [],
+    actions: [],
+    inventory: emptyInventory,
+    limitations: [],
+  }
+  rec.inventory.profiles = arrayOrEmpty(rec.inventory.profiles)
+  rec.inventory.orphans = arrayOrEmpty(rec.inventory.orphans)
+  rec.inventory.unsafe = arrayOrEmpty(rec.inventory.unsafe)
+  rec.inventory.limitations = arrayOrEmpty(rec.inventory.limitations)
+  rec.compatibilityCreated = arrayOrEmpty(rec.compatibilityCreated)
+  rec.actions = arrayOrEmpty(rec.actions)
+  rec.limitations = arrayOrEmpty(rec.limitations)
+  const providers = arrayOrEmpty(input.providers).map((provider) => ({
+    ...provider,
+    versions: arrayOrEmpty(provider.versions),
+    samples: arrayOrEmpty(provider.samples),
+  }))
   return {
     ...input,
-    lifecycleRecords: lifecycle.lifecycleRecords || [],
-    lifecycleOperations: lifecycle.lifecycleOperations || [],
-    lifecycleReconciliation: lifecycle.lifecycleReconciliation || {
-      generatedAt: '',
-      compatibilityCreated: [],
-      actions: [],
-      inventory: emptyInventory,
-      limitations: [],
-    },
+    profiles: arrayOrEmpty(input.profiles),
+    providers,
+    kernels: arrayOrEmpty(input.kernels),
+    adapters: arrayOrEmpty(input.adapters),
+    sessions: arrayOrEmpty(input.sessions),
+    credentials: arrayOrEmpty(input.credentials),
+    adapterPins: arrayOrEmpty(input.adapterPins),
+    kernelPins: arrayOrEmpty(input.kernelPins),
+    lifecycleRecords: arrayOrEmpty(lifecycle.lifecycleRecords).map(normalizeRecord),
+    lifecycleOperations: arrayOrEmpty(lifecycle.lifecycleOperations).map(normalizeLifecycleOperation),
+    lifecycleReconciliation: rec,
   }
 }
 

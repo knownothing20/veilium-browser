@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { formatDateTime } from '../i18n/format'
 import type { CredentialRecord, CredentialSaveRequest } from '../types'
+import { AppIcon } from './AppIcon'
 
 const emptyRequest: CredentialSaveRequest = { name: '', username: '', secret: '' }
 
@@ -44,7 +46,7 @@ export function CredentialVault({
   }
 
   async function remove(record: CredentialRecord) {
-    if (!window.confirm(`Delete “${record.name}” from ${provider}?`)) return
+    if (!window.confirm(`确定从 ${provider} 删除凭据“${record.name}”吗？`)) return
     setBusy(true)
     setError('')
     try {
@@ -60,28 +62,28 @@ export function CredentialVault({
   return (
     <div className="credential-layout">
       <section className="panel credential-form-card">
-        <div className="panel-heading"><div><h2>{request.id ? 'Update credential' : 'Add proxy credential'}</h2><p>The password is sent directly to {provider} and is never returned to the web interface.</p></div></div>
+        <div className="panel-heading"><div><h2>{request.id ? '更新凭据' : '添加代理凭据'}</h2><p>密码会直接发送到 {provider}，不会返回到网页界面，也不会写入环境元数据。</p></div></div>
         <form onSubmit={submit}>
-          <label>Display name<input required value={request.name} onChange={(event) => setRequest((current) => ({ ...current, name: event.target.value }))} placeholder="US residential proxy" /></label>
-          <label>Username<input required autoComplete="off" value={request.username} onChange={(event) => setRequest((current) => ({ ...current, username: event.target.value }))} /></label>
-          <label>Password<input required={!request.id} type="password" autoComplete="new-password" value={request.secret || ''} onChange={(event) => setRequest((current) => ({ ...current, secret: event.target.value }))} placeholder={request.id ? 'Leave blank to keep the current password' : 'Stored only in the OS vault'} /></label>
+          <label>显示名称<input required value={request.name} onChange={(event) => setRequest((current) => ({ ...current, name: event.target.value }))} placeholder="例如：美国住宅代理" /></label>
+          <label>用户名<input required autoComplete="off" value={request.username} onChange={(event) => setRequest((current) => ({ ...current, username: event.target.value }))} /></label>
+          <label>密码<input required={!request.id} type="password" autoComplete="new-password" value={request.secret || ''} onChange={(event) => setRequest((current) => ({ ...current, secret: event.target.value }))} placeholder={request.id ? '留空则保留当前密码' : '仅保存在操作系统凭据存储中'} /></label>
           <div className="credential-form-actions">
-            {request.id && <button type="button" className="button secondary" onClick={() => setRequest(emptyRequest)}>Cancel edit</button>}
-            <button className="button primary" disabled={!nativeMode || busy}>{busy ? 'Saving…' : request.id ? 'Update credential' : 'Store credential'}</button>
+            {request.id && <button type="button" className="button secondary" onClick={() => setRequest(emptyRequest)}>取消编辑</button>}
+            <button className="button primary" disabled={!nativeMode || busy}>{busy ? '正在保存…' : request.id ? '更新凭据' : '保存凭据'}</button>
           </div>
         </form>
-        {!nativeMode && <div className="info-banner credential-info"><strong>Desktop runtime required</strong><p>Browser preview mode never accepts or stores passwords.</p></div>}
+        {!nativeMode && <div className="info-banner credential-info"><strong>需要桌面运行时</strong><p>浏览器预览模式不会接收或保存密码。</p></div>}
         {error && <div className="form-error">{error}</div>}
       </section>
 
       <section className="credential-records">
         {records.length === 0
-          ? <div className="panel empty-state"><div className="empty-icon">◇</div><h3>No stored credential references</h3><p>Add a proxy username and password through the desktop application.</p></div>
+          ? <div className="panel empty-state"><div className="empty-icon"><AppIcon name="credential" size={25} /></div><h3>还没有保存凭据引用</h3><p>请通过桌面应用添加代理用户名和密码。</p></div>
           : records.map((record) => <article className="credential-card" key={record.id}>
-            <div className="credential-card-head"><div className="credential-symbol">◇</div><div><h2>{record.name}</h2><code>{record.id}</code></div></div>
-            <dl><div><dt>Username</dt><dd>{record.username}</dd></div><div><dt>Provider</dt><dd>{provider}</dd></div><div><dt>Updated</dt><dd>{new Date(record.updatedAt).toLocaleString()}</dd></div></dl>
-            <div className="credential-card-note"><span>●</span><p>Password stored outside Veilium metadata. It cannot be revealed from this screen.</p></div>
-            <div className="credential-card-actions"><button className="button secondary" disabled={busy || !nativeMode} onClick={() => edit(record)}>Edit metadata</button><button className="button secondary danger-text" disabled={busy || !nativeMode} onClick={() => void remove(record)}>Delete</button></div>
+            <div className="credential-card-head"><div className="credential-symbol"><AppIcon name="credential" /></div><div><h2>{record.name}</h2><code>{record.id}</code></div></div>
+            <dl><div><dt>用户名</dt><dd>{record.username}</dd></div><div><dt>存储提供方</dt><dd>{provider}</dd></div><div><dt>更新时间</dt><dd>{formatDateTime(record.updatedAt)}</dd></div></dl>
+            <div className="credential-card-note"><span>●</span><p>密码保存在 Veilium 元数据之外，无法从此页面查看或导出。</p></div>
+            <div className="credential-card-actions"><button className="button secondary" disabled={busy || !nativeMode} onClick={() => edit(record)}>编辑名称与用户名</button><button className="button secondary danger-text" disabled={busy || !nativeMode} onClick={() => void remove(record)}>删除</button></div>
           </article>)}
       </section>
     </div>

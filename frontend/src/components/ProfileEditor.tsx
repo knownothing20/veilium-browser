@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react'
 import {
   applyKernel,
   capabilityAllowsConfiguration,
   capabilityFor,
-  capabilityLabel,
   capabilitiesFor,
   defaultProfile,
   providerTrust,
-} from "../lib/model";
+} from '../lib/model'
+import { ui } from '../i18n'
 import type {
   AdapterRecord,
   CapabilityID,
@@ -15,20 +15,19 @@ import type {
   KernelRecord,
   Profile,
   ProviderDescriptor,
-} from "../types";
+} from '../types'
 
-function requiredAdapterKind(raw?: string): AdapterRecord["kind"] | undefined {
-  const scheme = (raw || "").split(":", 1)[0].trim().toLowerCase();
-  if (["vmess", "vless", "trojan", "ss", "shadowsocks"].includes(scheme))
-    return "xray";
-  if (["hysteria2", "tuic", "anytls"].includes(scheme)) return "sing-box";
-  return undefined;
+function requiredAdapterKind(raw?: string): AdapterRecord['kind'] | undefined {
+  const scheme = (raw || '').split(':', 1)[0].trim().toLowerCase()
+  if (['vmess', 'vless', 'trojan', 'ss', 'shadowsocks'].includes(scheme)) return 'xray'
+  if (['hysteria2', 'tuic', 'anytls'].includes(scheme)) return 'sing-box'
+  return undefined
 }
 
 function preferredProvider(providers: ProviderDescriptor[]): ProviderDescriptor | undefined {
-  return providers.find((item) => item.id === "custom-chromium")
-    || providers.find((item) => item.id === "native-chromium")
-    || providers[0];
+  return providers.find((item) => item.id === 'custom-chromium')
+    || providers.find((item) => item.id === 'native-chromium')
+    || providers[0]
 }
 
 export function ProfileEditor({
@@ -41,501 +40,251 @@ export function ProfileEditor({
   onClose,
   onSave,
 }: {
-  open: boolean;
-  profile?: Profile;
-  providers: ProviderDescriptor[];
-  kernels: KernelRecord[];
-  adapters: AdapterRecord[];
-  credentials: CredentialRecord[];
-  onClose: () => void;
-  onSave: (profile: Profile) => Promise<void>;
+  open: boolean
+  profile?: Profile
+  providers: ProviderDescriptor[]
+  kernels: KernelRecord[]
+  adapters: AdapterRecord[]
+  credentials: CredentialRecord[]
+  onClose: () => void
+  onSave: (profile: Profile) => Promise<void>
 }) {
-  const initialProvider = preferredProvider(providers);
-  const [draft, setDraft] = useState<Profile>(() =>
-    profile ? structuredClone(profile) : defaultProfile(initialProvider),
-  );
-  const [tags, setTags] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const initialProvider = preferredProvider(providers)
+  const [draft, setDraft] = useState<Profile>(() => profile ? structuredClone(profile) : defaultProfile(initialProvider))
+  const [tags, setTags] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
   useEffect(() => {
-    const next = profile
-      ? structuredClone(profile)
-      : defaultProfile(preferredProvider(providers));
-    setDraft(next);
-    setTags((next.tags || []).join(", "));
-    setError("");
-  }, [profile, providers, open]);
-  const selectedProvider =
-    providers.find((item) => item.id === draft.kernel.provider) || preferredProvider(providers);
+    const next = profile ? structuredClone(profile) : defaultProfile(preferredProvider(providers))
+    setDraft(next)
+    setTags((next.tags || []).join(', '))
+    setError('')
+  }, [profile, providers, open])
+
+  const selectedProvider = providers.find((item) => item.id === draft.kernel.provider) || preferredProvider(providers)
   const providerCapabilities = useMemo(
     () => capabilitiesFor(providers, draft.kernel.provider, draft.kernel.version),
     [providers, draft.kernel.provider, draft.kernel.version],
-  );
-  const trust = providerTrust(providers, draft.kernel.provider, draft.kernel.version);
-  const providerBlocked = trust === "disabled" || trust === "invalid";
-  const verifiedKernels = kernels.filter((item) => item.status === "verified");
-  const adapterKind = requiredAdapterKind(draft.proxy.url);
-  const compatibleAdapters = adapters.filter(
-    (item) => item.status === "verified" && item.kind === adapterKind,
-  );
-  if (!open) return null;
+  )
+  const trust = providerTrust(providers, draft.kernel.provider, draft.kernel.version)
+  const providerBlocked = trust === 'disabled' || trust === 'invalid'
+  const verifiedKernels = kernels.filter((item) => item.status === 'verified')
+  const adapterKind = requiredAdapterKind(draft.proxy.url)
+  const compatibleAdapters = adapters.filter((item) => item.status === 'verified' && item.kind === adapterKind)
+
+  if (!open) return null
 
   const declaration = (id: CapabilityID) => capabilityFor(
     providers,
     draft.kernel.provider,
     draft.kernel.version,
     id,
-  );
-  const canConfigure = (id: CapabilityID) => capabilityAllowsConfiguration(
-    declaration(id)?.status || "unsupported",
-  );
-  const update = <K extends keyof Profile>(key: K, value: Profile[K]) =>
-    setDraft((current) => ({ ...current, [key]: value }));
-  const updateFingerprint = (
-    key: keyof Profile["fingerprint"],
-    value: string | number,
-  ) =>
-    setDraft((current) => ({
-      ...current,
-      fingerprint: { ...current.fingerprint, [key]: value },
-    }));
-  const updateKernel = (key: keyof Profile["kernel"], value: string) =>
-    setDraft((current) => ({
-      ...current,
-      kernel: { ...current.kernel, [key]: value },
-    }));
-  const updateProxy = (key: keyof Profile["proxy"], value: string) =>
-    setDraft((current) => ({
-      ...current,
-      proxy: { ...current.proxy, [key]: value },
-    }));
+  )
+  const canConfigure = (id: CapabilityID) => capabilityAllowsConfiguration(declaration(id)?.status || 'unsupported')
+  const update = <K extends keyof Profile>(key: K, value: Profile[K]) => setDraft((current) => ({ ...current, [key]: value }))
+  const updateFingerprint = (key: keyof Profile['fingerprint'], value: string | number) => setDraft((current) => ({
+    ...current,
+    fingerprint: { ...current.fingerprint, [key]: value },
+  }))
+  const updateKernel = (key: keyof Profile['kernel'], value: string) => setDraft((current) => ({
+    ...current,
+    kernel: { ...current.kernel, [key]: value },
+  }))
+  const updateProxy = (key: keyof Profile['proxy'], value: string) => setDraft((current) => ({
+    ...current,
+    proxy: { ...current.proxy, [key]: value },
+  }))
+
   async function submit(event: React.FormEvent) {
-    event.preventDefault();
+    event.preventDefault()
     if (providerBlocked) {
-      setError(`Provider ${draft.kernel.provider} is ${trust} and cannot be saved or launched.`);
-      return;
+      setError(ui.editor.blockedError(draft.kernel.provider, trust))
+      return
     }
-    setSaving(true);
-    setError("");
+    setSaving(true)
+    setError('')
     try {
       await onSave({
         ...draft,
-        tags: tags
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean),
-      });
-      onClose();
+        tags: tags.split(',').map((item) => item.trim()).filter(Boolean),
+      })
+      onClose()
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      setError(reason instanceof Error ? reason.message : String(reason))
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
   }
+
+  const trustDetail = trust === 'reviewed'
+    ? ui.editor.reviewedTrust
+    : trust === 'custom'
+      ? ui.editor.customTrust
+      : trust === 'legacy'
+        ? ui.editor.legacyTrust
+        : ui.editor.blockedTrust
+
   return (
     <div className="overlay" onMouseDown={onClose}>
-      <form
-        className="editor-panel"
-        onSubmit={submit}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
+      <form className="editor-panel guided-editor" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}>
         <header className="editor-header">
           <div>
-            <span className="eyebrow">Isolated identity</span>
-            <h2>
-              {profile ? "Edit browser profile" : "Create browser profile"}
-            </h2>
+            <span className="eyebrow">{ui.editor.eyebrow}</span>
+            <h2>{profile ? ui.editor.editTitle : ui.editor.createTitle}</h2>
           </div>
-          <button type="button" className="close-button" onClick={onClose}>
-            ×
-          </button>
+          <button type="button" className="close-button" onClick={onClose} aria-label={ui.common.cancel}>×</button>
         </header>
+
         <div className="editor-scroll">
-          <section className="form-section">
-            <div className="section-heading">
-              <span>01</span>
-              <div>
-                <h3>Identity</h3>
-                <p>
-                  Human-readable organization only. Runtime state stays
-                  separate.
-                </p>
-              </div>
-            </div>
+          <FormSection index="01" title={ui.editor.basic} detail={ui.editor.basicDetail}>
             <div className="form-grid two">
-              <label>
-                Name
-                <input
-                  required
-                  value={draft.name}
-                  onChange={(event) => update("name", event.target.value)}
-                />
-              </label>
-              <label>
-                Group
-                <input
-                  value={draft.group || ""}
-                  onChange={(event) => update("group", event.target.value)}
-                />
-              </label>
+              <label>{ui.editor.name}<input required value={draft.name} onChange={(event) => update('name', event.target.value)} /></label>
+              <label>{ui.editor.group}<input value={draft.group || ''} onChange={(event) => update('group', event.target.value)} /></label>
             </div>
+            <label>{ui.editor.tags}<input value={tags} onChange={(event) => setTags(event.target.value)} /><small>{ui.editor.tagsHint}</small></label>
+            <label>{ui.editor.notes}<textarea value={draft.notes || ''} onChange={(event) => update('notes', event.target.value)} /></label>
+          </FormSection>
+
+          <FormSection index="02" title={ui.editor.browser} detail={ui.editor.browserDetail}>
             <label>
-              Tags
-              <input
-                value={tags}
-                onChange={(event) => setTags(event.target.value)}
-              />
-              <small>Separate tags with commas.</small>
-            </label>
-            <label>
-              Notes
-              <textarea
-                value={draft.notes || ""}
-                onChange={(event) => update("notes", event.target.value)}
-              />
-            </label>
-          </section>
-          <section className="form-section">
-            <div className="section-heading">
-              <span>02</span>
-              <div>
-                <h3>Kernel contract</h3>
-                <p>
-                  Binary integrity, provider trust, and capability evidence are
-                  separate states.
-                </p>
-              </div>
-            </div>
-            <div className="info-banner">
-              <strong>Provider trust: {trust}</strong>
-              <p>
-                {trust === "reviewed"
-                  ? "Reviewed trust applies only to the exact provider, version, platform, and binary identity."
-                  : trust === "custom"
-                    ? "Custom binaries may use generic launch settings but receive no reviewed fingerprint claims."
-                    : trust === "legacy"
-                      ? "This compatibility provider remains readable but former boolean claims are not treated as verified."
-                      : "This provider is blocked until its contract is repaired or replaced."}
-              </p>
-            </div>
-            <label>
-              Registered kernel
+              {ui.editor.registeredKernel}
               <select
-                value={draft.kernel.id || ""}
+                value={draft.kernel.id || ''}
                 onChange={(event) => {
-                  const record = verifiedKernels.find(
-                    (item) => item.id === event.target.value,
-                  );
-                  if (record)
-                    setDraft((current) => applyKernel(current, record));
-                  else
-                    setDraft((current) => ({
-                      ...current,
-                      kernel: { ...current.kernel, id: undefined },
-                    }));
+                  const record = verifiedKernels.find((item) => item.id === event.target.value)
+                  if (record) setDraft((current) => applyKernel(current, record))
+                  else setDraft((current) => ({ ...current, kernel: { ...current.kernel, id: undefined } }))
                 }}
               >
-                <option value="">Legacy manual executable</option>
-                {verifiedKernels.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} · Chromium {item.version.split(".")[0]}
-                  </option>
-                ))}
+                <option value="">{ui.editor.legacyExecutable}</option>
+                {verifiedKernels.map((item) => <option key={item.id} value={item.id}>{item.name} · Chromium {item.version.split('.')[0]}</option>)}
               </select>
-              <small>Integrity verification alone does not create reviewed provider trust.</small>
+              <small>{ui.editor.kernelHint}</small>
             </label>
-            <div className="form-grid two">
-              <label>
-                Provider
-                <select
-                  disabled={Boolean(draft.kernel.id)}
-                  value={draft.kernel.provider}
-                  onChange={(event) => {
-                    const provider =
-                      providers.find(
-                        (item) => item.id === event.target.value,
-                      ) || preferredProvider(providers);
-                    const defaults = defaultProfile(provider);
-                    setDraft((current) => ({
-                      ...current,
-                      kernel: defaults.kernel,
-                      fingerprint: defaults.fingerprint,
-                    }));
-                  }}
-                >
-                  {providers.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Chromium version
-                <select
-                  disabled={Boolean(draft.kernel.id)}
-                  value={draft.kernel.version}
-                  onChange={(event) =>
-                    updateKernel("version", event.target.value)
-                  }
-                >
-                  {selectedProvider?.versions.map((version) => (
-                    <option key={version}>{version}</option>
-                  ))}
-                </select>
-              </label>
+
+            <div className={`info-banner trust-banner ${providerBlocked ? 'danger' : ''}`}>
+              <strong>{ui.editor.providerTrust}：{trustLabel(trust)}</strong>
+              <p>{trustDetail}</p>
             </div>
-            <label>
-              Executable path
-              <input
-                required
-                readOnly={Boolean(draft.kernel.id)}
-                value={draft.kernel.executable}
-                onChange={(event) =>
-                  updateKernel("executable", event.target.value)
-                }
-              />
-            </label>
-            <div className="capability-strip">
-              {([
-                ["surface-seed", "Seeded surfaces"],
-                ["surface-controls", "Surface controls"],
-                ["custom-gpu", "Custom GPU"],
-                ["hardware-concurrency", "CPU override"],
-              ] as const).map(([id, label]) => {
-                const item = declaration(id);
-                return <span
-                  key={id}
-                  className={capabilityAllowsConfiguration(item?.status || "unsupported") ? "on" : ""}
-                  title={item?.limitation || "No provider declaration"}
-                >
-                  {label}: {capabilityLabel(item?.status || "unsupported")}
-                </span>;
-              })}
-            </div>
-            {providerCapabilities?.limitations?.length ? (
-              <small>{providerCapabilities.limitations.join(" · ")}</small>
-            ) : null}
-          </section>
-          <section className="form-section">
-            <div className="section-heading">
-              <span>03</span>
-              <div>
-                <h3>Identity consistency</h3>
-                <p>
-                  Unsupported controls are read-only until a reviewed provider
-                  and real-browser evidence authorize them.
-                </p>
+
+            <details className="advanced-settings">
+              <summary>{ui.editor.advancedBrowser}</summary>
+              <div className="advanced-settings-content">
+                <div className="form-grid two">
+                  <label>
+                    {ui.editor.provider}
+                    <select
+                      disabled={Boolean(draft.kernel.id)}
+                      value={draft.kernel.provider}
+                      onChange={(event) => {
+                        const provider = providers.find((item) => item.id === event.target.value) || preferredProvider(providers)
+                        const defaults = defaultProfile(provider)
+                        setDraft((current) => ({ ...current, kernel: defaults.kernel, fingerprint: defaults.fingerprint }))
+                      }}
+                    >
+                      {providers.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                    </select>
+                  </label>
+                  <label>
+                    {ui.editor.chromiumVersion}
+                    <select disabled={Boolean(draft.kernel.id)} value={draft.kernel.version} onChange={(event) => updateKernel('version', event.target.value)}>
+                      {selectedProvider?.versions.map((version) => <option key={version}>{version}</option>)}
+                    </select>
+                  </label>
+                </div>
+                <label>{ui.editor.executablePath}<input required readOnly={Boolean(draft.kernel.id)} value={draft.kernel.executable} onChange={(event) => updateKernel('executable', event.target.value)} /></label>
+                <div className="capability-strip">
+                  {([
+                    ['surface-seed', '稳定种子'],
+                    ['surface-controls', '表面控制'],
+                    ['custom-gpu', '自定义 GPU'],
+                    ['hardware-concurrency', 'CPU 覆盖'],
+                  ] as const).map(([id, label]) => {
+                    const item = declaration(id)
+                    return <span key={id} className={capabilityAllowsConfiguration(item?.status || 'unsupported') ? 'on' : ''} title={item?.limitation || '没有提供方声明'}>{label}：{capabilityStatusLabel(item?.status || 'unsupported')}</span>
+                  })}
+                </div>
+                {providerCapabilities?.limitations?.length ? <small>{providerCapabilities.limitations.join(' · ')}</small> : null}
               </div>
-            </div>
+            </details>
+          </FormSection>
+
+          <FormSection index="03" title={ui.editor.identity} detail={ui.editor.identityDetail}>
             <div className="form-grid three">
-              <label>
-                Platform
-                <select
-                  value={draft.fingerprint.platform}
-                  disabled={!canConfigure("platform")}
-                  onChange={(event) =>
-                    updateFingerprint("platform", event.target.value)
-                  }
-                >
-                  <option value="windows">Windows</option>
-                  <option value="linux">Linux</option>
-                  <option value="macos">macOS</option>
-                </select>
-              </label>
-              <label>
-                Brand
-                <select
-                  value={draft.fingerprint.brand}
-                  disabled={!canConfigure("browser-brand")}
-                  onChange={(event) =>
-                    updateFingerprint("brand", event.target.value)
-                  }
-                >
-                  <option>Chromium</option>
-                  <option>Chrome</option>
-                  <option>Edge</option>
-                  <option>Opera</option>
-                  <option>Vivaldi</option>
-                </select>
-              </label>
-              <label>
-                Language
-                <input
-                  value={draft.fingerprint.language}
-                  onChange={(event) =>
-                    updateFingerprint("language", event.target.value)
-                  }
-                />
-              </label>
-              <label>
-                Timezone
-                <input
-                  value={draft.fingerprint.timezone}
-                  disabled={!canConfigure("timezone")}
-                  onChange={(event) =>
-                    updateFingerprint("timezone", event.target.value)
-                  }
-                />
-              </label>
-              <label>
-                Screen width
-                <input
-                  type="number"
-                  min="800"
-                  max="7680"
-                  value={draft.fingerprint.screenWidth}
-                  onChange={(event) =>
-                    updateFingerprint("screenWidth", Number(event.target.value))
-                  }
-                />
-              </label>
-              <label>
-                Screen height
-                <input
-                  type="number"
-                  min="600"
-                  max="4320"
-                  value={draft.fingerprint.screenHeight}
-                  onChange={(event) =>
-                    updateFingerprint(
-                      "screenHeight",
-                      Number(event.target.value),
-                    )
-                  }
-                />
-              </label>
-              <label>
-                CPU threads
-                <input
-                  type="number"
-                  min="2"
-                  max="128"
-                  disabled={!canConfigure("hardware-concurrency")}
-                  value={draft.fingerprint.hardwareConcurrency || 0}
-                  onChange={(event) =>
-                    updateFingerprint(
-                      "hardwareConcurrency",
-                      Number(event.target.value),
-                    )
-                  }
-                />
-              </label>
-              <label>
-                WebRTC
-                <select
-                  value={draft.fingerprint.webrtcPolicy}
-                  onChange={(event) =>
-                    updateFingerprint("webrtcPolicy", event.target.value)
-                  }
-                >
-                  <option value="proxy-only">Proxy only</option>
-                  <option value="disabled">Disabled</option>
-                  <option value="default">Default</option>
-                </select>
-              </label>
-              <label>
-                GPU profile
-                <select
-                  value={draft.fingerprint.gpuProfile}
-                  onChange={(event) =>
-                    updateFingerprint("gpuProfile", event.target.value)
-                  }
-                >
-                  <option value="auto">Auto-consistent</option>
-                  <option value="native">Native host</option>
-                  {canConfigure("custom-gpu") && (
-                    <option value="custom">Custom metadata</option>
-                  )}
-                </select>
-              </label>
+              <label>{ui.editor.platform}<select value={draft.fingerprint.platform} disabled={!canConfigure('platform')} onChange={(event) => updateFingerprint('platform', event.target.value)}><option value="windows">Windows</option><option value="linux">Linux</option><option value="macos">macOS</option></select></label>
+              <label>{ui.editor.brand}<select value={draft.fingerprint.brand} disabled={!canConfigure('browser-brand')} onChange={(event) => updateFingerprint('brand', event.target.value)}><option>Chromium</option><option>Chrome</option><option>Edge</option><option>Opera</option><option>Vivaldi</option></select></label>
+              <label>{ui.editor.language}<input value={draft.fingerprint.language} onChange={(event) => updateFingerprint('language', event.target.value)} /></label>
+              <label>{ui.editor.timezone}<input value={draft.fingerprint.timezone} disabled={!canConfigure('timezone')} onChange={(event) => updateFingerprint('timezone', event.target.value)} /></label>
+              <label>{ui.editor.screenWidth}<input type="number" min="800" max="7680" value={draft.fingerprint.screenWidth} onChange={(event) => updateFingerprint('screenWidth', Number(event.target.value))} /></label>
+              <label>{ui.editor.screenHeight}<input type="number" min="600" max="4320" value={draft.fingerprint.screenHeight} onChange={(event) => updateFingerprint('screenHeight', Number(event.target.value))} /></label>
+              <label>{ui.editor.cpuThreads}<input type="number" min="2" max="128" disabled={!canConfigure('hardware-concurrency')} value={draft.fingerprint.hardwareConcurrency || 0} onChange={(event) => updateFingerprint('hardwareConcurrency', Number(event.target.value))} /></label>
+              <label>{ui.editor.webrtc}<select value={draft.fingerprint.webrtcPolicy} onChange={(event) => updateFingerprint('webrtcPolicy', event.target.value)}><option value="proxy-only">仅代理</option><option value="disabled">禁用</option><option value="default">默认</option></select></label>
+              <label>{ui.editor.gpuProfile}<select value={draft.fingerprint.gpuProfile} onChange={(event) => updateFingerprint('gpuProfile', event.target.value)}><option value="auto">自动保持一致</option><option value="native">使用本机</option>{canConfigure('custom-gpu') && <option value="custom">自定义元数据</option>}</select></label>
             </div>
-          </section>
-          <section className="form-section">
-            <div className="section-heading">
-              <span>04</span>
-              <div>
-                <h3>Network route</h3>
-                <p>
-                  Passwords remain in the operating-system vault. Advanced
-                  routes also bind an integrity-verified local adapter.
-                </p>
-              </div>
-            </div>
+          </FormSection>
+
+          <FormSection index="04" title={ui.editor.network} detail={ui.editor.networkDetail}>
+            <label>{ui.editor.proxyUrl}<input value={draft.proxy.url || ''} onChange={(event) => updateProxy('url', event.target.value)} placeholder="direct://、http://proxy.example:8080 或 vless://…" /></label>
             <label>
-              Proxy URL
-              <input
-                value={draft.proxy.url || ""}
-                onChange={(event) => updateProxy("url", event.target.value)}
-                placeholder="direct://, http://proxy.example:8080, or vless://…"
-              />
-            </label>
-            <label>
-              Credential
-              <select
-                value={draft.proxy.credentialRef || ""}
-                onChange={(event) =>
-                  updateProxy("credentialRef", event.target.value)
-                }
-              >
-                <option value="">No credential</option>
-                {credentials.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} · {item.username}
-                  </option>
-                ))}
+              {ui.editor.credential}
+              <select value={draft.proxy.credentialRef || ''} onChange={(event) => updateProxy('credentialRef', event.target.value)}>
+                <option value="">{ui.editor.noCredential}</option>
+                {credentials.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.username}</option>)}
               </select>
-              <small>
-                HTTP, HTTPS and SOCKS5 use the built-in bridge. Xray UUIDs
-                and passwords remain in the vault. Hysteria2 and AnyTLS use a
-                password; TUIC uses strict JSON with uuid and password.
-              </small>
             </label>
-            {adapterKind && (
-              <label>
-                Managed {adapterKind} adapter
-                <select
-                  required
-                  value={draft.proxy.adapterRef || ""}
-                  onChange={(event) =>
-                    updateProxy("adapterRef", event.target.value)
-                  }
-                >
-                  <option value="">Select a verified adapter</option>
-                  {compatibleAdapters.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} · {item.version}
-                    </option>
-                  ))}
-                </select>
-                <small>
-                  The adapter binary is verified now and again before runtime.
-                  Xray and sing-box routes expose only a private per-session
-                  SOCKS5 endpoint to Chromium.
-                </small>
-              </label>
-            )}
-            {!adapterKind && draft.proxy.adapterRef && (
-              <div className="info-banner">
-                <strong>Adapter reference will be rejected</strong>
-                <p>
-                  Only VMess, VLESS, Trojan, Shadowsocks, Hysteria2, TUIC and
-                  AnyTLS routes use managed adapters.
-                </p>
-              </div>
-            )}
-          </section>
+            {adapterKind && <label>
+              {ui.editor.managedAdapter}（{adapterKind}）
+              <select required value={draft.proxy.adapterRef || ''} onChange={(event) => updateProxy('adapterRef', event.target.value)}>
+                <option value="">{ui.editor.selectVerifiedAdapter}</option>
+                {compatibleAdapters.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.version}</option>)}
+              </select>
+              <small>{ui.editor.adapterHint}</small>
+            </label>}
+            {!adapterKind && draft.proxy.adapterRef && <div className="info-banner danger"><strong>{ui.editor.adapterRejected}</strong><p>{ui.editor.adapterRejectedDetail}</p></div>}
+          </FormSection>
+
+          <FormSection index="05" title={ui.editor.review} detail={ui.editor.reviewDetail}>
+            <div className="review-card">
+              <strong>{draft.name || ui.editor.createTitle}</strong>
+              <dl>
+                <div><dt>{ui.editor.registeredKernel}</dt><dd>{verifiedKernels.find((item) => item.id === draft.kernel.id)?.name || ui.editor.legacyExecutable}</dd></div>
+                <div><dt>{ui.editor.proxyUrl}</dt><dd>{draft.proxy.url || 'direct://'}</dd></div>
+                <div><dt>{ui.editor.language}</dt><dd>{draft.fingerprint.language}</dd></div>
+                <div><dt>{ui.editor.timezone}</dt><dd>{draft.fingerprint.timezone}</dd></div>
+              </dl>
+              <p>{ui.editor.reviewReady}</p>
+            </div>
+          </FormSection>
         </div>
+
         {error && <div className="form-error">{error}</div>}
         <footer className="editor-footer">
-          <button type="button" className="button secondary" onClick={onClose}>
-            Cancel
-          </button>
-          <button className="button primary" disabled={saving || providerBlocked}>
-            {saving ? "Saving…" : profile ? "Save changes" : "Create profile"}
-          </button>
+          <button type="button" className="button secondary" onClick={onClose}>{ui.common.cancel}</button>
+          <button className="button primary" disabled={saving || providerBlocked}>{saving ? ui.common.saving : profile ? ui.editor.saveChanges : ui.editor.create}</button>
         </footer>
       </form>
     </div>
-  );
+  )
+}
+
+function FormSection({ index, title, detail, children }: { index: string; title: string; detail: string; children: React.ReactNode }) {
+  return <section className="form-section"><div className="section-heading"><span>{index}</span><div><h3>{title}</h3><p>{detail}</p></div></div>{children}</section>
+}
+
+function trustLabel(value: string): string {
+  if (value === 'reviewed') return '已审查'
+  if (value === 'custom') return '自定义'
+  if (value === 'legacy') return '兼容模式'
+  if (value === 'disabled') return '已禁用'
+  if (value === 'invalid') return '无效'
+  return value
+}
+
+function capabilityStatusLabel(value: string): string {
+  if (value === 'supported') return '支持'
+  if (value === 'unsupported') return '不支持'
+  if (value === 'partial') return '有限支持'
+  if (value === 'verified') return '已验证'
+  return value
 }
