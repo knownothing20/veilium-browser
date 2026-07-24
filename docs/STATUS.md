@@ -1,6 +1,6 @@
 # Current Project Status
 
-Last updated: 2026-07-23
+Last updated: 2026-07-24
 Application version: 0.15.0-dev
 Main baseline SHA: ffcf25d94cd821c82f07cc49fc61130d3e02fcdb
 Current phase: Phase 5
@@ -85,7 +85,7 @@ Completed in the owner's Windows development environment (2026-07-23):
 - `go fmt ./...` — passed (all files already formatted);
 - `go vet ./...` — passed (no issues);
 - `go test ./...` — all 30 packages passed (no failures);
-- `go test -race ./...` — not run: requires GCC (cgo) which is not installed on this Windows environment; race detection must be verified in an environment with MinGW-w64 or equivalent before merge;
+- `go test -race ./...` — all 30 packages passed (no data races detected); MinGW-w64 gcc 16.1.0 installed at `D:\mingw64` (moved from `D:\Program Files\mingw64\mingw64` to avoid path-space breakage in gcc/ld internal resolution);
 - `go build -o build/bin/veilium-browser.exe ./cmd/veilium` — passed;
 - `wails build` — Windows amd64 build succeeded in 14.4s (`build/bin/veilium-browser.exe`);
 - `wails dev` — desktop application launched successfully (both `wails` and `veilium-browser-dev` processes running, ~54 MB working set);
@@ -94,7 +94,7 @@ Completed in the owner's Windows development environment (2026-07-23):
 
 Not yet verified and must not be claimed as passed:
 
-- `go test -race ./...` (blocked by missing GCC/cgo on this Windows host);
+- ~~`go test -race ./...` (blocked by missing GCC/cgo on this Windows host)~~ — **passed 2026-07-24** after moving MinGW-w64 to `D:\mingw64`;
 - real Chromium start/stop/cleanup after the M5.5 changes;
 - manual Chinese UI smoke testing at 1366×768 and 1920×1080;
 - complete regression of recovery, portability, template, batch, proxy, and Evidence behavior;
