@@ -85,7 +85,7 @@ Completed in the owner's Windows development environment (2026-07-23):
 - `go fmt ./...` — passed (all files already formatted);
 - `go vet ./...` — passed (no issues);
 - `go test ./...` — all 30 packages passed (no failures);
-- `go test -race ./...` — all 30 packages passed (no data races detected); MinGW-w64 gcc 16.1.0 installed at `D:\mingw64` (moved from `D:\Program Files\mingw64\mingw64` to avoid path-space breakage in gcc/ld internal resolution);
+- `go test -race ./...` — all 30 packages passed (no data races detected); MinGW-w64 gcc 16.1.0 copied to `D:\mw64` (gcc/ld cannot resolve relative paths containing spaces when installed under `D:\Program Files`; original winget installation at `D:\Program Files\mingw64\mingw64` is preserved);
 - `go build -o build/bin/veilium-browser.exe ./cmd/veilium` — passed;
 - `wails build` — Windows amd64 build succeeded in 14.4s (`build/bin/veilium-browser.exe`);
 - `wails dev` — desktop application launched successfully (both `wails` and `veilium-browser-dev` processes running, ~54 MB working set);
@@ -94,7 +94,7 @@ Completed in the owner's Windows development environment (2026-07-23):
 
 Not yet verified and must not be claimed as passed:
 
-- ~~`go test -race ./...` (blocked by missing GCC/cgo on this Windows host)~~ — **passed 2026-07-24** after moving MinGW-w64 to `D:\mingw64`;
+- ~~`go test -race ./...` (blocked by missing GCC/cgo on this Windows host)~~ — **passed 2026-07-24** after copying MinGW-w64 to `D:\mw64` (gcc/ld relative-path resolution breaks on spaces in `D:\Program Files`);
 - real Chromium start/stop/cleanup after the M5.5 changes;
 - manual Chinese UI smoke testing at 1366×768 and 1920×1080;
 - complete regression of recovery, portability, template, batch, proxy, and Evidence behavior;
