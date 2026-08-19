@@ -1,112 +1,96 @@
-# Architecture
+# Veilium Architecture
+
+Last updated: 2026-08-19
 
 ## Design principles
 
-1. **Clean-room implementation.** Reference projects inform requirements, not copied source.
-2. **Provider contracts over guessed flags.** Every fingerprint option must be supported by the chosen provider and major version.
-3. **Identity consistency over maximum randomness.** Stable, coherent profiles are safer than changing every surface at every launch.
-4. **Local-first and least privilege.** Control surfaces bind to loopback and require authentication by default.
-5. **Replaceable runtimes.** Chromium kernels and proxy runtimes are adapters, not application foundations.
-6. **Fail-closed execution.** Missing integrity, unsupported fields, unavailable secrets, and failed readiness checks block launch.
-7. **Evidence-backed capabilities.** UI availability and launch arguments are not sufficient proof of real browser behavior.
+1. **Local first and least privilege.** Sensitive browser, credential, and control data stay local by default.
+2. **Provider contracts over guessed behavior.** A browser capability is supported only for an explicit Provider/version combination.
+3. **Evidence over UI claims.** A setting or launch argument is not proof that Chromium actually exposes the requested identity.
+4. **Identity consistency over maximum randomness.** A Profile represents one stable, plausible environment.
+5. **Exact runtime identity.** Reviewed kernels and adapters are pinned and verified by archive/executable/package identity.
+6. **Replaceable runtimes.** Chromium, Xray, and sing-box are managed providers, not hidden assumptions.
+7. **Fail closed.** Missing secrets, tampered packages, unsupported settings, and unverifiable states are rejected or clearly limited.
+8. **Recoverable lifecycle.** Storage-changing operations use locks, journals, staging, verification, rollback, and reconciliation.
 
-## Current layer model
+## Runtime layers
 
 ```text
 Wails + React desktop workspace
             |
-Direct Go bindings / authenticated loopback REST
+Desktop service / authenticated loopback API
             |
-Profile service, policy validation and persistence
+Profile + policy + lifecycle + portability
             |
 Launch planner -------- Network route resolver
       |                         |
-Kernel registry          Credential vault
+Provider contract         Credential vault
       |                         |
-Browser supervisor       Proxy bridge / adapter runtime
+Kernel registry          Proxy bridge / adapters
       |                         |
-Managed Chromium         Xray / sing-box providers
-            \             /
-             Runtime status, diagnostics and cleanup
+Browser supervisor       Xray / sing-box runtime
+      \                         /
+       Real browser identity + Network Evidence
+                    |
+        Compatibility / Readiness
 ```
 
-A future MCP or broader automation surface must use the same policy and authorization layer rather than bypassing it.
+## Stable package responsibilities
 
-## Package responsibilities
-
-- `internal/domain`: stable profile, fingerprint, proxy, and launch contracts.
-- `internal/fingerprint`: provider capability catalog, validation, and provider-specific arguments.
-- `internal/profile`: atomic local profile persistence.
-- `internal/kernel`: managed Chromium imports, integrity records, and in-use protection.
-- `internal/launch`: redacted, reviewable browser launch plans.
-- `internal/supervisor`: browser process ownership, readiness, runtime status, logs, and cleanup.
-- `internal/credential`: metadata plus operating-system-backed secret storage.
-- `internal/proxy`: route classification and native-versus-bridge decisions.
-- `internal/proxybridge`: authenticated HTTP, HTTPS, and SOCKS5 loopback bridges.
-- `internal/proxydiagnostics`: connectivity, timing, exit-IP, DNS-route, and WebRTC-policy analysis.
-- `internal/adapter`: managed Xray and sing-box executable records.
-- `internal/adapterruntime`: provider registry and supervised adapter lifecycle.
-- `internal/xrayprovider`: constrained reviewed Xray configurations.
-- `internal/singboxprovider`: constrained reviewed sing-box configurations.
-- `internal/adapterrelease`: embedded official release pins.
-- `internal/adaptervalidation`: native version and configuration checks.
-- `internal/adapterinstaller`: explicit pinned download, verification, safe extraction, and import.
-- `internal/desktop`: application service composition and desktop-facing operations.
-- `internal/api`: loopback-only authenticated REST service.
-- `cmd/veilium`: headless service entry point.
-- `frontend`: desktop workspace and local browser-preview mode.
+- `internal/domain` — Profile, fingerprint, proxy, kernel, and launch contracts.
+- `internal/fingerprint` — Provider capability catalog, validation, and provider-specific arguments.
+- `internal/kernel` / `internal/kernelrelease` / `internal/kernelinstaller` — managed Chromium identity, release pins, import/install, integrity, and in-use protection.
+- `internal/launch` — redacted, reviewable launch plans.
+- `internal/supervisor` — process ownership, CDP readiness, runtime state, logs, and cleanup.
+- `internal/credential` — metadata plus OS-backed secret storage.
+- `internal/proxy` / `internal/proxybridge` / `internal/proxydiagnostics` — route resolution, authenticated loopback bridges, and connectivity diagnostics.
+- `internal/adapter*`, `internal/xrayprovider`, `internal/singboxprovider` — managed proxy-adapter providers and supervised runtimes.
+- `internal/evidence`, `internal/consistency`, `internal/networkevidence`, `internal/compatibility` — real-browser identity, context consistency, network observations, and exact-combination compatibility.
+- `internal/lifecycle`, `internal/localrecovery`, `internal/portableprofile` and desktop services — recoverable Profile lifecycle, snapshots, restore, portable definitions, templates, and bounded multi-Profile operations.
+- `frontend` — task-oriented desktop product surface; it must not invent backend trust or readiness state.
 
 ## Persistent-data boundaries
 
-- Profile metadata is stored locally through atomic file replacement.
-- Browser user data uses a Veilium-managed directory per profile.
-- Kernel and adapter stores keep managed copies plus size and SHA-256 records.
-- Secret values remain in the operating-system credential provider; persistent profile data stores references only.
-- Private per-session proxy configurations and logs live in restricted runtime directories and are cleaned up with their sessions.
+These remain separate:
 
-Persisted-contract changes must include compatibility, migration, failure, and rollback analysis before implementation.
+- Profile metadata and non-secret configuration;
+- Veilium-managed browser user-data directories;
+- OS-vault secret values;
+- Kernel and adapter package records and managed binaries;
+- Evidence, compatibility, lifecycle journals, snapshots, trash, runtime logs, and staging data.
 
-## Runtime boundaries
-
-- A browser starts only from a registered and currently verified kernel.
-- CDP uses a Chromium-assigned port discovered through a validated `DevToolsActivePort` file.
-- Debugging endpoints and local bridges bind to loopback.
-- Xray and sing-box configurations are generated per session and expose only a local SOCKS5 endpoint to Chromium.
-- Browser and adapter processes are owned through Unix process groups or Windows Job Objects.
-- Application shutdown stops active sessions and removes private runtime material.
+A portable Profile definition is not browser data, a local snapshot is not a cross-device identity guarantee, and archived Evidence cannot create current Provider trust.
 
 ## Security boundaries
 
-- API requests are bounded and unknown JSON fields are rejected.
-- Authentication tokens are compared in constant time.
-- Inline proxy credentials are rejected.
-- Secrets must not appear in Chromium arguments, Bootstrap payloads, logs, or profile files.
-- Downloaded official adapters are restricted to embedded release pins and exact archive and executable hashes.
-- Automatic downloads and updates remain disabled unless separately designed and approved.
-- Remote binding, telemetry, deployment, cloud sync, and automation permissions require explicit future threat models.
+- Local APIs and debugger-facing control use loopback-only endpoints.
+- Inline proxy credentials are rejected; secrets are resolved from the OS vault at runtime.
+- Logs, launch plans, Bootstrap payloads, reports, and portable exports must not expose secret values.
+- Browser and adapter child processes remain owned by Veilium and are cleaned up on shutdown.
+- Automatic remote control, telemetry, cloud sync, and background runtime updates require separate product/security approval.
 
-## Capability evidence boundary
+## Current browser-provider boundary
 
-A capability may be declared only when all applicable layers agree:
+The existing reviewed Provider is an exact Windows amd64 stock Chromium Snapshot. It proves managed launch, package identity, and the current Evidence chain, but it does **not** claim advanced fingerprint overrides.
 
-1. provider and Chromium-version contract;
-2. profile validation;
-3. generated launch configuration;
-4. selected binary integrity and identity;
-5. integration or real-runtime evidence;
-6. clear UI reporting of supported and unsupported states.
+The next architecture extension is a **separate Veilium Fingerprint Chromium Provider**. Stock and fingerprint Providers must coexist. New capability claims require exact Provider/revision/version/platform bindings and real-browser evidence.
 
-The active roadmap and phase document determine when additional capability evidence is developed. Architecture does not set product priority by itself.
+## Future identity flow
 
-## Deferred architecture surfaces
+```text
+Identity Template + Root Seed
+            |
+Fingerprint Provider Contract
+            |
+Versioned launch configuration
+            |
+Exact Fingerprint Chromium package
+            |
+Top-level / iframe / worker Evidence
+            |
+Restart stability + seed separation
+            |
+Environment Readiness
+```
 
-The following remain deferred until approved by the active phase plan:
-
-- broader browser fingerprint evidence and consistency testing;
-- extension, cookie, and complete profile lifecycle management;
-- stable Launch API and unified CDP abstraction;
-- MCP and tool-level authorization;
-- encrypted export, backup, or sync;
-- signed application releases, updates, SBOM, provenance, and reproducible builds.
-
-See `docs/PRODUCT.md`, `docs/ROADMAP.md`, `docs/STATUS.md`, and the active phase document for scope and priority.
+This extension must reuse the current Kernel Registry, Supervisor, Evidence, Proxy, Security, and Lifecycle layers rather than bypassing them.

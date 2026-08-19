@@ -1,123 +1,61 @@
-# Development Process
+# Veilium Development Process
 
-## Sources of truth
+Last updated: 2026-08-19
 
-Project decisions are governed in this order:
+## Goal
 
-1. `docs/PRODUCT.md` — product purpose, principles, and non-goals.
-2. `docs/ROADMAP.md` — six-phase sequence and phase status.
-3. the active `docs/PHASE_XX.md` — approved scope and exit criteria.
-4. `docs/STATUS.md` — current milestone, task, blockers, and handoff.
-5. module documents — implementation contracts and operational details.
-6. issue and pull-request descriptions — the scope of one change.
+Keep development fast and reviewable without recreating the old phase/handoff branch explosion.
 
-A lower-level document may add detail but may not contradict a higher-level document.
+## One canonical line
 
-## Required reading order
+- `main` is the only long-lived canonical branch.
+- Keep at most one active feature branch for the current major development line whenever practical.
+- Use `agent/<topic>` for a feature branch, merge it, then delete it.
+- Do not create activation, handoff, closing-review, process-only, temporary-autofix, or diagnostic branches/PRs.
+- Do not create a new phase document for routine work.
 
-Before planning or changing the repository, every developer or agent must read:
+## Default execution mode
 
-1. `AGENTS.md`;
-2. `docs/PRODUCT.md`;
-3. `docs/ROADMAP.md`;
-4. `docs/STATUS.md`;
-5. the current phase document named by `docs/STATUS.md`;
-6. only then, the relevant module documents and code.
+Development is autonomous by default:
 
-## Unit of work
+1. read the current sources of truth;
+2. implement the current task;
+3. run static/unit/integration checks;
+4. run real-runtime checks where the claim depends on Chromium or the OS;
+5. diagnose and repair failures;
+6. record truthful limitations;
+7. continue to the next dependency-ordered task when acceptance criteria are satisfied.
 
-One issue represents one reviewable problem. One pull request should normally resolve one issue and one milestone task.
+Do not pause for ordinary implementation choices, naming, file layout, local refactors, test fixes, small Chromium-version adjustments, or a single capability downgrade.
 
-Every work item must state:
+## Owner gates
 
-- the user or engineering problem;
-- the current phase and milestone;
-- scope and explicit non-scope;
-- affected contracts and files;
-- security, privacy, and licensing impact;
-- validation and acceptance criteria;
-- documentation and status updates.
+Stop for owner input only when the next action would:
 
-Unplanned improvements discovered during implementation are recorded as separate issues. They are not added to the current pull request unless they are required for correctness or safety and the pull-request scope is explicitly updated.
+- materially change product direction;
+- irreversibly delete or transform user data without an established recovery path;
+- broaden secret exposure, remote control, telemetry, or cloud behavior;
+- weaken Sandbox, package integrity, Provider trust, or Evidence;
+- require a project license, binary-redistribution, trademark, or commercial-boundary decision.
 
-## Standard workflow
+## Pull requests
 
-1. Read the sources of truth.
-2. Select the single current task from `docs/STATUS.md`.
-3. Create or confirm a scoped issue.
-4. Create a branch from the latest default branch using `agent/<description>` or an equivalent phase-prefixed name.
-5. Open a Draft PR early when implementation begins.
-6. Implement only the approved scope.
-7. Add or update tests before claiming completion.
-8. Update relevant documentation and `docs/STATUS.md` in the same PR.
-9. Run local checks and allow required CI checks to complete.
-10. Resolve review comments and confirm the diff still matches the issue.
-11. Merge only when acceptance criteria and governance checks pass.
-12. Update the handoff so the next session has one explicit next task.
+- Keep one PR focused on one major development line, not one PR per sub-capability.
+- Use dependency-ordered commits inside the PR.
+- Split only when a PR becomes materially unsafe to review or roll back.
+- Product-code PRs update `docs/STATUS.md` with what changed, what was actually validated, remaining limitations, and the next task.
+- Never claim a test or manual flow passed unless it actually ran.
 
-## Scope control
+## Validation
 
-A pull request must not:
+Run the narrowest useful checks during iteration, then the full relevant matrix before declaring the task complete. Capability claims that depend on Chromium require the exact selected binary and real-browser Evidence.
 
-- introduce a feature outside the active phase;
-- start work from a later phase before the current phase exit gate closes;
-- add unrelated cleanup, refactors, dependencies, protocols, or UI redesigns;
-- change product goals implicitly through implementation;
-- claim provider or fingerprint behavior without the required evidence;
-- weaken security boundaries to make implementation easier.
+A failed optional capability may remain `unsupported`/`unverified` while unrelated validated work continues. A failure that affects Provider integrity, secrets, Sandbox, persisted data, or recovery blocks release.
 
-When a requested change conflicts with the active plan, stop implementation and open a planning issue or planning PR. Do not silently reinterpret the roadmap.
+## Documentation lifecycle
 
-## Documentation ownership
-
-- `PRODUCT.md` changes only when product intent changes.
-- `ROADMAP.md` changes when phase status, order, or approved phase goals change.
-- `PHASE_XX.md` changes when the active phase scope or acceptance criteria change.
-- `STATUS.md` changes with every product-code PR and whenever the current task, blocker, version, or handoff changes.
-- module documents change with the contracts they describe.
-- architecture decisions with long-term consequences should be recorded in a dedicated decision document when needed.
-
-Documentation must describe the merged implementation, not an intended future state presented as already complete.
-
-## Validation levels
-
-Use the strongest applicable evidence:
-
-1. formatting and static checks;
-2. unit tests;
-3. component and integration tests;
-4. real-binary or real-browser runtime tests;
-5. cross-platform CI;
-6. security and failure-path tests;
-7. migration, rollback, and long-running tests when state or release behavior changes.
-
-A UI control, launch argument, or mocked test alone does not prove that a selected browser binary applies a fingerprint setting.
-
-## Phase activation and closure
-
-A planned phase becomes active only through a dedicated planning PR that defines its user outcome, ordered milestones, non-goals, dependencies, evidence plan, and exit criteria.
-
-A phase closes only through a dedicated closure PR that:
-
-- verifies every exit criterion;
-- runs the complete required test matrix;
-- records unresolved risks and deferred work;
-- marks the phase document `Done`;
-- updates `ROADMAP.md` and `STATUS.md`;
-- identifies the first planning task for the next phase.
-
-## Urgent fixes
-
-A severe correctness or security fix may interrupt the current task when the issue explains why it cannot wait. The fix must remain narrow, include regression evidence, update status, and avoid opportunistic feature work.
-
-## Required repository settings
-
-The repository owner should configure default-branch protection to require:
-
-- pull requests instead of direct pushes;
-- required CI and governance checks;
-- resolved review conversations;
-- no force pushes or branch deletion;
-- the same rules for administrators where supported.
-
-These settings are repository configuration and are not enforced solely by files in the repository.
+- Root `docs/` contains only current sources and the active development plan.
+- Completed subsystem documentation moves to `docs/archive/implemented/`.
+- Old phase/plan/review documents move to `docs/archive/history/`.
+- Documents fully superseded and no longer useful are deleted; Git history remains the audit trail.
+- Archive material is reference-only and never overrides current code or current root docs.

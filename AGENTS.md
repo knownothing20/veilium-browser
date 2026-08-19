@@ -2,16 +2,16 @@
 
 ## Required reading
 
-Before planning or modifying the repository, read in this order:
+Before changing the repository, read only the current sources of truth in this order:
 
-1. `docs/PRODUCT.md`;
-2. `docs/ROADMAP.md`;
-3. `docs/STATUS.md`;
-4. the current phase document named by `docs/STATUS.md`;
-5. `docs/DEVELOPMENT_PROCESS.md`;
-6. relevant module documents and code.
+1. `docs/PRODUCT.md` — product purpose and non-goals;
+2. `docs/ROADMAP.md` — prioritized development sequence;
+3. `docs/STATUS.md` — current task, blockers, and validation debt;
+4. the current plan named by `docs/STATUS.md`;
+5. `docs/ARCHITECTURE.md` — durable technical boundaries;
+6. `docs/DEVELOPMENT_PROCESS.md` — execution and review rules.
 
-Do not begin by independently redesigning the project from code or README alone.
+Files under `docs/archive/` are historical references only. They must not override the current sources above.
 
 ## Source-of-truth order
 
@@ -20,48 +20,43 @@ When instructions conflict, follow this order:
 1. safety, law, licensing, and clean-room restrictions;
 2. `docs/PRODUCT.md`;
 3. `docs/ROADMAP.md`;
-4. the active `docs/PHASE_XX.md`;
-5. `docs/STATUS.md`;
-6. module documents;
-7. issue and pull-request scope.
+4. `docs/STATUS.md`;
+5. the active development plan;
+6. `docs/ARCHITECTURE.md`;
+7. implementation details and historical archive material.
 
-Stop and open a planning change when a requested implementation conflicts with a higher-level source. Do not silently reinterpret the plan.
+## Default autonomous execution
 
-## Scope and workflow
+- Continue through ordinary technical decisions without asking the owner whether to continue.
+- Fix build, test, type, runtime, compatibility, and local architecture problems autonomously.
+- Prefer the smallest safe, reversible, evidence-backed implementation.
+- A single capability failure should normally downgrade that capability to `unsupported` or `unverified`, not stop unrelated work.
+- Ask the owner only for a major product-direction change, an irreversible data/security change, or a licensing/distribution decision.
 
-- Never commit directly to `main`; use reviewed branches and Draft PRs.
-- Work only on the single current task or an explicitly approved issue.
-- Keep one pull request focused on one reviewable problem.
-- Do not add unrelated features, refactors, protocols, dependencies, or UI redesigns while completing another task.
-- Do not implement work from a later phase before the current phase exit gate closes.
-- Product-code pull requests must update `docs/STATUS.md` with completed work, validation, risks, and the exact next task.
-- Phase scope changes require updates to the phase document, roadmap, and status in one planning PR.
-- A phase becomes active or closes only through the process defined in `docs/DEVELOPMENT_PROCESS.md`.
+## Branch and pull-request discipline
+
+- `main` is the single canonical branch.
+- Use at most one active feature branch for the current major task unless a split is required for reviewability.
+- Do not create phase-handoff, activation, closing-review, process-only, temporary-autofix, or diagnostic branches/PRs.
+- Use short-lived `agent/<topic>` branches, merge them, then delete the branch.
+- Product-code PRs must update `docs/STATUS.md` in the same change set.
+- Do not create a new phase document for routine development; update the current roadmap/status/plan instead.
 
 ## Clean-room and capability evidence
 
-- Do not copy source code from Donut Browser, Ant Browser, VirtualBrowser, or their browser kernels.
-- Reference projects may inform product requirements and architectural lessons only.
-- New fingerprint fields require a provider/version capability contract and tests.
-- Do not claim a setting is applied until an integration test verifies the selected browser binary.
-- Unsupported or ambiguous combinations must fail closed and be reported clearly.
+- Reference projects may inform requirements and architecture, not copied implementation.
+- New fingerprint behavior requires an explicit provider/version capability contract and real-browser evidence.
+- A UI field or launch argument is not proof that a browser capability is applied.
+- Unsupported, ambiguous, tampered, or unverifiable combinations must fail closed or remain explicitly limited.
 
 ## Security and data
 
-- Local APIs must bind to loopback and require authentication by default.
+- Keep secrets in the operating-system vault; persistent profile data stores references only.
 - Never log proxy passwords, cookies, tokens, decrypted browser data, or private runtime configurations.
-- Keep secrets in the operating-system vault and pass only references through persistent profile data.
-- Do not add workflow write permissions, automatic merging, deployment, remote binding, telemetry, or background downloads without explicit review.
-- Keep platform-specific runtime code behind interfaces and test the portable policy layer on Linux and Windows.
-- Changes to persisted data require compatibility, migration, failure, and rollback analysis.
+- Local APIs bind to loopback and require authentication by default.
+- Do not weaken Chromium Sandbox, runtime ownership, package-integrity checks, rollback, or Evidence to make tests pass.
+- Persisted-data changes require compatibility, migration, failure, and rollback analysis.
 
 ## Completion standard
 
-A task is not complete until:
-
-- its acceptance criteria are satisfied;
-- relevant tests and failure paths pass;
-- security and licensing impact is documented;
-- implementation documents describe the merged behavior accurately;
-- `docs/STATUS.md` identifies one explicit next task;
-- the final diff still matches the issue's scope and non-scope.
+A task is complete when relevant tests and real-runtime checks pass, security/licensing boundaries remain intact, `docs/STATUS.md` records the truth, and completed implementation notes are archived rather than left as competing current plans.
