@@ -1,0 +1,109 @@
+package main
+
+import (
+	"path/filepath"
+	"strings"
+
+	"github.com/knownothing20/veilium-browser/internal/desktop"
+	"github.com/knownothing20/veilium-browser/internal/portableprofile"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+)
+
+const maxPortableFilenameRunes = 80
+
+func (a *DesktopApp) PickPortableExportFile(profileName string) (string, error) {
+	name := portableFilename(profileName)
+	return runtime.SaveFileDialog(a.runtimeContext(), runtime.SaveDialogOptions{
+		Title:           "Export portable Veilium Profile",
+		DefaultFilename: name + ".veilium-profile.json",
+	})
+}
+
+func (a *DesktopApp) PickPortableExportDirectory() (string, error) {
+	return runtime.OpenDirectoryDialog(a.runtimeContext(), runtime.OpenDialogOptions{
+		Title: "Choose a folder for portable Veilium Profiles",
+	})
+}
+
+func (a *DesktopApp) PickPortableImportFile() (string, error) {
+	return runtime.OpenFileDialog(a.runtimeContext(), runtime.OpenDialogOptions{
+		Title: "Import portable Veilium Profile",
+	})
+}
+
+func (a *DesktopApp) ExportPortableProfile(request desktop.PortableExportRequest) (desktop.PortableExportResult, error) {
+	return a.service.ExportPortableProfile(request)
+}
+
+func (a *DesktopApp) PreviewPortableImport(path string) (desktop.PortableImportPreview, error) {
+	return a.service.PreviewPortableImport(path)
+}
+
+func (a *DesktopApp) ImportPortableProfile(request desktop.PortableImportRequest) (desktop.PortableImportResult, error) {
+	return a.service.ImportPortableProfile(request)
+}
+
+func (a *DesktopApp) ListPortableTemplates() ([]portableprofile.Template, error) {
+	return a.service.ListPortableTemplates()
+}
+
+func (a *DesktopApp) CreatePortableTemplate(request desktop.PortableTemplateCreateRequest) (portableprofile.Template, error) {
+	return a.service.CreatePortableTemplate(request)
+}
+
+func (a *DesktopApp) UpdatePortableTemplate(request desktop.PortableTemplateUpdateRequest) (portableprofile.Template, error) {
+	return a.service.UpdatePortableTemplate(request)
+}
+
+func (a *DesktopApp) DeletePortableTemplate(templateID string) error {
+	return a.service.DeletePortableTemplate(templateID)
+}
+
+func (a *DesktopApp) ApplyPortableTemplate(request desktop.PortableTemplateApplyRequest) (desktop.PortableImportResult, error) {
+	return a.service.ApplyPortableTemplate(request)
+}
+
+func portableFilename(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "veilium-profile"
+	}
+	value = strings.Map(func(r rune) rune {
+		if r < ' ' {
+			return '-'
+		}
+		switch r {
+		case '<', '>', ':', '"', '/', '\\', '|', '?', '*', '\x7f':
+			return '-'
+		default:
+			return r
+		}
+	}, value)
+	value = strings.Trim(value, " .")
+	if value == "" {
+		return "veilium-profile"
+	}
+	runes := []rune(value)
+	if len(runes) > maxPortableFilenameRunes {
+		value = strings.Trim(string(runes[:maxPortableFilenameRunes]), " .")
+	}
+	if value == "" {
+		return "veilium-profile"
+	}
+	if portableWindowsReservedName(value) {
+		value = "_" + value
+	}
+	return filepath.Base(value)
+}
+
+func portableWindowsReservedName(value string) bool {
+	base := strings.ToUpper(strings.SplitN(strings.Trim(value, " ."), ".", 2)[0])
+	switch base {
+	case "CON", "PRN", "AUX", "NUL":
+		return true
+	}
+	if len(base) == 4 && (strings.HasPrefix(base, "COM") || strings.HasPrefix(base, "LPT")) {
+		return base[3] >= '1' && base[3] <= '9'
+	}
+	return false
+}

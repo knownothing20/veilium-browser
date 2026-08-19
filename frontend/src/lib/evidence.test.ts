@@ -34,6 +34,7 @@ function run(id: string, startedAt: string, status: EvidenceRun['status']): Evid
     startedAt,
     completedAt: startedAt,
     expiresAt: startedAt,
+    limitations: [],
     observations: [
       { id: 'a', context: 'top-level', status: 'passed' },
       { id: 'b', context: 'iframe', status: 'partial' },
@@ -47,12 +48,12 @@ describe('evidence helpers', () => {
   })
 
   it('maps terminal status for display', () => {
-    expect(evidenceStatusLabel('incomplete')).toBe('Incomplete')
+    expect(evidenceStatusLabel('incomplete')).toBe('不完整')
     expect(evidenceStatusClass('failed')).toBe('failed')
     expect(evidenceStatusClass('partial')).toBe('degraded')
   })
 
   it('summarizes observation counts', () => {
-    expect(evidenceSummary(run('one', '2026-07-18T10:00:00Z', 'partial'))).toBe('1 passed · 1 partial')
+    expect(evidenceSummary(run('one', '2026-07-18T10:00:00Z', 'partial'))).toBe('1 项通过 · 1 项部分通过')
   })
 })

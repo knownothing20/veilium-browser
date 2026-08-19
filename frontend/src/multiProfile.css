@@ -1,0 +1,303 @@
+.multi-profile-dock-button {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 80;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 18px;
+  background: var(--accent, #6d5dfc);
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(20, 18, 48, 0.24);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.multi-profile-dock {
+  position: fixed;
+  inset: 24px 24px 84px auto;
+  z-index: 70;
+  width: min(760px, calc(100vw - 48px));
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--border, rgba(120, 120, 140, 0.24));
+  border-radius: 20px;
+  background: var(--surface, #fff);
+  box-shadow: 0 24px 70px rgba(20, 18, 48, 0.28);
+}
+
+.multi-profile-dock-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.multi-profile-dock-header h1 {
+  margin: 4px 0;
+  font-size: 24px;
+}
+
+.multi-profile-dock-header p {
+  margin: 0;
+}
+
+.multi-profile-dock .recovery-section {
+  margin: 0;
+  box-shadow: none;
+}
+
+.bulk-health-card,
+.bulk-export-card,
+.storage-management-card {
+  grid-column: 1 / -1;
+}
+
+.bulk-export-folder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--border, rgba(120, 120, 140, 0.24));
+  border-radius: 12px;
+  background: rgba(120, 120, 140, 0.06);
+}
+
+.bulk-export-folder span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted, #6c6a78);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-export-results {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bulk-export-results article {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(34, 156, 102, 0.08);
+}
+
+.bulk-export-results span,
+.bulk-export-results code {
+  overflow: hidden;
+  color: var(--muted, #6c6a78);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bulk-health-list {
+  display: grid;
+  gap: 12px;
+}
+
+.bulk-health-report {
+  border: 1px solid var(--border, rgba(120, 120, 140, 0.24));
+  border-radius: 14px;
+  padding: 14px;
+  background: color-mix(in srgb, var(--surface, #fff) 94%, #6d5dfc 6%);
+}
+
+.bulk-health-report.ready {
+  border-color: rgba(34, 156, 102, 0.34);
+}
+
+.bulk-health-report.limited {
+  border-color: rgba(198, 139, 24, 0.38);
+}
+
+.bulk-health-report.blocked {
+  border-color: rgba(203, 65, 77, 0.38);
+}
+
+.bulk-health-report-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.bulk-health-report-header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.bulk-health-report-header span,
+.bulk-health-checks p {
+  color: var(--muted, #6c6a78);
+}
+
+.bulk-health-status {
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bulk-health-status.ready {
+  background: rgba(34, 156, 102, 0.12);
+  color: #16734a;
+}
+
+.bulk-health-status.limited {
+  background: rgba(198, 139, 24, 0.14);
+  color: #8b5f0d;
+}
+
+.bulk-health-status.blocked {
+  background: rgba(203, 65, 77, 0.13);
+  color: #a12634;
+}
+
+.bulk-health-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bulk-health-checks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border-radius: 10px;
+  padding: 9px;
+  background: rgba(120, 120, 140, 0.07);
+}
+
+.bulk-health-checks li.pass {
+  background: rgba(34, 156, 102, 0.08);
+}
+
+.bulk-health-checks li.warning {
+  background: rgba(198, 139, 24, 0.09);
+}
+
+.bulk-health-checks li.fail {
+  background: rgba(203, 65, 77, 0.09);
+}
+
+.bulk-health-check-icon {
+  display: grid;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(120, 120, 140, 0.12);
+  font-weight: 900;
+}
+
+.bulk-health-checks li.pass .bulk-health-check-icon {
+  color: #16734a;
+}
+
+.bulk-health-checks li.warning .bulk-health-check-icon {
+  color: #8b5f0d;
+}
+
+.bulk-health-checks li.fail .bulk-health-check-icon {
+  color: #a12634;
+}
+
+.bulk-health-checks strong {
+  font-size: 13px;
+}
+
+.bulk-health-checks p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.storage-repair-plans {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.storage-repair-plans .panel-heading {
+  margin-bottom: 0;
+}
+
+.storage-repair-plans .panel-heading h3 {
+  margin: 0 0 4px;
+}
+
+.storage-repair-plan {
+  display: grid;
+  gap: 7px;
+  border: 1px solid var(--border, rgba(120, 120, 140, 0.24));
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(120, 120, 140, 0.05);
+}
+
+.storage-repair-plan.danger {
+  border-color: rgba(203, 65, 77, 0.34);
+  background: rgba(203, 65, 77, 0.06);
+}
+
+.storage-repair-plan.warning {
+  border-color: rgba(198, 139, 24, 0.34);
+  background: rgba(198, 139, 24, 0.06);
+}
+
+.storage-repair-plan > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.storage-repair-plan span,
+.storage-repair-plan small {
+  color: var(--muted, #6c6a78);
+}
+
+.storage-repair-plan p {
+  margin: 0;
+  line-height: 1.45;
+}
+
+@media (max-width: 720px) {
+  .multi-profile-dock {
+    inset: 12px 12px 76px;
+    width: auto;
+  }
+
+  .multi-profile-dock-button {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .multi-profile-dock-header {
+    flex-direction: column;
+  }
+
+  .bulk-export-folder,
+  .storage-repair-plan > div {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .bulk-health-checks {
+    grid-template-columns: 1fr;
+  }
+}

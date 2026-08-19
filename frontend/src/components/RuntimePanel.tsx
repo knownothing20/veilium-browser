@@ -1,5 +1,7 @@
+import { healthLabel, formatDateTime } from '../i18n/format'
 import { isRuntimeActive } from '../lib/runtime'
 import type { RuntimeSession } from '../types'
+import { AppIcon } from './AppIcon'
 
 export function RuntimePanel({
   sessions,
@@ -15,9 +17,9 @@ export function RuntimePanel({
   if (sessions.length === 0) {
     return (
       <section className="panel empty-state">
-        <div className="empty-icon">▶</div>
-        <h3>No runtime sessions yet</h3>
-        <p>Start a profile from Browser profiles after assigning a registered kernel.</p>
+        <div className="empty-icon"><AppIcon name="runtime" size={25} /></div>
+        <h3>还没有运行会话</h3>
+        <p>请先在“浏览器环境”中为环境分配已注册内核，然后点击“打开浏览器”。</p>
       </section>
     )
   }
@@ -33,20 +35,20 @@ export function RuntimePanel({
                 <span className="eyebrow">{session.profileId.slice(0, 10)}</span>
                 <h2>{session.profileName}</h2>
               </div>
-              <span className={`runtime-state ${session.state}`}>{session.state}</span>
+              <span className={`runtime-state ${session.state}`}>{healthLabel(session.state)}</span>
             </div>
             <dl>
-              <div><dt>Process</dt><dd>{session.pid > 0 ? `PID ${session.pid}` : 'Not started'}</dd></div>
-              <div><dt>CDP</dt><dd>{session.cdpUrl || 'Waiting for loopback endpoint'}</dd></div>
-              <div><dt>Browser</dt><dd>{session.browser || 'Waiting for /json/version'}</dd></div>
-              <div><dt>Started</dt><dd>{new Date(session.startedAt).toLocaleString()}</dd></div>
-              <div><dt>Log</dt><dd title={session.logPath}>{session.logPath}</dd></div>
+              <div><dt>进程</dt><dd>{session.pid > 0 ? `PID ${session.pid}` : '尚未启动'}</dd></div>
+              <div><dt>CDP 端点</dt><dd>{session.cdpUrl || '正在等待本机回环端点'}</dd></div>
+              <div><dt>浏览器信息</dt><dd>{session.browser || '正在等待 /json/version'}</dd></div>
+              <div><dt>启动时间</dt><dd>{formatDateTime(session.startedAt)}</dd></div>
+              <div><dt>日志路径</dt><dd title={session.logPath}>{session.logPath}</dd></div>
             </dl>
-            {session.webSocketDebuggerUrl && <div className="runtime-endpoint"><span>WebSocket debugger</span><code>{session.webSocketDebuggerUrl}</code></div>}
-            {session.lastError && <div className="runtime-failure"><strong>Runtime error</strong><p>{session.lastError}</p></div>}
+            {session.webSocketDebuggerUrl && <div className="runtime-endpoint"><span>WebSocket 调试端点</span><code>{session.webSocketDebuggerUrl}</code></div>}
+            {session.lastError && <div className="runtime-failure"><strong>运行错误</strong><p>{session.lastError}</p></div>}
             <div className="runtime-card-actions">
-              {active && <button className="button secondary" disabled={!nativeMode || busyProfileID === session.profileId} onClick={() => onStop(session.profileId)}>{busyProfileID === session.profileId ? 'Stopping…' : 'Stop browser'}</button>}
-              {!active && session.exitCode !== undefined && <span>Exit code {session.exitCode}</span>}
+              {active && <button className="button secondary" disabled={!nativeMode || busyProfileID === session.profileId} onClick={() => onStop(session.profileId)}>{busyProfileID === session.profileId ? '正在关闭…' : '关闭浏览器'}</button>}
+              {!active && session.exitCode !== undefined && <span>退出代码 {session.exitCode}</span>}
             </div>
           </article>
         )

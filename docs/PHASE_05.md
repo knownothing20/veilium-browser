@@ -1,94 +1,106 @@
-# Phase 5 — Profile Lifecycle and Day-to-Day Operations
+# Phase 5 — Profile Lifecycle, Day-to-Day Operations, and Desktop Productization
 
 Status: Active
 Phase: Phase 5
 Owner decision required: No
 Product implementation allowed: Yes
 
-## Activation record
+## Activation and authority
 
-Phase 5 was approved through Activation Review Issue #40 and activated through PR #47.
+Phase 5 was approved through Activation Review Issue #40 and activated through PR #47. M5.1 and M5.2 completed their required implementation and closing reviews.
 
-The planning contract remains defined by:
+The repository owner subsequently directed that the approved Chinese browser workspace plan be implemented on the only remaining Phase 5 development path. The current authority is therefore:
 
-- Planning Issue #37;
-- Planning PR #39;
-- `docs/PHASE_05_CONTRACTS.md`;
-- `docs/ROADMAP.md`;
-- `docs/STATUS.md`.
+- PR #59 — `feat: complete Phase 5 product`;
+- branch `agent/handoff-m5-3`;
+- `docs/STATUS.md`;
+- `docs/PHASE_05_CONTRACTS.md` for lifecycle and artifact contracts;
+- `docs/PROFILE_PORTABILITY_AND_MULTI_PROFILE.md` for M5.3/M5.4 product behavior;
+- `docs/CHINESE_BROWSER_WORKSPACE_DEVELOPMENT_PLAN.md` for M5.5 desktop productization.
+
+No additional development branch, pull request, temporary issue, or workflow is authorized while PR #59 remains the active completion path.
 
 ## Milestone record
 
-M5.1 is complete:
+1. **M5.1 — Lifecycle Contract, Inventory, and Operation Journal — Done**
+   - Issue #45;
+   - PR #52, squash-merged as `51c469e51ec4cab4ade99efd83c2e6c26145f266`;
+   - Closing Review #53 — PASS.
+2. **M5.2 — Safe Local Recovery — Done**
+   - Issue #54;
+   - PR #56, merged to main;
+   - Closing Review #57 — PASS.
+3. **M5.3 — Portable Profile Definitions and Templates — Implemented in PR #59, executable validation pending.**
+4. **M5.4 — Bounded Multi-profile Operations and Storage Management — Implemented in PR #59, executable validation pending.**
+5. **M5.5 — Chinese Browser Workspace Productization — Active in PR #59.**
 
-- implementation Issue #45;
-- implementation PR #52, squash-merged as `51c469e51ec4cab4ade99efd83c2e6c26145f266`;
-- Closing Review #53 — PASS.
+## Phase 5 user outcome
 
-M5.2 is the current milestone and Issue #54 is the only authorized implementation issue.
+A user can create, start, stop, inspect, preserve, recover, export, import, template, archive, and manage Veilium browser environments through a local-first desktop product that remains truthful about unsupported, limited, unsafe, or unverifiable state.
 
-M5.3 and M5.4 remain blocked until the preceding milestone merges, passes a dedicated Closing Review, and `docs/STATUS.md` advances.
+The default experience is organized around browser environments and the action “打开浏览器”, not around backend modules. Advanced Provider, Kernel, proxy runtime, lifecycle, operation journal, compatibility, and Evidence details remain reviewable through advanced pages and technical details.
 
-## Milestone order
+## M5.5 authorized scope
 
-1. M5.1 — Lifecycle Contract, Inventory, and Operation Journal
-2. M5.2 — Safe Local Recovery
-3. M5.3 — Portable Profile Definitions and Templates
-4. M5.4 — Bounded Multi-profile Operations and Storage Management
+M5.5 may implement only the productization work defined by `docs/CHINESE_BROWSER_WORKSPACE_DEVELOPMENT_PLAN.md`, including:
 
-A later milestone must not begin before the current milestone is merged, reviewed, and handed off through `docs/STATUS.md`.
+- a typed Simplified Chinese localization foundation and English fallback dictionary;
+- `zh-CN` document metadata, Chinese CJK typography, readable sizes, and desktop window adaptation;
+- a primary navigation containing browser environments, proxy/network, data/recovery, batch management, and settings;
+- advanced access to runtime sessions, browser kernels, credentials, diagnostics, compatibility, and Evidence;
+- browser environments as the default page with visible create, open, close, edit, search, filter, status, and repair entry points;
+- a guided Chinese create/edit environment flow that reuses existing Profile contracts and backend validation;
+- integration of the Phase 5 Multi-Profile floating dock into the normal page hierarchy;
+- localized status, date, size, confirmation, empty, loading, and high-frequency error presentation;
+- lightweight shared icons, feedback surfaces, and progressive disclosure;
+- frontend component refactoring required to make the approved UI testable and maintainable;
+- structured error projection only where free-form errors cannot be mapped safely, without exposing secrets.
 
-## Current M5.2 authority
+## M5.5 constraints
 
-Issue #54 may extend the M5.1 lifecycle foundation with bounded same-machine recovery workflows.
+- no existing persisted Profile, Kernel, Adapter, Credential, Lifecycle, Snapshot, Portable Definition, Template, Runtime, Compatibility, or Evidence schema may be changed merely to store translated text;
+- internal enum and reason-code values remain stable and are translated only at the presentation boundary;
+- the management interface language must remain separate from each Profile's browser language, timezone, Accept-Language, platform, and fingerprint configuration;
+- frontend controls may explain backend policy but may not replace or bypass backend authorization and preflight;
+- hiding technical detail must not hide a launch blocker, recovery requirement, trust limitation, or unsafe state;
+- no new Provider or fingerprint capability may be claimed from UI availability;
+- all secrets remain in the operating-system credential vault and must not enter Bootstrap data, logs, errors, reports, exports, or translations;
+- the Wails window remains an environment manager and does not become an embedded Chromium tabbed browser.
 
-All M5.2 implementation must:
+## Frozen security and product boundaries
 
-- use the M5.1 lifecycle records, operation journal, locks, blockers, cancellation state, inventory, and startup recovery;
-- keep Profile metadata, lifecycle state, runtime state, health, Provider trust, compatibility, and Evidence separate;
-- require stopped runtime and protected dependent work before managed storage changes;
-- treat browser files as opaque data;
-- enforce reviewed path, entry, file, size, space, duration, manifest, and staging bounds;
-- verify replacement state before activation;
-- preserve the only healthy copy until replacement state validates;
-- restore into a new Profile identity by default;
-- remap dependency requirements without copying secrets or source record IDs;
-- preserve interrupted or partial work as explicit recovery state;
-- never broaden Provider trust, compatibility, health, or Evidence applicability.
-
-Detailed M5.2 scope, acceptance criteria, and non-scope are authoritative in Issue #54. Logical records and transitions remain authoritative in `docs/PHASE_05_CONTRACTS.md`.
-
-## Frozen boundaries
-
-- secrets remain in the operating-system credential vault;
+- local APIs and control surfaces remain loopback-only and authenticated where applicable;
+- browser data remains opaque and separate from portable Profile metadata;
 - custom and legacy Providers remain unpromoted;
 - reviewed browser trust remains restricted to the approved Windows amd64 package;
-- artifacts cannot create reviewed trust or applicable Evidence;
-- Windows and Linux are the minimum claimed lifecycle targets;
-- macOS and cross-platform full browser-state recovery remain unclaimed;
-- no general filesystem browser, remote API, MCP, cloud sync, or unrelated UI redesign is authorized.
+- artifacts, templates, localization, and UI summaries cannot create reviewed trust, compatibility, health, or applicable Evidence;
+- destructive work remains serialized and recoverable boundaries preserve the only healthy copy until verification;
+- bulk permanent deletion remains prohibited;
+- unsupported, unsafe, contradictory, missing, modified, or unverifiable state fails closed or remains explicitly limited;
+- no general filesystem browser, remote API, MCP, cloud sync, proxy rotation, scheduling, bulk browser start, or unrelated automation is authorized.
 
-## Validation
+## Required validation
 
-Every milestone requires the strongest applicable subset of:
+PR #59 must not merge until applicable validation has actually run:
 
-- governance and documentation checks;
-- formatting, static analysis, unit tests, race tests, and builds;
-- frontend typecheck, tests, and production build;
-- Windows and Linux Wails builds;
-- strict schema, path, entry, bound, interruption, persistence, and rollback tests;
-- Windows and Linux real-filesystem integration tests;
-- artifact exclusion checks;
-- Phase 4 and earlier Phase 5 regression checks.
+- repository governance and documentation consistency;
+- Go formatting, vet, unit/race tests, and builds;
+- frontend typecheck, unit tests, and production build;
+- Wails development startup and Windows amd64 build;
+- Linux build checks where currently claimed;
+- real browser start, readiness, stop, process-tree cleanup, and retained Phase 4 Evidence regressions;
+- proxy adapters, credential references, diagnostics, local recovery, portability, templates, bulk operations, storage inventory, and report export smoke tests;
+- localization dictionary shape tests and primary-flow component tests;
+- manual Simplified Chinese smoke testing at 1366×768 and 1920×1080;
+- explicit verification that application-language changes do not mutate Profile identity values;
+- final changed-file, security, privacy, licensing, failure-path, and scope review.
+
+GitHub Actions remain paused. Static review may identify issues but cannot replace executable validation or justify a success claim.
 
 ## Implementation control
 
-The current implementation authority is Issue #54 only.
-
-Each milestone requires:
-
-1. a short-lived implementation branch;
-2. one Draft PR with `docs/STATUS.md` updated alongside product code;
-3. Governance and the complete applicable CI matrix;
-4. a dedicated Closing Review before STATUS advances;
-5. no later-milestone work before explicit handoff.
+- PR #59 and `agent/handoff-m5-3` are the single implementation path;
+- product-code commits must update `docs/STATUS.md` with completed work, validation truth, risks, and the exact next task;
+- changes should remain in reviewable, dependency-ordered groups;
+- no direct commit to `main`;
+- no claim of completion until code, documentation, build output, and manual behavior agree.

@@ -145,11 +145,28 @@ type NativeRecoveryAPI = {
   CancelLocalRecoveryOperation(operationId: string): Promise<LocalRecoveryState>
 }
 
+function arrayOrEmpty<T>(value: T[] | null | undefined): T[] {
+  return value || []
+}
+
 const emptyState: LocalRecoveryState = {
   snapshots: [],
   trash: [],
   progress: [],
   trashReconciliation: { generatedAt: '', findings: [], limitations: [] },
+}
+
+function normalizeLocalRecoveryState(raw: LocalRecoveryState): LocalRecoveryState {
+  return {
+    snapshots: arrayOrEmpty(raw.snapshots),
+    trash: arrayOrEmpty(raw.trash),
+    progress: arrayOrEmpty(raw.progress),
+    trashReconciliation: {
+      generatedAt: raw.trashReconciliation?.generatedAt || '',
+      findings: arrayOrEmpty(raw.trashReconciliation?.findings),
+      limitations: arrayOrEmpty(raw.trashReconciliation?.limitations),
+    },
+  }
 }
 
 function native(): NativeRecoveryAPI | undefined {
@@ -165,7 +182,7 @@ function requireNative(): NativeRecoveryAPI {
 export const localRecoveryAPI = {
   isNative: () => Boolean(native()),
   emptyState: () => ({ ...emptyState, snapshots: [], trash: [], progress: [], trashReconciliation: { ...emptyState.trashReconciliation, findings: [], limitations: [] } }),
-  state: async () => native() ? native()!.LocalRecoveryState() : localRecoveryAPI.emptyState(),
+  state: async () => native() ? normalizeLocalRecoveryState(await native()!.LocalRecoveryState()) : localRecoveryAPI.emptyState(),
   preflight: (profileId: string) => requireNative().LocalRecoveryPreflight(profileId),
   refresh: () => requireNative().RefreshLocalRecovery(),
   snapshot: (request: CreateLocalSnapshotRequest) => requireNative().CreateLocalSnapshot(request),
