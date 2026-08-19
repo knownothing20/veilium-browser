@@ -177,10 +177,7 @@ func adapterTestService(t *testing.T) (*Service, *adapterRuntime, credential.Rec
 
 func createAdvancedProfile(t *testing.T, service *Service, credentialID, adapterID string) domain.Profile {
 	t.Helper()
-	kernelSource := filepath.Join(service.dataRoot, "chromium-test")
-	if err := os.WriteFile(kernelSource, []byte("browser"), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	kernelSource := testKernelExecutable(t)
 	kernelRecord, err := service.ImportKernel(kernel.ImportRequest{
 		Name: "Chromium", Provider: fingerprint.ProviderPatched, Version: "148.0.0", SourcePath: kernelSource,
 	})

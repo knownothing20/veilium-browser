@@ -37,10 +37,11 @@ const (
 )
 
 type KernelRequirement struct {
-	Provider  string `json:"provider"`
-	Version   string `json:"version"`
-	SHA256    string `json:"sha256"`
-	SizeBytes int64  `json:"sizeBytes"`
+	Provider         string `json:"provider"`
+	ProviderRevision int    `json:"providerRevision,omitempty"`
+	Version          string `json:"version"`
+	SHA256           string `json:"sha256"`
+	SizeBytes        int64  `json:"sizeBytes"`
 }
 
 type AdapterRequirement struct {
@@ -480,6 +481,9 @@ func validatePayload(payload Payload) error {
 	}
 	if err := validateRequirement(payload.Kernel.Provider, payload.Kernel.Version, payload.Kernel.SHA256, payload.Kernel.SizeBytes, "kernel"); err != nil {
 		return err
+	}
+	if payload.Kernel.ProviderRevision < 0 {
+		return fmt.Errorf("kernel Provider revision cannot be negative")
 	}
 	if payload.Adapter != nil {
 		if err := validateRequirement(payload.Adapter.Kind, payload.Adapter.Version, payload.Adapter.SHA256, payload.Adapter.SizeBytes, "adapter"); err != nil {

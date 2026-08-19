@@ -1,8 +1,8 @@
 # Veilium Development
 
 Last updated: 2026-08-19
-Current state: Consolidated Phase 1–5 product baseline is on `main`; post-merge real-browser/product regression validation remains
-Current task: Complete the P0 validation debt below, repair any regressions, then continue automatically into the Multi-Provider foundation
+Current state: P0 regression closure and the Multi-Provider reviewed-Kernel foundation are complete on the active feature branch; the production catalog still exposes only the exact stock Chromium Provider
+Current task: Specify and build a separately licensed, provenance-recorded, exact Windows amd64 Veilium Fingerprint Chromium package before adding any Fingerprint Provider release or capability claim
 
 > **This file is the single current source of truth for Veilium development.**
 > Do not create separate current roadmap, status, phase, architecture, product-plan, handoff, or review documents. Git history is the archive.
@@ -96,25 +96,94 @@ Stable responsibilities:
 
 Persistent data classes stay separate: Profile metadata, browser user data, vault secrets, Kernel/Adapter records, Evidence, lifecycle journals, snapshots/trash, runtime logs, and staging data.
 
-## 4. P0 — validation debt that must be completed first
+## 4. P0 — validation debt completed on 2026-08-19
 
-PR #59 was merged at the owner's request before its remaining manual/runtime checks were complete. These checks must not be retroactively marked as passed.
+PR #59 was merged at the owner's request before its remaining manual/runtime checks were complete. The checks below were not retroactively marked as passed: they were rerun against the current feature-branch source and closed with new local evidence on 2026-08-19.
+
+Execute P0 in this order. A later gate must not be used to conceal a failure in an earlier one.
+
+### P0-A — fail-closed product hardening
+
+Close defects that can make metadata or UI state look healthier than the runtime:
+
+- a managed Kernel must pass a bounded offline launch probe before registration and after restart before it is treated as launchable;
+- native HTTP/HTTPS/SOCKS5 routes must pass a bounded endpoint preflight before browser start and backend health must report an unreachable endpoint as blocked;
+- Profile creation must surface required name, Kernel, route, and Adapter failures in the visible editor rather than relying on hidden browser-form validation;
+- Windows system-proxy discovery, when exposed, is read-only and credential-free, converts only safely representable static routes to an explicit Profile URL, and rejects PAC-only or ambiguous per-scheme settings;
+- concurrent runtime cleanup must be idempotent and return cleanup failures instead of racing private-directory removal.
+
+Delivered:
+
+- managed reviewed packages run a bounded product-like loopback CDP launch probe before registration and after restart;
+- native HTTP/HTTPS/SOCKS5 endpoints run a bounded preflight before health can be ready or a browser can start;
+- Profile-editor validation is visible and system-proxy application clears stale Credential and Adapter references;
+- the Windows system-proxy API is read-only, never returns credentials, accepts only unambiguous static HTTP/HTTPS/SOCKS routes, and rejects PAC-only or unsafe configuration;
+- Adapter runtime cleanup is serialized, idempotent, and returns cleanup failures;
+- reviewed Chromium runtime ACLs preserve Sandbox execution while preventing content writes that would silently mutate the integrity-recorded package; failed install/probe paths release the temporary ACL before cleanup;
+- Evidence records use a deterministic `evidence-mismatch` failure code when evaluated observations disagree with the expected identity, while unavailable optional worker observations remain explicitly partial instead of falsely passing or blocking unrelated checks.
+
+### P0-B — deterministic local acceptance
+
+Automate backend and presentation invariants before relying on Windows input injection:
+
+- test the Profile-editor state transitions, including system-proxy application clearing stale Credential and Adapter references;
+- render the primary workspace at 1366×768 and 1920×1080 using an isolated test data root and capture reviewable evidence;
+- prove that presentation-language changes do not mutate Profile language, timezone, platform, Seed, or fingerprint settings;
+- prove Profile, Kernel, lifecycle, portable-template, and Evidence metadata survive an application/service restart;
+- keep test-only control surfaces disabled in normal builds and loopback-only when enabled.
+
+Windows GUI automation may supplement these checks, but an input-injection permission failure is not permission to bypass the desktop security boundary.
+
+Completed evidence:
+
+- frontend state-transition tests cover visible Profile validation and the system-proxy reset invariant;
+- the primary workspace rendered at 1366×768 and 1920×1080 with exact viewport dimensions, no horizontal overflow, and no browser console warnings or errors;
+- all eight main workspace destinations opened in the local browser preview, and required Profile name validation blocked an empty submission with the visible in-editor alert `请先填写环境名称。`;
+- restart tests preserve Profile identity, Kernel binding, lifecycle metadata, portable templates, and Evidence metadata;
+- presentation-language tests continue to prove that UI language does not mutate Profile language, timezone, platform, Seed, or fingerprint settings;
+- the production Wails window was built and opened with an isolated `VEILIUM_DATA_DIR`; the WebView workspace rendered and remained alive without input-injection bypasses.
+
+### P0-C — exact real-browser and product regression
 
 Run and repair:
 
 1. real Chromium start, readiness, stop, and child-process cleanup after the Chinese workspace changes;
-2. manual primary-flow review at 1366×768 and 1920×1080;
-3. end-to-end smoke tests for Kernel import/install, credentials, Proxy Diagnostics, Recovery, Portability, Templates, Batch Management, Storage, and Evidence;
-4. persistence after application restart;
-5. proof that management-language presentation does not mutate Profile language, timezone, platform, or fingerprint values.
+2. end-to-end smoke tests for Kernel import/install, credentials, Proxy Diagnostics, Recovery, Portability, Templates, Batch Management, Storage, and Evidence;
+3. persistence after application restart;
+4. proof that management-language presentation does not mutate Profile language, timezone, platform, or fingerprint values.
 
-Previously recorded successful checks from the former PR #59 include frontend typecheck/tests/build, Go fmt/vet/unit/race tests, Go build, Windows Wails build, Wails development startup, and governance validation.
+Use the pinned stock Chromium archive only through the existing integrity-checked installer and an isolated Veilium data root. It is an application-managed runtime, not a Windows system installation. Existing Microsoft Edge may be used for controlled custom-Kernel test fixtures, but it must not inherit reviewed Provider status and copying only its executable is not a valid package installation.
+
+Before CPU- or memory-intensive build, race, package, or real-browser stages, measure host load. Queue the stage only when CPU and memory are simultaneously above 95%; remeasure before resuming instead of starting competing heavy work.
+
+New exact-browser evidence on 2026-08-19:
+
+- Provider `official-chromium-snapshot-win64`, revision `1`, Chromium `152.0.7960.0`, snapshot `1664436`;
+- archive size `343585547`, SHA-256 `d224019b7cbc115951b0f5dce8cf232c37244881a3eb969c010e457aa369332f`;
+- executable SHA-256 `5093988c8fdf969494f921deb32c177dbe5ed88cc101346852d93e760041e5c9`;
+- complete package tree: 261 files, 814120936 bytes, SHA-256 `312cb62d6bfab56ecfa52c4e8047dd33c05a1c17c7e44bc2afd9be436854a8dc`;
+- the integrity-checked installer imported that exact archive, the bounded CDP probe reached ready state, the managed 1280×800 window started, Evidence evaluated honestly as partial for unsupported stock-browser surfaces, the process tree stopped, and post-run package verification retained the exact tree identity;
+- the host screen observed by the real-browser test was 2880×1800. Stock Chromium has no reviewed Screen-Identity override, so a mismatching Profile screen remains a failure rather than being disguised as window sizing.
+
+Final regression evidence on the same source state:
+
+- `gofmt` over all changed Go sources;
+- `go vet ./...`;
+- `go test -count=1 ./...`;
+- `go test -race -count=1 ./...` using the already-installed local MinGW toolchain from a temporary no-space path;
+- `go build ./...`;
+- the opt-in read-only Windows static-proxy integration test completed without exposing credentials or changing system settings;
+- frontend TypeScript typecheck, 6 Vitest files / 20 tests, and a 76-module Vite production build;
+- an initial clean Wails build plus the final `wails build -platform windows/amd64 -o veilium-browser-final.exe` rebuild with Wails 2.12.0;
+- `python scripts/check_project_governance.py`.
+
+Every recorded resource gate was below the queue condition; CPU and memory were never simultaneously above 95%.
 
 **Exit:** no blocking regression remains. Then continue automatically to P1.
 
-## 5. P1 — Multi-Provider reviewed Kernel foundation
+## 5. P1 — Multi-Provider reviewed Kernel foundation completed on 2026-08-19
 
-The current release/fingerprint code still assumes a single reviewed official Chromium path. Refactor it so these can coexist:
+The release, Kernel, installer, portability, Evidence, desktop, and frontend contracts now support these identities coexisting without changing the stock Provider:
 
 ```text
 Official Stock Chromium
@@ -133,7 +202,27 @@ Requirements:
 - stock Chromium behavior and capability claims do not change;
 - no new fingerprint capability is claimed in this stage.
 
+Implementation order:
+
+1. generalize strict manifest validation and release lookup around the complete compound identity without changing the existing stock manifest values;
+2. add a second embedded test Provider fixture to prove duplicate rejection, independent provenance/layout policy, installer lookup, Kernel matching, portable dependency matching, frontend descriptors, and Evidence binding;
+3. retain the existing stock Provider ID and exact package identities as compatibility tests;
+4. expose only backend-derived Provider labels, release availability, and trust state to the frontend;
+5. run tamper and cross-Provider mismatch tests before adding any Fingerprint Chromium release.
+
 **Exit:** a second test Provider can coexist without changing stock Provider trust or behavior.
+
+Delivered and verified:
+
+- the compound identity is Provider ID + Provider revision + browser version + platform + architecture;
+- strict multi-release manifests reject duplicate compound identities and apply Provider-scoped provenance, download-host, archive-layout, executable-path, size, and platform policy;
+- Kernel Registry records, launch-probe tokens, package import/verify, installer requests, portable dependency matching, local recovery, Evidence binding, and frontend install requests carry Provider revision;
+- legacy persisted stock records with no revision migrate in memory to the exact current stock contract, while new exact matching fails closed across Provider or revision boundaries;
+- frontend Provider descriptors are derived from backend capability contracts rather than hard-coded Provider IDs;
+- an embedded test-only second Provider proves coexistence, independent provenance/layout, installer lookup, portable matching, descriptor derivation, duplicate rejection, cross-revision rejection, and Evidence mismatch handling;
+- the production release manifest still contains only `official-chromium-snapshot-win64`; no Fingerprint Provider binary or advanced capability has been added or claimed.
+
+The exact next gate is not another UI placeholder. It is a project/license decision plus a reproducible build and review package for a separate Fingerprint Chromium binary, including source baseline, patch set, build recipe, redistribution/license record, archive/executable/tree digests, Provider revision, runtime-control contract, tamper downgrade, and exact-binary real-browser Evidence.
 
 ## 6. P1 — Veilium Fingerprint Chromium V1
 
@@ -171,6 +260,8 @@ Rules:
 - custom Kernels cannot be manually promoted to reviewed;
 - every public capability requires exact-binary real-browser Evidence;
 - failed optional capabilities remain `unsupported`/`unverified` while unrelated verified work continues.
+
+The Go/Wails foundation may be completed without a Fingerprint Chromium binary. The Fingerprint Provider itself is complete only when an exact locally built or reviewed package, provenance record, license record, package-tree identity, runtime control contract, and real-browser Evidence are all present. Until then its release is absent and every advanced capability remains unsupported or unverified; placeholder digests, stock-Chromium aliases, and UI-only claims are forbidden.
 
 ## 7. P1 — Evidence V2 and fingerprint matrix
 

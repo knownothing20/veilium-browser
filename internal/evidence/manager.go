@@ -205,6 +205,10 @@ func (m *Manager) Run(ctx context.Context, request RunRequest) (Run, error) {
 	run.CompletedAt = &completed
 	run.Observations = evaluation.Observations
 	run.Limitations = sortedUnique(append(evaluation.Limitations, cleanupLimitations...))
+	if run.Status == RunFailed {
+		run.FailureCode = "evidence-mismatch"
+		run.FailureDetail = failedObservationDetail(run.Observations)
+	}
 	if len(cleanupLimitations) > 0 && run.Status == RunPassed {
 		run.Status = RunPartial
 	}
@@ -212,6 +216,27 @@ func (m *Manager) Run(ctx context.Context, request RunRequest) (Run, error) {
 		return run, fmt.Errorf("persist evidence run: %w", err)
 	}
 	return run, nil
+}
+
+func failedObservationDetail(observations []Observation) string {
+	details := make([]string, 0, 4)
+	for _, observation := range observations {
+		if observation.Status != ObservationFailed {
+			continue
+		}
+		detail := strings.TrimSpace(observation.ReasonCode)
+		if detail == "" {
+			detail = "observation-failed"
+		}
+		details = append(details, observation.ID+":"+detail)
+		if len(details) == 4 {
+			break
+		}
+	}
+	if len(details) == 0 {
+		return "evidence evaluation reported a failed status"
+	}
+	return boundedError(errors.New(strings.Join(details, "; ")))
 }
 
 func (m *Manager) Shutdown() {
@@ -304,6 +329,13 @@ func validateRunRequest(request RunRequest) (kernel.ProviderBinaryIdentity, erro
 	}
 	if request.Capabilities.Provider != request.Profile.Kernel.Provider || request.Capabilities.MajorVersion != parseMajor(request.Profile.Kernel.Version) {
 		return kernel.ProviderBinaryIdentity{}, fmt.Errorf("provider capabilities do not match the profile kernel")
+	}
+	providerRevision := request.Kernel.ProviderRevision
+	if providerRevision == 0 {
+		providerRevision = request.Capabilities.Revision
+	}
+	if providerRevision != request.Capabilities.Revision {
+		return kernel.ProviderBinaryIdentity{}, fmt.Errorf("kernel Provider revision does not match the evidence contract")
 	}
 	identity, err := kernel.BinaryIdentity(request.Kernel)
 	if err != nil {

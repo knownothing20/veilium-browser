@@ -2,7 +2,6 @@ package desktop
 
 import (
 	"context"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -25,10 +24,7 @@ func TestRunEvidenceRequiresReadyManagedSession(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	source := filepath.Join(root, "chrome-test")
-	if err := os.WriteFile(source, []byte("evidence-browser"), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	source := testKernelExecutable(t)
 	record, err := service.ImportKernel(kernel.ImportRequest{
 		Name:       "Evidence Chromium",
 		Provider:   fingerprint.ProviderCustom,

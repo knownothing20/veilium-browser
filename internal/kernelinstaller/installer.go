@@ -28,9 +28,10 @@ const (
 )
 
 type Request struct {
-	ProviderID      string `json:"providerId"`
-	Version         string `json:"version"`
-	LicenseAccepted bool   `json:"licenseAccepted"`
+	ProviderID       string `json:"providerId"`
+	ProviderRevision int    `json:"providerRevision,omitempty"`
+	Version          string `json:"version"`
+	LicenseAccepted  bool   `json:"licenseAccepted"`
 }
 
 type Store interface {
@@ -39,7 +40,7 @@ type Store interface {
 	ImportPackage(kernel.PackageImportRequest) (kernel.Record, error)
 }
 
-type releaseResolver func(providerID, version, platform, arch string) (kernelrelease.Release, bool)
+type releaseResolver func(providerID string, providerRevision int, version, platform, arch string) (kernelrelease.Release, bool)
 
 type Installer struct {
 	store       Store
@@ -60,8 +61,7 @@ func New(store Store, tempRoot string) (*Installer, error) {
 		DisableCompression:    true,
 	}
 	client := &http.Client{Transport: transport, Timeout: downloadTimeout}
-	client.CheckRedirect = secureRedirectPolicy
-	return newWithDependencies(store, tempRoot, client, runtime.GOOS, runtime.GOARCH, kernelrelease.Find)
+	return newWithDependencies(store, tempRoot, client, runtime.GOOS, runtime.GOARCH, kernelrelease.FindRevision)
 }
 
 func newWithDependencies(store Store, tempRoot string, client *http.Client, platform, arch string, findRelease releaseResolver) (*Installer, error) {
@@ -84,10 +84,13 @@ func (installer *Installer) Install(ctx context.Context, request Request) (kerne
 	}
 	request.ProviderID = strings.TrimSpace(request.ProviderID)
 	request.Version = strings.TrimSpace(request.Version)
+	if request.ProviderRevision < 0 {
+		return kernel.Record{}, fmt.Errorf("Chromium Provider revision cannot be negative")
+	}
 	if !request.LicenseAccepted {
 		return kernel.Record{}, fmt.Errorf("Chromium license and third-party notice acknowledgement is required")
 	}
-	release, ok := installer.findRelease(request.ProviderID, request.Version, installer.platform, installer.arch)
+	release, ok := installer.findRelease(request.ProviderID, request.ProviderRevision, request.Version, installer.platform, installer.arch)
 	if !ok {
 		return kernel.Record{}, fmt.Errorf("no pinned reviewed Chromium package is available for %s/%s", installer.platform, installer.arch)
 	}
@@ -116,14 +119,14 @@ func (installer *Installer) Install(ctx context.Context, request Request) (kerne
 		return kernel.Record{}, err
 	}
 	record, err := installer.store.ImportPackage(kernel.PackageImportRequest{
-		Name: release.Name, Provider: release.ProviderID, Version: release.BrowserVersion,
+		Name: release.Name, Provider: release.ProviderID, ProviderRevision: release.ProviderRevision, Version: release.BrowserVersion,
 		SourceRoot: extractedRoot, ExecutablePath: release.ExecutablePath,
 		SnapshotRevision: release.SnapshotRevision, ArchiveSHA256: release.ArchiveSHA256,
 	})
 	if err != nil {
 		return kernel.Record{}, fmt.Errorf("import reviewed Chromium package: %w", err)
 	}
-	if record.Provider != release.ProviderID || record.Version != release.BrowserVersion || record.SnapshotRevision != release.SnapshotRevision || record.ArchiveSHA256 != release.ArchiveSHA256 || record.PackageTreeSHA256 != release.PackageTreeSHA256 {
+	if record.Provider != release.ProviderID || record.ProviderRevision != release.ProviderRevision || record.Version != release.BrowserVersion || record.SnapshotRevision != release.SnapshotRevision || record.ArchiveSHA256 != release.ArchiveSHA256 || record.PackageTreeSHA256 != release.PackageTreeSHA256 {
 		return kernel.Record{}, fmt.Errorf("installed Chromium package did not match the embedded reviewed identity")
 	}
 	return record, nil
@@ -131,7 +134,7 @@ func (installer *Installer) Install(ctx context.Context, request Request) (kerne
 
 func (installer *Installer) existing(release kernelrelease.Release) (kernel.Record, bool, error) {
 	for _, record := range installer.store.List() {
-		if record.Provider != release.ProviderID || record.Version != release.BrowserVersion || record.SnapshotRevision != release.SnapshotRevision {
+		if record.Provider != release.ProviderID || record.ProviderRevision != release.ProviderRevision || record.Version != release.BrowserVersion || record.SnapshotRevision != release.SnapshotRevision {
 			continue
 		}
 		verified, err := installer.store.Verify(record.ID)
@@ -148,7 +151,7 @@ func (installer *Installer) existing(release kernelrelease.Release) (kernel.Reco
 
 func (installer *Installer) download(ctx context.Context, release kernelrelease.Release, destination string) error {
 	parsed, err := url.Parse(release.ArchiveURL)
-	if err != nil || !allowedPinnedURL(parsed, release) {
+	if err != nil || !kernelrelease.DownloadURLAllowed(release, parsed) {
 		return fmt.Errorf("embedded official Chromium URL is invalid")
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, release.ArchiveURL, nil)
@@ -157,7 +160,9 @@ func (installer *Installer) download(ctx context.Context, release kernelrelease.
 	}
 	request.Header.Set("Accept", "application/zip")
 	request.Header.Set("User-Agent", "Veilium-Official-Chromium-Installer/1")
-	response, err := installer.client.Do(request)
+	client := *installer.client
+	client.CheckRedirect = secureRedirectPolicy(release)
+	response, err := client.Do(request)
 	if err != nil {
 		return fmt.Errorf("download official Chromium: %w", err)
 	}
@@ -202,7 +207,7 @@ func extractPinnedPackage(ctx context.Context, release kernelrelease.Release, ar
 	var files int
 	var expanded int64
 	for _, entry := range archive.File {
-		name, isDirectory, err := validateArchiveEntry(entry)
+		name, isDirectory, err := validateArchiveEntry(entry, release.ArchiveRoot)
 		if err != nil {
 			return err
 		}
@@ -226,7 +231,7 @@ func extractPinnedPackage(ctx context.Context, release kernelrelease.Release, ar
 		return fmt.Errorf("create official Chromium extraction root: %w", err)
 	}
 	for _, entry := range archive.File {
-		name, isDirectory, err := validateArchiveEntry(entry)
+		name, isDirectory, err := validateArchiveEntry(entry, release.ArchiveRoot)
 		if err != nil {
 			return err
 		}
@@ -289,14 +294,15 @@ func extractPinnedPackage(ctx context.Context, release kernelrelease.Release, ar
 	return nil
 }
 
-func validateArchiveEntry(entry *zip.File) (string, bool, error) {
+func validateArchiveEntry(entry *zip.File, archiveRoot string) (string, bool, error) {
 	if entry == nil || strings.ContainsRune(entry.Name, 0) || strings.ContainsRune(entry.Name, '\\') || strings.HasPrefix(entry.Name, "/") {
 		return "", false, fmt.Errorf("official Chromium ZIP contains an unsafe path")
 	}
 	isDirectory := entry.FileInfo().IsDir() || strings.HasSuffix(entry.Name, "/")
 	name := strings.TrimSuffix(entry.Name, "/")
 	clean := path.Clean(name)
-	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || clean != name || (clean != "chrome-win" && !strings.HasPrefix(clean, "chrome-win/")) {
+	archiveRoot = strings.TrimSpace(archiveRoot)
+	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") || clean != name || archiveRoot == "" || (clean != archiveRoot && !strings.HasPrefix(clean, archiveRoot+"/")) {
 		return "", false, fmt.Errorf("official Chromium ZIP contains an unsafe or unexpected path %q", entry.Name)
 	}
 	mode := entry.Mode()
@@ -332,28 +338,18 @@ func verifyFile(filename string, expectedSize int64, expectedDigest string) erro
 	return nil
 }
 
-func allowedPinnedURL(value *url.URL, release kernelrelease.Release) bool {
-	if value == nil || value.String() != release.ArchiveURL || value.Scheme != "https" || value.Hostname() != "commondatastorage.googleapis.com" || value.User != nil || value.RawQuery != "" || value.Fragment != "" {
-		return false
+func secureRedirectPolicy(release kernelrelease.Release) func(*http.Request, []*http.Request) error {
+	return func(request *http.Request, via []*http.Request) error {
+		if len(via) >= maxRedirects {
+			return fmt.Errorf("reviewed Chromium download exceeded redirect limit")
+		}
+		if request == nil || !kernelrelease.RedirectURLAllowed(release, request.URL) {
+			return fmt.Errorf("reviewed Chromium download redirected outside its Provider host policy")
+		}
+		request.Header.Del("Authorization")
+		request.Header.Del("Cookie")
+		return nil
 	}
-	expected := fmt.Sprintf("/chromium-browser-snapshots/Win_x64/%d/chrome-win.zip", release.SnapshotRevision)
-	return value.EscapedPath() == expected
-}
-
-func secureRedirectPolicy(request *http.Request, via []*http.Request) error {
-	if len(via) >= maxRedirects {
-		return fmt.Errorf("official Chromium download exceeded redirect limit")
-	}
-	if request.URL == nil || request.URL.Scheme != "https" || request.URL.User != nil || request.URL.Fragment != "" {
-		return fmt.Errorf("official Chromium download redirected to an unsafe URL")
-	}
-	host := strings.ToLower(request.URL.Hostname())
-	if host != "commondatastorage.googleapis.com" && host != "storage.googleapis.com" {
-		return fmt.Errorf("official Chromium download redirected outside approved Google storage hosts")
-	}
-	request.Header.Del("Authorization")
-	request.Header.Del("Cookie")
-	return nil
 }
 
 func ensurePrivateDirectory(directory string) error {

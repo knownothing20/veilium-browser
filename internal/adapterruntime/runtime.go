@@ -259,10 +259,12 @@ type processInstance struct {
 	dir     string
 	done    chan struct{}
 
-	mu        sync.Mutex
-	waitErr   error
-	closeOnce sync.Once
-	closeErr  error
+	mu          sync.Mutex
+	waitErr     error
+	closeOnce   sync.Once
+	closeErr    error
+	cleanupOnce sync.Once
+	cleanupErr  error
 }
 
 func (i *processInstance) URL() string           { return i.url }
@@ -323,7 +325,7 @@ func (i *processInstance) wait() {
 	i.waitErr = err
 	i.mu.Unlock()
 	close(i.done)
-	i.cleanup()
+	_ = i.cleanup()
 }
 
 func (i *processInstance) Close() error {
@@ -333,7 +335,7 @@ func (i *processInstance) Close() error {
 	i.closeOnce.Do(func() {
 		select {
 		case <-i.done:
-			i.cleanup()
+			i.closeErr = i.cleanup()
 			return
 		default:
 		}
@@ -350,15 +352,20 @@ func (i *processInstance) Close() error {
 			}
 			<-i.done
 		}
-		i.cleanup()
+		if err := i.cleanup(); err != nil && i.closeErr == nil {
+			i.closeErr = err
+		}
 	})
 	return i.closeErr
 }
 
-func (i *processInstance) cleanup() {
-	if i.dir != "" {
-		_ = os.RemoveAll(i.dir)
-	}
+func (i *processInstance) cleanup() error {
+	i.cleanupOnce.Do(func() {
+		if i.dir != "" {
+			i.cleanupErr = os.RemoveAll(i.dir)
+		}
+	})
+	return i.cleanupErr
 }
 
 func safeID(value string) string {

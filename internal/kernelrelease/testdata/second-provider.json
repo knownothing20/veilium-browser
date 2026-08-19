@@ -1,0 +1,33 @@
+{
+  "providerId": "test-reviewed-provider",
+  "providerRevision": 7,
+  "name": "Embedded second Provider fixture",
+  "browserVersion": "152.1.2.3",
+  "snapshotRevision": 9001,
+  "sourceProject": "Veilium Test Chromium",
+  "sourcePageUrl": "https://example.invalid/provider/",
+  "licenseSpdx": "MIT",
+  "licenseUrl": "https://example.invalid/licenses/LICENSE",
+  "thirdPartyNoticesUrl": "https://example.invalid/notices/NOTICE",
+  "reviewedAt": "2026-08-19T00:00:00Z",
+  "platform": "windows",
+  "arch": "amd64",
+  "archiveName": "test-win.zip",
+  "archiveUrl": "https://example.invalid/downloads/9001/test-win.zip",
+  "allowedDownloadHosts": ["example.invalid"],
+  "archiveSizeBytes": 1024,
+  "archiveSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "archiveEntryCount": 2,
+  "archiveRoot": "test-win",
+  "executablePath": "test-win/test-browser.exe",
+  "executableSizeBytes": 512,
+  "executableSha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "packageFileCount": 2,
+  "expandedSizeBytes": 768,
+  "packageTreeSha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "limitations": [
+    "Test fixture only.",
+    "Not a production release.",
+    "Does not claim fingerprint capabilities."
+  ]
+}

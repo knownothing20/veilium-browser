@@ -46,6 +46,7 @@ type Release struct {
 	Arch                 string   `json:"arch"`
 	ArchiveName          string   `json:"archiveName"`
 	ArchiveURL           string   `json:"archiveUrl"`
+	AllowedDownloadHosts []string `json:"allowedDownloadHosts"`
 	ArchiveSizeBytes     int64    `json:"archiveSizeBytes"`
 	ArchiveSHA256        string   `json:"archiveSha256"`
 	ArchiveEntryCount    int      `json:"archiveEntryCount"`
@@ -57,6 +58,40 @@ type Release struct {
 	ExpandedSizeBytes    int64    `json:"expandedSizeBytes"`
 	PackageTreeSHA256    string   `json:"packageTreeSha256"`
 	Limitations          []string `json:"limitations"`
+}
+
+type Identity struct {
+	ProviderID       string `json:"providerId"`
+	ProviderRevision int    `json:"providerRevision"`
+	BrowserVersion   string `json:"browserVersion"`
+	Platform         string `json:"platform"`
+	Arch             string `json:"arch"`
+}
+
+type providerValidationPolicy struct {
+	SourceProject, LicenseSPDX                       string
+	Platform, Arch                                   string
+	ArchiveName, ArchiveRoot, ExecutablePath         string
+	ArchiveHosts                                     []string
+	ArchivePath                                      func(Release) string
+	SourceHost, SourcePath                           string
+	LicenseHost, LicensePathSuffix, ThirdPartyNotice string
+	MinimumArchiveSize, MaximumArchiveSize           int64
+}
+
+var productionProviderPolicies = map[string]providerValidationPolicy{
+	ProviderID: {
+		SourceProject: "The Chromium Project", LicenseSPDX: "BSD-3-Clause",
+		Platform: "windows", Arch: "amd64",
+		ArchiveName: "chrome-win.zip", ArchiveRoot: "chrome-win", ExecutablePath: "chrome-win/chrome.exe",
+		ArchiveHosts: []string{"commondatastorage.googleapis.com", "storage.googleapis.com"},
+		ArchivePath: func(release Release) string {
+			return fmt.Sprintf("/chromium-browser-snapshots/Win_x64/%d/chrome-win.zip", release.SnapshotRevision)
+		},
+		SourceHost: "www.chromium.org", SourcePath: "/getting-involved/download-chromium/",
+		LicenseHost: "chromium.googlesource.com", LicensePathSuffix: "/LICENSE", ThirdPartyNotice: "chrome://credits/",
+		MinimumArchiveSize: 50 << 20, MaximumArchiveSize: 500 << 20,
+	},
 }
 
 func Catalog() (Manifest, error) {
@@ -98,12 +133,46 @@ func Find(providerID, version, platform, arch string) (Release, bool) {
 	if err != nil {
 		return Release{}, false
 	}
+	var match Release
+	found := false
 	for _, release := range releases {
 		if release.ProviderID == strings.TrimSpace(providerID) && release.BrowserVersion == strings.TrimSpace(version) && release.Platform == strings.TrimSpace(platform) && release.Arch == strings.TrimSpace(arch) {
+			if found {
+				return Release{}, false
+			}
+			match = release
+			found = true
+		}
+	}
+	return cloneRelease(match), found
+}
+
+func FindExact(identity Identity) (Release, bool) {
+	releases, err := Releases()
+	if err != nil {
+		return Release{}, false
+	}
+	return findExact(releases, identity)
+}
+
+func FindRevision(providerID string, providerRevision int, version, platform, arch string) (Release, bool) {
+	if providerRevision == 0 {
+		return Find(providerID, version, platform, arch)
+	}
+	return FindExact(Identity{ProviderID: providerID, ProviderRevision: providerRevision, BrowserVersion: version, Platform: platform, Arch: arch})
+}
+
+func findExact(releases []Release, identity Identity) (Release, bool) {
+	for _, release := range releases {
+		if release.Identity() == normalizeIdentity(identity) {
 			return cloneRelease(release), true
 		}
 	}
 	return Release{}, false
+}
+
+func (release Release) Identity() Identity {
+	return Identity{ProviderID: release.ProviderID, ProviderRevision: release.ProviderRevision, BrowserVersion: release.BrowserVersion, Platform: release.Platform, Arch: release.Arch}
 }
 
 func MatchExecutable(providerID, version, digest string, size int64) (Release, bool) {
@@ -135,21 +204,56 @@ func MatchPackage(providerID, version, executableDigest string, executableSize i
 	return Release{}, false
 }
 
-func validate(manifest Manifest) error {
-	if manifest.SchemaVersion != 1 || len(manifest.Releases) != 1 {
-		return fmt.Errorf("reviewed Chromium manifest must contain exactly one schema-v1 release")
+func MatchPackageExact(identity Identity, executableDigest string, executableSize int64, packageDigest string, packageFiles int, packageSize int64) (Release, bool) {
+	release, ok := FindExact(identity)
+	if !ok {
+		return Release{}, false
 	}
-	release := manifest.Releases[0]
-	if release.ProviderID != ProviderID || release.ProviderRevision < 1 || strings.TrimSpace(release.Name) == "" {
+	executableDigest = strings.ToLower(strings.TrimSpace(executableDigest))
+	packageDigest = strings.ToLower(strings.TrimSpace(packageDigest))
+	if release.ExecutableSHA256 != executableDigest || release.ExecutableSizeBytes != executableSize || release.PackageTreeSHA256 != packageDigest || release.PackageFileCount != packageFiles || release.ExpandedSizeBytes != packageSize {
+		return Release{}, false
+	}
+	return release, true
+}
+
+func validate(manifest Manifest) error {
+	return validateWithPolicies(manifest, productionProviderPolicies)
+}
+
+func validateWithPolicies(manifest Manifest, policies map[string]providerValidationPolicy) error {
+	if manifest.SchemaVersion != 1 || len(manifest.Releases) < 1 || len(manifest.Releases) > 128 {
+		return fmt.Errorf("reviewed Chromium manifest must contain 1 to 128 schema-v1 releases")
+	}
+	seen := make(map[Identity]struct{}, len(manifest.Releases))
+	for index, release := range manifest.Releases {
+		identity := normalizeIdentity(release.Identity())
+		if _, duplicate := seen[identity]; duplicate {
+			return fmt.Errorf("reviewed Chromium manifest contains duplicate compound identity at release %d", index)
+		}
+		seen[identity] = struct{}{}
+		policy, ok := policies[identity.ProviderID]
+		if !ok {
+			return fmt.Errorf("reviewed Chromium Provider %q has no validation policy", identity.ProviderID)
+		}
+		if err := validateRelease(release, policy); err != nil {
+			return fmt.Errorf("release %d: %w", index, err)
+		}
+	}
+	return nil
+}
+
+func validateRelease(release Release, policy providerValidationPolicy) error {
+	if strings.TrimSpace(release.ProviderID) == "" || release.ProviderID != strings.TrimSpace(release.ProviderID) || release.ProviderRevision < 1 || strings.TrimSpace(release.Name) == "" {
 		return fmt.Errorf("reviewed Chromium Provider identity is invalid")
 	}
-	if !versionPattern.MatchString(release.BrowserVersion) || release.SnapshotRevision < 1 || release.Platform != "windows" || release.Arch != "amd64" {
+	if !versionPattern.MatchString(release.BrowserVersion) || release.SnapshotRevision < 1 || release.Platform != policy.Platform || release.Arch != policy.Arch {
 		return fmt.Errorf("reviewed Chromium version or platform is invalid")
 	}
-	if release.SourceProject != "The Chromium Project" || release.LicenseSPDX != "BSD-3-Clause" || strings.TrimSpace(release.ReviewedAt) == "" {
+	if release.SourceProject != policy.SourceProject || release.LicenseSPDX != policy.LicenseSPDX || strings.TrimSpace(release.ReviewedAt) == "" {
 		return fmt.Errorf("reviewed Chromium provenance metadata is incomplete")
 	}
-	if release.ArchiveName != "chrome-win.zip" || release.ArchiveSizeBytes < 50<<20 || release.ArchiveSizeBytes > 500<<20 || release.ArchiveEntryCount < 1 || release.ArchiveEntryCount > 5000 {
+	if release.ArchiveName != policy.ArchiveName || release.ArchiveSizeBytes < policy.MinimumArchiveSize || release.ArchiveSizeBytes > policy.MaximumArchiveSize || release.ArchiveEntryCount < 1 || release.ArchiveEntryCount > 5000 {
 		return fmt.Errorf("reviewed Chromium archive metadata is invalid")
 	}
 	if !digestPattern.MatchString(release.ArchiveSHA256) || !digestPattern.MatchString(release.ExecutableSHA256) || !digestPattern.MatchString(release.PackageTreeSHA256) || release.ExecutableSizeBytes < 1 {
@@ -158,24 +262,70 @@ func validate(manifest Manifest) error {
 	if release.PackageFileCount != release.ArchiveEntryCount || release.ExpandedSizeBytes < release.ExecutableSizeBytes {
 		return fmt.Errorf("reviewed Chromium package-tree metadata is invalid")
 	}
-	if release.ArchiveRoot != "chrome-win" || release.ExecutablePath != "chrome-win/chrome.exe" || !safeRelativePath(release.ExecutablePath) {
+	if release.ArchiveRoot != policy.ArchiveRoot || release.ExecutablePath != policy.ExecutablePath || !safeRelativePath(release.ExecutablePath) || !strings.HasPrefix(release.ExecutablePath, release.ArchiveRoot+"/") {
 		return fmt.Errorf("reviewed Chromium archive layout is invalid")
 	}
-	expectedArchivePath := fmt.Sprintf("/chromium-browser-snapshots/Win_x64/%d/chrome-win.zip", release.SnapshotRevision)
-	if err := validateHTTPSURL(release.ArchiveURL, "commondatastorage.googleapis.com", expectedArchivePath); err != nil {
+	if len(policy.ArchiveHosts) == 0 || policy.ArchivePath == nil || !equalStrings(release.AllowedDownloadHosts, policy.ArchiveHosts) {
+		return fmt.Errorf("reviewed Chromium download-host policy is invalid")
+	}
+	if err := validateHTTPSURL(release.ArchiveURL, policy.ArchiveHosts[0], policy.ArchivePath(release)); err != nil {
 		return err
 	}
-	if err := validateHTTPSURL(release.SourcePageURL, "www.chromium.org", "/getting-involved/download-chromium/"); err != nil {
+	if err := validateHTTPSURL(release.SourcePageURL, policy.SourceHost, policy.SourcePath); err != nil {
 		return err
 	}
 	license, err := url.Parse(release.LicenseURL)
-	if err != nil || license.Scheme != "https" || license.Hostname() != "chromium.googlesource.com" || license.User != nil || license.Fragment != "" || !strings.HasSuffix(license.EscapedPath(), "/LICENSE") {
+	if err != nil || license.Scheme != "https" || license.Hostname() != policy.LicenseHost || license.User != nil || license.RawQuery != "" || license.Fragment != "" || !strings.HasSuffix(license.EscapedPath(), policy.LicensePathSuffix) {
 		return fmt.Errorf("reviewed Chromium license URL is invalid")
 	}
-	if release.ThirdPartyNoticesURL != "chrome://credits/" || len(release.Limitations) < 3 {
+	if release.ThirdPartyNoticesURL != policy.ThirdPartyNotice || len(release.Limitations) < 3 {
 		return fmt.Errorf("reviewed Chromium notices or limitations are incomplete")
 	}
 	return nil
+}
+
+func normalizeIdentity(identity Identity) Identity {
+	identity.ProviderID = strings.TrimSpace(identity.ProviderID)
+	identity.BrowserVersion = strings.TrimSpace(identity.BrowserVersion)
+	identity.Platform = strings.TrimSpace(identity.Platform)
+	identity.Arch = strings.TrimSpace(identity.Arch)
+	return identity
+}
+
+func equalStrings(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if strings.TrimSpace(left[index]) != strings.TrimSpace(right[index]) {
+			return false
+		}
+	}
+	return true
+}
+
+func DownloadURLAllowed(release Release, candidate *url.URL) bool {
+	if candidate == nil || candidate.String() != release.ArchiveURL || candidate.Scheme != "https" || candidate.User != nil || candidate.RawQuery != "" || candidate.Fragment != "" || (candidate.Port() != "" && candidate.Port() != "443") {
+		return false
+	}
+	for _, host := range release.AllowedDownloadHosts {
+		if strings.EqualFold(candidate.Hostname(), strings.TrimSpace(host)) {
+			return true
+		}
+	}
+	return false
+}
+
+func RedirectURLAllowed(release Release, candidate *url.URL) bool {
+	if candidate == nil || candidate.Scheme != "https" || candidate.User != nil || candidate.Fragment != "" || (candidate.Port() != "" && candidate.Port() != "443") {
+		return false
+	}
+	for _, host := range release.AllowedDownloadHosts {
+		if strings.EqualFold(candidate.Hostname(), strings.TrimSpace(host)) {
+			return true
+		}
+	}
+	return false
 }
 
 func validateHTTPSURL(raw, host, expectedPath string) error {
@@ -205,6 +355,7 @@ func cloneManifest(source Manifest) Manifest {
 
 func cloneRelease(source Release) Release {
 	result := source
+	result.AllowedDownloadHosts = append([]string(nil), source.AllowedDownloadHosts...)
 	result.Limitations = append([]string(nil), source.Limitations...)
 	return result
 }

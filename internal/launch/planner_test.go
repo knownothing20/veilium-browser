@@ -29,6 +29,9 @@ func TestBuildProducesStableSafeLaunchPlan(t *testing.T) {
 			t.Fatalf("generic provider emitted unverified flag %q in %s", blocked, joined)
 		}
 	}
+	if plan.Args[len(plan.Args)-1] != "about:blank" {
+		t.Fatalf("managed launch must end with an offline initial target: %#v", plan.Args)
+	}
 }
 
 func TestBuildSupportsChromiumAssignedDebuggingPort(t *testing.T) {

@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -78,7 +77,7 @@ func TestReviewedChromiumInstallForCI(t *testing.T) {
 		t.Fatalf("load reviewed release: %#v %v", releases, err)
 	}
 	release := releases[0]
-	archiveTree, err := inspectCIArchivePackageTree(archive)
+	archiveTree, err := inspectCIArchivePackageTree(archive, release.ArchiveRoot)
 	if err != nil {
 		t.Fatalf("inspect reviewed Chromium archive package tree: %v", err)
 	}
@@ -109,16 +108,13 @@ func TestReviewedChromiumInstallForCI(t *testing.T) {
 		t.Fatal(err)
 	}
 	client := &http.Client{Transport: ciArchiveTransport{path: archive, url: release.ArchiveURL}}
-	installer, err := newWithDependencies(store, filepath.Join(workDir, "installer"), client, "windows", "amd64", kernelrelease.Find)
+	installer, err := newWithDependencies(store, filepath.Join(workDir, "installer"), client, "windows", "amd64", kernelrelease.FindRevision)
 	if err != nil {
 		t.Fatal(err)
 	}
 	record, err := installer.Install(context.Background(), Request{ProviderID: release.ProviderID, Version: release.BrowserVersion, LicenseAccepted: true})
 	if err != nil {
 		t.Fatal(err)
-	}
-	if err := grantReviewedChromiumSandboxReadAccess(record.Executable, workDir); err != nil {
-		t.Fatalf("grant reviewed Chromium sandbox read access: %v", err)
 	}
 	record, err = store.Verify(record.ID)
 	if err != nil {
@@ -141,49 +137,7 @@ func TestReviewedChromiumInstallForCI(t *testing.T) {
 	}
 }
 
-func grantReviewedChromiumSandboxReadAccess(executable, workDir string) error {
-	packageDir, err := filepath.Abs(filepath.Dir(executable))
-	if err != nil {
-		return fmt.Errorf("resolve reviewed Chromium package directory: %w", err)
-	}
-	workRoot, err := filepath.Abs(workDir)
-	if err != nil {
-		return fmt.Errorf("resolve reviewed Chromium work root: %w", err)
-	}
-	relative, err := filepath.Rel(workRoot, packageDir)
-	if err != nil {
-		return fmt.Errorf("relate reviewed Chromium package to work root: %w", err)
-	}
-	if relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || filepath.IsAbs(relative) {
-		return fmt.Errorf("reviewed Chromium package directory escapes CI work root")
-	}
-	info, err := os.Stat(executable)
-	if err != nil {
-		return fmt.Errorf("stat reviewed Chromium executable: %w", err)
-	}
-	if info.IsDir() {
-		return fmt.Errorf("reviewed Chromium executable path is a directory")
-	}
-
-	// Chromium's Windows sandbox uses restricted and AppContainer identities.
-	// The CI package remains byte-for-byte verified; only temporary read/execute
-	// ACLs are added to the reviewed package tree before browser evidence runs.
-	principals := []string{
-		"*S-1-5-12:(OI)(CI)(RX)",
-		"*S-1-15-2-1:(OI)(CI)(RX)",
-		"*S-1-15-2-2:(OI)(CI)(RX)",
-	}
-	for _, principal := range principals {
-		command := exec.Command("icacls.exe", packageDir, "/grant", principal, "/T", "/Q")
-		output, err := command.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("grant %s on reviewed Chromium package: %w: %s", principal, err, strings.TrimSpace(string(output)))
-		}
-	}
-	return nil
-}
-
-func inspectCIArchivePackageTree(archivePath string) (kernel.PackageTreeIdentity, error) {
+func inspectCIArchivePackageTree(archivePath, archiveRoot string) (kernel.PackageTreeIdentity, error) {
 	archive, err := zip.OpenReader(archivePath)
 	if err != nil {
 		return kernel.PackageTreeIdentity{}, err
@@ -193,7 +147,7 @@ func inspectCIArchivePackageTree(archivePath string) (kernel.PackageTreeIdentity
 	files := make([]ciArchiveFileIdentity, 0, len(archive.File))
 	var total int64
 	for _, entry := range archive.File {
-		name, isDirectory, err := validateArchiveEntry(entry)
+		name, isDirectory, err := validateArchiveEntry(entry, archiveRoot)
 		if err != nil {
 			return kernel.PackageTreeIdentity{}, err
 		}

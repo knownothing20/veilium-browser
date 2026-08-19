@@ -11,17 +11,19 @@ import (
 
 func TestPortableKernelMatchingIsExactAndVerified(t *testing.T) {
 	requirement := portableprofile.KernelRequirement{
-		Provider:  "custom-chromium",
-		Version:   "148.0.0",
-		SHA256:    strings.Repeat("a", 64),
-		SizeBytes: 100,
+		Provider:         "custom-chromium",
+		ProviderRevision: 7,
+		Version:          "148.0.0",
+		SHA256:           strings.Repeat("a", 64),
+		SizeBytes:        100,
 	}
 	record := kernel.Record{
-		Provider:  requirement.Provider,
-		Version:   requirement.Version,
-		SHA256:    requirement.SHA256,
-		SizeBytes: requirement.SizeBytes,
-		Status:    kernel.StatusVerified,
+		Provider:         requirement.Provider,
+		ProviderRevision: requirement.ProviderRevision,
+		Version:          requirement.Version,
+		SHA256:           requirement.SHA256,
+		SizeBytes:        requirement.SizeBytes,
+		Status:           kernel.StatusVerified,
 	}
 	if !kernelMatches(record, requirement) {
 		t.Fatal("expected exact verified Kernel to match")
@@ -34,6 +36,11 @@ func TestPortableKernelMatchingIsExactAndVerified(t *testing.T) {
 	record.SHA256 = strings.Repeat("b", 64)
 	if kernelMatches(record, requirement) {
 		t.Fatal("different Kernel digest matched a portable requirement")
+	}
+	record.SHA256 = requirement.SHA256
+	record.ProviderRevision++
+	if kernelMatches(record, requirement) {
+		t.Fatal("different Provider revision matched a portable requirement")
 	}
 }
 

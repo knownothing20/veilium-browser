@@ -161,6 +161,25 @@ func (c *Controller) Apply(ctx context.Context, cdpPort int, browserWebSocket st
 }
 
 func (c *Controller) firstPageTarget(ctx context.Context, port int) (string, error) {
+	for {
+		targetID, err := c.readFirstPageTarget(ctx, port)
+		if err != nil {
+			return "", err
+		}
+		if targetID != "" {
+			return targetID, nil
+		}
+		timer := time.NewTimer(50 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return "", fmt.Errorf("no controlled page target became available: %w", ctx.Err())
+		case <-timer.C:
+		}
+	}
+}
+
+func (c *Controller) readFirstPageTarget(ctx context.Context, port int) (string, error) {
 	endpoint := fmt.Sprintf("http://127.0.0.1:%d/json/list", port)
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -186,7 +205,7 @@ func (c *Controller) firstPageTarget(ctx context.Context, port int) (string, err
 			return target.ID, nil
 		}
 	}
-	return "", fmt.Errorf("no controlled page target is available")
+	return "", nil
 }
 
 func call(connection *websocket.Conn, id int, method string, params map[string]any, output any) error {

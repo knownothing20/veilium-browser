@@ -1,9 +1,11 @@
 package desktop
 
 import (
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/fingerprint"
@@ -23,10 +25,7 @@ func TestBulkRefreshProfileHealthReportsReadyAndReusesOperation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	source := filepath.Join(root, "chrome-test")
-	if err := os.WriteFile(source, []byte("verified-browser"), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	source := testKernelExecutable(t)
 	record, err := service.ImportKernel(kernel.ImportRequest{
 		Name: "Verified Chromium", Provider: fingerprint.ProviderPatched, Version: "148.0.0", SourcePath: source,
 	})
@@ -67,6 +66,47 @@ func TestBulkRefreshProfileHealthReportsReadyAndReusesOperation(t *testing.T) {
 	}
 	if operations := service.ListLifecycleOperations(); len(operations) != 1 {
 		t.Fatalf("idempotent retry created %d operations, want 1", len(operations))
+	}
+}
+
+func TestProfileHealthBlocksUnavailableNativeProxy(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	address := listener.Addr().String()
+	if err := listener.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	root := t.TempDir()
+	store, err := profile.Open(filepath.Join(root, "profiles.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	service, err := newService(store, root, newFakeRuntime())
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, err := service.ImportKernel(kernel.ImportRequest{
+		Name: "Verified Chromium", Provider: fingerprint.ProviderPatched, Version: "148.0.0", SourcePath: testKernelExecutable(t),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := validProfile()
+	input.Kernel = domain.KernelRef{ID: record.ID}
+	input.Proxy.URL = "http://" + address
+	created, err := service.CreateProfile(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(created.UserDataDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	report := service.evaluateProfileHealth(created, lifecycle.StateAvailable, time.Now().UTC())
+	if report.Status != ProfileHealthBlocked || checkStatus(report.Checks, "route") != HealthCheckFail {
+		t.Fatalf("unavailable proxy route was not blocked: %#v", report)
 	}
 }
 

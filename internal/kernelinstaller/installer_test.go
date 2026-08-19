@@ -39,7 +39,7 @@ func (store *fakeStore) ImportPackage(request kernel.PackageImportRequest) (kern
 	store.sourcePresent = statErr == nil
 	release := store.release
 	return kernel.Record{
-		ID: "official-1", Name: release.Name, Provider: release.ProviderID, Version: release.BrowserVersion,
+		ID: "official-1", Name: release.Name, Provider: release.ProviderID, ProviderRevision: release.ProviderRevision, Version: release.BrowserVersion,
 		Status: kernel.StatusVerified, SnapshotRevision: release.SnapshotRevision,
 		ArchiveSHA256: release.ArchiveSHA256, PackageTreeSHA256: release.PackageTreeSHA256,
 	}, nil
@@ -70,6 +70,42 @@ func TestInstallRequiresLicenseAcknowledgement(t *testing.T) {
 	}
 }
 
+func TestInstallerUsesCompleteProviderIdentity(t *testing.T) {
+	archive, release := buildFixture(t, false)
+	store := &fakeStore{release: release}
+	client := &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK, Status: "200 OK", Header: make(http.Header), Body: io.NopCloser(bytes.NewReader(archive)), ContentLength: int64(len(archive)), Request: request}, nil
+	})}
+	called := false
+	installer, err := newWithDependencies(store, t.TempDir(), client, "windows", "amd64", func(provider string, revision int, version, platform, arch string) (kernelrelease.Release, bool) {
+		called = true
+		if provider != release.ProviderID || revision != release.ProviderRevision || version != release.BrowserVersion || platform != release.Platform || arch != release.Arch {
+			t.Fatalf("incomplete Provider lookup: %q/%d/%q/%q/%q", provider, revision, version, platform, arch)
+		}
+		return release, true
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := installer.Install(context.Background(), Request{ProviderID: release.ProviderID, ProviderRevision: release.ProviderRevision, Version: release.BrowserVersion, LicenseAccepted: true}); err != nil {
+		t.Fatal(err)
+	}
+	if !called {
+		t.Fatal("release resolver was not called")
+	}
+}
+
+func TestArchiveLayoutIsProviderScoped(t *testing.T) {
+	entry := &zip.File{FileHeader: zip.FileHeader{Name: "test-win/test-browser.exe"}}
+	entry.SetMode(0o600)
+	if name, directory, err := validateArchiveEntry(entry, "test-win"); err != nil || directory || name != entry.Name {
+		t.Fatalf("second Provider layout was rejected: %q %t %v", name, directory, err)
+	}
+	if _, _, err := validateArchiveEntry(entry, "chrome-win"); err == nil {
+		t.Fatal("cross-Provider archive layout was accepted")
+	}
+}
+
 func TestInstallRejectsArchiveDigestMismatch(t *testing.T) {
 	archive, release := buildFixture(t, false)
 	release.ArchiveSHA256 = strings.Repeat("0", 64)
@@ -91,13 +127,13 @@ func TestInstallRejectsTraversalEntry(t *testing.T) {
 
 func TestHealthyExistingInstallAvoidsDownload(t *testing.T) {
 	_, release := buildFixture(t, false)
-	existing := kernel.Record{ID: "existing", Name: release.Name, Provider: release.ProviderID, Version: release.BrowserVersion, SnapshotRevision: release.SnapshotRevision, Status: kernel.StatusVerified}
+	existing := kernel.Record{ID: "existing", Name: release.Name, Provider: release.ProviderID, ProviderRevision: release.ProviderRevision, Version: release.BrowserVersion, SnapshotRevision: release.SnapshotRevision, Status: kernel.StatusVerified}
 	store := &fakeStore{records: []kernel.Record{existing}, verify: existing}
 	client := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 		t.Fatal("healthy existing package should not trigger a download")
 		return nil, nil
 	})}
-	installer, err := newWithDependencies(store, t.TempDir(), client, "windows", "amd64", func(_, _, _, _ string) (kernelrelease.Release, bool) { return release, true })
+	installer, err := newWithDependencies(store, t.TempDir(), client, "windows", "amd64", func(_ string, _ int, _, _, _ string) (kernelrelease.Release, bool) { return release, true })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -115,8 +151,8 @@ func testInstaller(t *testing.T, store Store, archive []byte, release kernelrele
 			Body: io.NopCloser(bytes.NewReader(archive)), ContentLength: int64(len(archive)), Request: request,
 		}, nil
 	})}
-	installer, err := newWithDependencies(store, t.TempDir(), client, "windows", "amd64", func(provider, version, platform, arch string) (kernelrelease.Release, bool) {
-		return release, provider == release.ProviderID && version == release.BrowserVersion && platform == release.Platform && arch == release.Arch
+	installer, err := newWithDependencies(store, t.TempDir(), client, "windows", "amd64", func(provider string, revision int, version, platform, arch string) (kernelrelease.Release, bool) {
+		return release, provider == release.ProviderID && (revision == 0 || revision == release.ProviderRevision) && version == release.BrowserVersion && platform == release.Platform && arch == release.Arch
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -182,8 +218,10 @@ func buildFixture(t *testing.T, traversal bool) ([]byte, kernelrelease.Release) 
 		ProviderID: "test-reviewed-chromium", ProviderRevision: 1, Name: "Test reviewed Chromium",
 		BrowserVersion: "152.0.0.0", SnapshotRevision: 123,
 		Platform: "windows", Arch: "amd64", ArchiveName: "chrome-win.zip",
-		ArchiveURL:       "https://commondatastorage.googleapis.com/chromium-browser-snapshots/Win_x64/123/chrome-win.zip",
-		ArchiveSizeBytes: int64(len(archive)), ArchiveSHA256: hex.EncodeToString(archiveDigest[:]),
+		ArchiveRoot:          "chrome-win",
+		ArchiveURL:           "https://commondatastorage.googleapis.com/chromium-browser-snapshots/Win_x64/123/chrome-win.zip",
+		AllowedDownloadHosts: []string{"commondatastorage.googleapis.com", "storage.googleapis.com"},
+		ArchiveSizeBytes:     int64(len(archive)), ArchiveSHA256: hex.EncodeToString(archiveDigest[:]),
 		PackageFileCount: fileCount, ExpandedSizeBytes: expandedSize, PackageTreeSHA256: tree.SHA256,
 		ExecutablePath: "chrome-win/chrome.exe", ExecutableSizeBytes: int64(len(files["chrome-win/chrome.exe"])), ExecutableSHA256: hex.EncodeToString(executableDigest[:]),
 	}

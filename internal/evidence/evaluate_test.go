@@ -63,6 +63,28 @@ func TestMissingContextIsIncomplete(t *testing.T) {
 	}
 }
 
+func TestMissingWorkerClientHintsIsPartialWhenWorkerIdentityExists(t *testing.T) {
+	profile := evidenceProfile()
+	capabilities, _ := fingerprint.For(fingerprint.ProviderCustom, "148.0.0")
+	submission := fullMatchingSubmission()
+	for index := range submission.Contexts {
+		if submission.Contexts[index].Context == ContextWorker {
+			submission.Contexts[index].UABrands = nil
+			submission.Contexts[index].UAPlatform = ""
+		}
+	}
+	evaluation, err := Evaluate(profile, capabilities, submission)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if evaluation.Status != RunPartial {
+		t.Fatalf("optional worker Client Hints made evidence %s", evaluation.Status)
+	}
+	if !hasObservation(evaluation.Observations, "worker.uaClientHints", ObservationPartial) {
+		t.Fatalf("worker Client Hints limitation was not partial: %#v", evaluation.Observations)
+	}
+}
+
 func TestLegacySurfaceEvidenceCanMatchWithoutCreatingReviewedTrust(t *testing.T) {
 	profile := evidenceProfile()
 	profile.Kernel.Provider = fingerprint.ProviderPatched

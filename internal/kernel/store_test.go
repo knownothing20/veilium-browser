@@ -1,6 +1,7 @@
 package kernel
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -8,12 +9,36 @@ import (
 	"testing"
 )
 
-func TestImportVerifyTamperAndDelete(t *testing.T) {
+func TestOpenMigratesLegacyKernelProviderRevisionInMemory(t *testing.T) {
 	root := t.TempDir()
-	source := filepath.Join(root, "chrome-test")
-	if err := os.WriteFile(source, []byte("chromium-binary-v1"), 0o700); err != nil {
+	path := filepath.Join(root, "kernels.json")
+	records := []Record{{
+		ID: "legacy-kernel", Name: "Legacy kernel", Provider: "custom-chromium", Version: "148.0.0",
+		Executable: filepath.Join(root, "legacy.exe"), SHA256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", SizeBytes: 1, Status: StatusVerified,
+	}}
+	data, err := json.Marshal(records)
+	if err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store, err := Open(path, filepath.Join(root, "managed"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := store.Get("legacy-kernel")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.ProviderRevision != 1 {
+		t.Fatalf("legacy Provider revision was not migrated: %#v", loaded)
+	}
+}
+
+func TestImportVerifyTamperAndDelete(t *testing.T) {
+	root := t.TempDir()
+	source := testKernelExecutable(t)
 	store, err := Open(filepath.Join(root, "kernels.json"), filepath.Join(root, "managed"))
 	if err != nil {
 		t.Fatal(err)
@@ -55,10 +80,7 @@ func TestImportVerifyTamperAndDelete(t *testing.T) {
 
 func TestDuplicateImportIsIdempotent(t *testing.T) {
 	root := t.TempDir()
-	source := filepath.Join(root, "chrome-test")
-	if err := os.WriteFile(source, []byte("same-binary"), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	source := testKernelExecutable(t)
 	store, _ := Open(filepath.Join(root, "kernels.json"), filepath.Join(root, "managed"))
 	request := ImportRequest{Name: "One", Provider: "native-chromium", Version: "148.0.0", SourcePath: source}
 	first, err := store.Import(request)
@@ -79,11 +101,8 @@ func TestRejectsSymlinkSource(t *testing.T) {
 		t.Skip("symlink creation commonly requires elevated permissions on Windows")
 	}
 	root := t.TempDir()
-	target := filepath.Join(root, "target")
+	target := testKernelExecutable(t)
 	link := filepath.Join(root, "link")
-	if err := os.WriteFile(target, []byte("binary"), 0o700); err != nil {
-		t.Fatal(err)
-	}
 	if err := os.Symlink(target, link); err != nil {
 		t.Fatal(err)
 	}

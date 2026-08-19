@@ -30,6 +30,7 @@ type Record struct {
 	ID                string    `json:"id"`
 	Name              string    `json:"name"`
 	Provider          string    `json:"provider"`
+	ProviderRevision  int       `json:"providerRevision,omitempty"`
 	Version           string    `json:"version"`
 	Executable        string    `json:"executable"`
 	SHA256            string    `json:"sha256"`
@@ -53,17 +54,23 @@ type ImportRequest struct {
 }
 
 type Store struct {
-	mu    sync.RWMutex
-	path  string
-	root  string
-	items map[string]Record
+	mu         sync.RWMutex
+	path       string
+	root       string
+	items      map[string]Record
+	launchable map[string]string
 }
 
 func Open(path, root string) (*Store, error) {
 	if strings.TrimSpace(path) == "" || strings.TrimSpace(root) == "" {
 		return nil, fmt.Errorf("kernel store path and root are required")
 	}
-	store := &Store{path: path, root: root, items: make(map[string]Record)}
+	store := &Store{
+		path:       path,
+		root:       root,
+		items:      make(map[string]Record),
+		launchable: make(map[string]string),
+	}
 	if err := store.load(); err != nil {
 		return nil, err
 	}
@@ -179,6 +186,9 @@ func (s *Store) Import(request ImportRequest) (Record, error) {
 	defer s.mu.Unlock()
 	for _, existing := range s.items {
 		if existing.SHA256 == digest && existing.Provider == provider && existing.Version == version {
+			if err := s.ensureLaunchableLocked(existing); err != nil {
+				return Record{}, err
+			}
 			return existing, nil
 		}
 	}
@@ -196,17 +206,23 @@ func (s *Store) Import(request ImportRequest) (Record, error) {
 		_ = os.RemoveAll(destinationDir)
 		return Record{}, fmt.Errorf("activate imported kernel: %w", err)
 	}
+	if err := probeManagedExecutable(destination); err != nil {
+		_ = os.RemoveAll(destinationDir)
+		return Record{}, fmt.Errorf("imported kernel is not launchable: %w", err)
+	}
 	committed = true
 
 	now := time.Now().UTC()
 	record := Record{
-		ID: id, Name: name, Provider: provider, Version: version,
+		ID: id, Name: name, Provider: provider, ProviderRevision: capabilities.Revision, Version: version,
 		Executable: destination, SHA256: digest, SizeBytes: size,
 		Status: StatusVerified, ImportedAt: now, VerifiedAt: now,
 	}
 	s.items[id] = record
+	s.launchable[id] = launchProbeToken(record)
 	if err := s.persistLocked(); err != nil {
 		delete(s.items, id)
+		delete(s.launchable, id)
 		_ = os.RemoveAll(destinationDir)
 		return Record{}, err
 	}
@@ -239,6 +255,13 @@ func (s *Store) Verify(id string) (Record, error) {
 			record.Status = packageStatus
 		}
 	}
+	if record.Status == StatusVerified {
+		if err := s.ensureLaunchableLocked(record); err != nil {
+			return Record{}, err
+		}
+	} else {
+		delete(s.launchable, id)
+	}
 	s.items[id] = record
 	if err := s.persistLocked(); err != nil {
 		s.items[id] = previous
@@ -258,6 +281,18 @@ func (s *Store) Delete(id string) (Record, error) {
 	if !isWithin(s.root, directory) {
 		return Record{}, fmt.Errorf("refusing to remove kernel outside managed root")
 	}
+	if record.PackageRoot != "" {
+		if !isWithin(s.root, record.PackageRoot) {
+			return Record{}, fmt.Errorf("refusing to release kernel package outside managed root")
+		}
+		if _, err := os.Lstat(record.PackageRoot); err == nil {
+			if err := releaseManagedPackageRuntimeAccess(record.PackageRoot); err != nil {
+				return Record{}, fmt.Errorf("release managed kernel package access: %w", err)
+			}
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return Record{}, fmt.Errorf("inspect managed kernel package access: %w", err)
+		}
+	}
 	trash := filepath.Join(s.root, ".trash-"+id+"-"+time.Now().UTC().Format("20060102150405.000000000"))
 	moved := false
 	if _, err := os.Stat(directory); err == nil {
@@ -270,6 +305,7 @@ func (s *Store) Delete(id string) (Record, error) {
 	}
 
 	delete(s.items, id)
+	delete(s.launchable, id)
 	if err := s.persistLocked(); err != nil {
 		s.items[id] = record
 		if moved {
@@ -281,6 +317,30 @@ func (s *Store) Delete(id string) (Record, error) {
 		_ = os.RemoveAll(trash)
 	}
 	return record, nil
+}
+
+func (s *Store) ensureLaunchableLocked(record Record) error {
+	token := launchProbeToken(record)
+	if s.launchable[record.ID] == token {
+		return nil
+	}
+	if record.PackageRoot != "" {
+		if !isWithin(s.root, record.PackageRoot) {
+			return fmt.Errorf("kernel %q package root escapes the managed kernel root", record.Name)
+		}
+		if err := prepareManagedPackageRuntimeAccess(record.PackageRoot); err != nil {
+			return fmt.Errorf("prepare kernel %q package runtime access: %w", record.Name, err)
+		}
+	}
+	if err := probeManagedExecutable(record.Executable); err != nil {
+		return fmt.Errorf("kernel %q is not launchable: %w", record.Name, err)
+	}
+	s.launchable[record.ID] = token
+	return nil
+}
+
+func launchProbeToken(record Record) string {
+	return fmt.Sprintf("%s\x00%d\x00%s\x00%s", record.SHA256, record.ProviderRevision, record.PackageTreeSHA256, record.Executable)
 }
 
 func (s *Store) load() error {
@@ -296,6 +356,11 @@ func (s *Store) load() error {
 		return fmt.Errorf("decode kernel store: %w", err)
 	}
 	for _, record := range records {
+		if record.ProviderRevision == 0 {
+			if capabilities, capabilityErr := fingerprint.For(record.Provider, record.Version); capabilityErr == nil {
+				record.ProviderRevision = capabilities.Revision
+			}
+		}
 		s.items[record.ID] = record
 	}
 	return nil

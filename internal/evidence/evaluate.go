@@ -122,7 +122,13 @@ func evaluateSnapshot(profile domain.Profile, capabilities fingerprint.Capabilit
 	if len(snapshot.UABrands) > 0 || snapshot.UAPlatform != "" {
 		observations = append(observations, Observation{ID: prefix + "uaClientHints", Context: snapshot.Context, Status: ObservationPassed, Observed: strings.Join(append(snapshot.UABrands, snapshot.UAPlatform), ",")})
 	} else {
-		observations = append(observations, Observation{ID: prefix + "uaClientHints", Context: snapshot.Context, Status: ObservationUnavailable, ReasonCode: "api-unavailable", Detail: "UA Client Hints were not exposed in this context."})
+		status := ObservationUnavailable
+		detail := "UA Client Hints were not exposed in this context."
+		if snapshot.Context == ContextWorker {
+			status = ObservationPartial
+			detail = "Worker UA Client Hints are optional when the worker user agent and cross-context identity checks are present."
+		}
+		observations = append(observations, Observation{ID: prefix + "uaClientHints", Context: snapshot.Context, Status: status, ReasonCode: "api-unavailable", Detail: detail})
 	}
 
 	if snapshot.Screen != nil {

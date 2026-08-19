@@ -17,6 +17,10 @@
       "arch": "amd64",
       "archiveName": "chrome-win.zip",
       "archiveUrl": "https://commondatastorage.googleapis.com/chromium-browser-snapshots/Win_x64/1664436/chrome-win.zip",
+      "allowedDownloadHosts": [
+        "commondatastorage.googleapis.com",
+        "storage.googleapis.com"
+      ],
       "archiveSizeBytes": 343585547,
       "archiveSha256": "d224019b7cbc115951b0f5dce8cf232c37244881a3eb969c010e457aa369332f",
       "archiveEntryCount": 261,

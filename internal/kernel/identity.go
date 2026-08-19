@@ -47,9 +47,16 @@ func BinaryIdentity(record Record) (ProviderBinaryIdentity, error) {
 	if strings.TrimSpace(record.SHA256) == "" || record.SizeBytes < 1 {
 		return ProviderBinaryIdentity{}, fmt.Errorf("kernel record %q has incomplete binary identity", record.ID)
 	}
+	providerRevision := record.ProviderRevision
+	if providerRevision == 0 {
+		providerRevision = capabilities.Revision
+	}
+	if providerRevision != capabilities.Revision {
+		return ProviderBinaryIdentity{}, fmt.Errorf("kernel record %q Provider revision does not match the active contract", record.ID)
+	}
 	identity := ProviderBinaryIdentity{
 		SchemaVersion: BinaryIdentitySchemaVersion, ProviderID: capabilities.Provider,
-		ProviderRevision: capabilities.Revision, ProviderTrust: capabilities.TrustStatus,
+		ProviderRevision: providerRevision, ProviderTrust: capabilities.TrustStatus,
 		BrowserVersion: record.Version, OperatingSystem: runtime.GOOS, Architecture: runtime.GOARCH,
 		ExecutablePath: record.Executable, ExecutableSize: record.SizeBytes, ExecutableSHA256: record.SHA256,
 		PackageRoot: record.PackageRoot, PackageTreeSHA256: record.PackageTreeSHA256,
@@ -59,7 +66,10 @@ func BinaryIdentity(record Record) (ProviderBinaryIdentity, error) {
 		Limitations: append([]string(nil), capabilities.Limitations...),
 	}
 	if capabilities.IsReviewed() {
-		release, ok := kernelrelease.MatchPackage(record.Provider, record.Version, record.SHA256, record.SizeBytes, record.PackageTreeSHA256, record.PackageFileCount, record.PackageSizeBytes)
+		release, ok := kernelrelease.MatchPackageExact(kernelrelease.Identity{
+			ProviderID: record.Provider, ProviderRevision: providerRevision, BrowserVersion: record.Version,
+			Platform: runtime.GOOS, Arch: runtime.GOARCH,
+		}, record.SHA256, record.SizeBytes, record.PackageTreeSHA256, record.PackageFileCount, record.PackageSizeBytes)
 		if !ok || record.SnapshotRevision != release.SnapshotRevision || record.ArchiveSHA256 != release.ArchiveSHA256 || strings.TrimSpace(record.PackageRoot) == "" {
 			return ProviderBinaryIdentity{}, fmt.Errorf("reviewed kernel record %q does not match the embedded package identity", record.ID)
 		}

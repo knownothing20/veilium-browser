@@ -3,7 +3,6 @@ package desktop
 import (
 	"context"
 	"errors"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -106,11 +105,7 @@ func bridgeTestService(t *testing.T) (*Service, *bridgeRuntime, *fakeBridgeFacto
 
 func createBridgeProfile(t *testing.T, service *Service, credentialID string) domain.Profile {
 	t.Helper()
-	root := service.dataRoot
-	source := filepath.Join(root, "chrome-test")
-	if err := os.WriteFile(source, []byte("verified-browser"), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	source := testKernelExecutable(t)
 	kernelRecord, err := service.ImportKernel(kernel.ImportRequest{Name: "Verified Chromium", Provider: fingerprint.ProviderPatched, Version: "148.0.0", SourcePath: source})
 	if err != nil {
 		t.Fatal(err)

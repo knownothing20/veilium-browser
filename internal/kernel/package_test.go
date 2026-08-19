@@ -75,6 +75,21 @@ func TestReviewedProviderCannotUseSingleFileImport(t *testing.T) {
 	}
 }
 
+func TestReviewedPackageRejectsCrossRevisionImport(t *testing.T) {
+	root := t.TempDir()
+	store, err := Open(filepath.Join(root, "kernels.json"), filepath.Join(root, "managed"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = store.ImportPackage(PackageImportRequest{
+		Name: "Wrong revision", Provider: fingerprint.ProviderOfficial, ProviderRevision: 2,
+		Version: "152.0.7960.0", SourceRoot: root,
+	})
+	if err == nil || !strings.Contains(err.Error(), "Provider revision") {
+		t.Fatalf("cross-revision package import was not rejected: %v", err)
+	}
+}
+
 func writePackageFixture(t *testing.T, root string, order []string) {
 	t.Helper()
 	for _, relative := range order {

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/knownothing20/veilium-browser/internal/adapter"
 	"github.com/knownothing20/veilium-browser/internal/adapterinstaller"
@@ -27,6 +28,7 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/proxy"
 	"github.com/knownothing20/veilium-browser/internal/singboxprovider"
 	"github.com/knownothing20/veilium-browser/internal/supervisor"
+	"github.com/knownothing20/veilium-browser/internal/systemproxy"
 	"github.com/knownothing20/veilium-browser/internal/xrayprovider"
 )
 
@@ -200,13 +202,14 @@ func (s *Service) Bootstrap() Bootstrap {
 	}
 }
 
-func (s *Service) ListProfiles() []domain.Profile        { return s.store.List() }
-func (s *Service) ListKernels() []kernel.Record          { return s.kernels.List() }
-func (s *Service) ListAdapters() []adapter.Record        { return s.adapters.List() }
-func (s *Service) ListSessions() []supervisor.Session    { return s.supervisor.List() }
-func (s *Service) ListCredentials() []credential.Record  { return s.credentials.List() }
-func (s *Service) Shutdown(ctx context.Context) error    { return shutdownRuntimeAndBridges(s, ctx) }
-func (s *Service) IsProfileActive(profileID string) bool { return s.supervisor.IsActive(profileID) }
+func (s *Service) ListProfiles() []domain.Profile              { return s.store.List() }
+func (s *Service) ListKernels() []kernel.Record                { return s.kernels.List() }
+func (s *Service) ListAdapters() []adapter.Record              { return s.adapters.List() }
+func (s *Service) ListSessions() []supervisor.Session          { return s.supervisor.List() }
+func (s *Service) ListCredentials() []credential.Record        { return s.credentials.List() }
+func (s *Service) GetSystemProxy() (systemproxy.Result, error) { return systemproxy.Current() }
+func (s *Service) Shutdown(ctx context.Context) error          { return shutdownRuntimeAndBridges(s, ctx) }
+func (s *Service) IsProfileActive(profileID string) bool       { return s.supervisor.IsActive(profileID) }
 func (s *Service) Capabilities(provider, version string) (fingerprint.Capabilities, error) {
 	return fingerprint.For(provider, version)
 }
@@ -408,6 +411,9 @@ func (s *Service) BuildLaunchPlan(request LaunchPlanRequest) (domain.LaunchPlan,
 }
 
 func (s *Service) StartProfile(ctx context.Context, profileID string) (supervisor.Session, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	item, err := s.store.Get(profileID)
 	if err != nil {
 		return supervisor.Session{}, err
@@ -437,6 +443,14 @@ func (s *Service) StartProfile(ctx context.Context, profileID string) (superviso
 	route, err := proxy.Resolve(item.Proxy.URL, item.Proxy.CredentialRef)
 	if err != nil {
 		return supervisor.Session{}, err
+	}
+	if !route.RequiresBridge && route.DisplayURL != "direct://" {
+		preflightContext, cancel := context.WithTimeout(ctx, 2*time.Second)
+		preflightErr := proxy.CheckReachable(preflightContext, route)
+		cancel()
+		if preflightErr != nil {
+			return supervisor.Session{}, fmt.Errorf("proxy preflight failed: %w", preflightErr)
+		}
 	}
 	if !route.RequiresBridge {
 		return s.supervisor.Start(ctx, item.ID, item.Name, func(port int) (domain.LaunchPlan, error) {
@@ -665,7 +679,10 @@ func officialAdapterPins() []adapterrelease.Pin {
 }
 
 func providerCatalog() []ProviderDescriptor {
-	contracts := fingerprint.Definitions()
+	return providerCatalogFromContracts(fingerprint.Definitions())
+}
+
+func providerCatalogFromContracts(contracts []fingerprint.ProviderDefinition) []ProviderDescriptor {
 	definitions := make([]ProviderDescriptor, 0, len(contracts))
 	for _, contract := range contracts {
 		descriptor := ProviderDescriptor{
@@ -675,7 +692,7 @@ func providerCatalog() []ProviderDescriptor {
 			Versions:    append([]string(nil), contract.Versions...),
 		}
 		for _, version := range descriptor.Versions {
-			capabilities, err := fingerprint.For(descriptor.ID, version)
+			capabilities, err := fingerprint.CapabilitiesForDefinition(contract, version)
 			if err == nil {
 				descriptor.Samples = append(descriptor.Samples, capabilities)
 			}

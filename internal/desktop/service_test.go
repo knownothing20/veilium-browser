@@ -3,8 +3,10 @@ package desktop
 import (
 	"context"
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -55,6 +57,63 @@ func TestCreateUpdateCloneLifecycle(t *testing.T) {
 	}
 }
 
+func TestServiceRestartPreservesProfileIdentityAndManagedKernel(t *testing.T) {
+	root := t.TempDir()
+	storePath := filepath.Join(root, "profiles.json")
+	store, err := profile.Open(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service, err := newService(store, root, newFakeRuntime())
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, err := service.ImportKernel(kernel.ImportRequest{
+		Name: "Persistent Chromium", Provider: fingerprint.ProviderCustom,
+		Version: "148.0.0", SourcePath: testKernelExecutable(t),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := validProfile()
+	input.Name = "Persistent identity"
+	input.Kernel = domain.KernelRef{ID: record.ID}
+	input.Fingerprint.Language = "zh-CN"
+	input.Fingerprint.Timezone = "Asia/Hong_Kong"
+	created, err := service.CreateProfile(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.Shutdown(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	reopenedStore, err := profile.Open(storePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := newService(reopenedStore, root, newFakeRuntime())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = reopened.Shutdown(context.Background()) })
+	profiles := reopened.ListProfiles()
+	if len(profiles) != 1 {
+		t.Fatalf("expected one persisted profile, got %d", len(profiles))
+	}
+	actual := profiles[0]
+	if actual.ID != created.ID || actual.Kernel.ID != record.ID || actual.UserDataDir != created.UserDataDir {
+		t.Fatalf("profile or managed dependency identity changed across restart: %#v", actual)
+	}
+	if !reflect.DeepEqual(actual.Fingerprint, created.Fingerprint) {
+		t.Fatalf("fingerprint identity changed across restart:\nwant %#v\n got %#v", created.Fingerprint, actual.Fingerprint)
+	}
+	verified, err := reopened.VerifyKernel(record.ID)
+	if err != nil || verified.Status != kernel.StatusVerified {
+		t.Fatalf("persisted managed kernel did not re-verify: record=%#v err=%v", verified, err)
+	}
+}
+
 func TestCapabilitiesRejectUnknownProvider(t *testing.T) {
 	root := t.TempDir()
 	store, _ := profile.Open(filepath.Join(root, "profiles.json"))
@@ -66,10 +125,7 @@ func TestCapabilitiesRejectUnknownProvider(t *testing.T) {
 
 func TestKernelRegistryProtectsProfilesAndLaunchPlans(t *testing.T) {
 	root := t.TempDir()
-	source := filepath.Join(root, "chrome-test")
-	if err := os.WriteFile(source, []byte("verified-browser"), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	source := testKernelExecutable(t)
 	store, _ := profile.Open(filepath.Join(root, "profiles.json"))
 	service, _ := NewService(store, root)
 	record, err := service.ImportKernel(kernel.ImportRequest{Name: "Verified Chromium", Provider: fingerprint.ProviderPatched, Version: "148.0.0", SourcePath: source})
@@ -98,10 +154,7 @@ func TestKernelRegistryProtectsProfilesAndLaunchPlans(t *testing.T) {
 
 func TestStartProfileRequiresManagedVerifiedKernelAndLocksMutations(t *testing.T) {
 	root := t.TempDir()
-	source := filepath.Join(root, "chrome-test")
-	if err := os.WriteFile(source, []byte("verified-browser"), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	source := testKernelExecutable(t)
 	store, _ := profile.Open(filepath.Join(root, "profiles.json"))
 	runtime := newFakeRuntime()
 	service, err := newService(store, root, runtime)
@@ -141,6 +194,47 @@ func TestStartProfileRequiresManagedVerifiedKernelAndLocksMutations(t *testing.T
 	}
 }
 
+func TestStartProfileRejectsUnavailableNativeProxyBeforeRuntime(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	address := listener.Addr().String()
+	if err := listener.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	root := t.TempDir()
+	store, err := profile.Open(filepath.Join(root, "profiles.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime := newFakeRuntime()
+	service, err := newService(store, root, runtime)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, err := service.ImportKernel(kernel.ImportRequest{
+		Name: "Verified Chromium", Provider: fingerprint.ProviderPatched, Version: "148.0.0", SourcePath: testKernelExecutable(t),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := validProfile()
+	input.Kernel = domain.KernelRef{ID: record.ID}
+	input.Proxy.URL = "http://" + address
+	created, err := service.CreateProfile(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.StartProfile(context.Background(), created.ID); err == nil || !strings.Contains(err.Error(), "proxy preflight failed") {
+		t.Fatalf("expected unavailable proxy preflight rejection, got %v", err)
+	}
+	if runtime.IsActive(created.ID) {
+		t.Fatal("browser runtime started despite failed proxy preflight")
+	}
+}
+
 func TestStartProfileRejectsLegacyAndUnmanagedProfiles(t *testing.T) {
 	root := t.TempDir()
 	store, _ := profile.Open(filepath.Join(root, "profiles.json"))
@@ -155,10 +249,7 @@ func TestStartProfileRejectsLegacyAndUnmanagedProfiles(t *testing.T) {
 		t.Fatalf("expected registered kernel requirement, got %v", err)
 	}
 
-	source := filepath.Join(root, "chrome-test")
-	if err := os.WriteFile(source, []byte("verified-browser"), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	source := testKernelExecutable(t)
 	record, err := service.ImportKernel(kernel.ImportRequest{Name: "Verified Chromium", Provider: fingerprint.ProviderPatched, Version: "148.0.0", SourcePath: source})
 	if err != nil {
 		t.Fatal(err)

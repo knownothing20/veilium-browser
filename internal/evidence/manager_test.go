@@ -146,6 +146,38 @@ func TestManagerPersistsTargetOpenFailure(t *testing.T) {
 	}
 }
 
+func TestManagerPersistsEvaluationMismatchWithStableFailureCode(t *testing.T) {
+	now := time.Date(2026, 7, 18, 16, 0, 0, 0, time.UTC)
+	store := newTestEvidenceStore(t, now)
+	submission := fullMatchingSubmission()
+	submission.Contexts[0].Language = "fr-FR"
+	manager, err := NewManager(store, ManagerOptions{
+		Timeout: 2 * time.Second,
+		Now:     func() time.Time { return now },
+		CollectorFactory: func(CollectorOptions) (CollectorHandle, error) {
+			return &fakeCollector{submission: submission, url: controlledTestURL()}, nil
+		},
+		TargetController: &fakeTargetController{target: Target{ID: "target_1", Type: "page"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	run, err := manager.Run(context.Background(), validRunRequest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.Status != RunFailed || run.FailureCode != "evidence-mismatch" || !strings.Contains(run.FailureDetail, "language-mismatch") {
+		t.Fatalf("evaluation mismatch was not normalized: %#v", run)
+	}
+	loaded, err := store.Get(run.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.FailureCode != run.FailureCode || loaded.FailureDetail != run.FailureDetail {
+		t.Fatalf("persisted mismatch changed: %#v", loaded)
+	}
+}
+
 func TestManagerRejectsUnmanagedOrMismatchedRequest(t *testing.T) {
 	store := newTestEvidenceStore(t, time.Now().UTC())
 	manager, err := NewManager(store, ManagerOptions{})
@@ -161,6 +193,11 @@ func TestManagerRejectsUnmanagedOrMismatchedRequest(t *testing.T) {
 	request.Session.State = supervisor.StateExited
 	if _, err := manager.Run(context.Background(), request); err == nil || !strings.Contains(err.Error(), "ready managed") {
 		t.Fatalf("expected ready-session rejection, got %v", err)
+	}
+	request = validRunRequest()
+	request.Kernel.ProviderRevision = request.Capabilities.Revision + 1
+	if _, err := manager.Run(context.Background(), request); err == nil || !strings.Contains(err.Error(), "Provider revision") {
+		t.Fatalf("expected Provider revision mismatch, got %v", err)
 	}
 }
 

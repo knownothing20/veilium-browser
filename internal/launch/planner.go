@@ -58,6 +58,10 @@ func (Planner) Build(profile domain.Profile, remoteDebuggingPort int) (domain.La
 		warnings = append(warnings, "proxy bridge must be started before launching the browser")
 	}
 	args = append(args, fpArgs...)
+	// A fresh Chromium profile may expose browser CDP readiness before it has a
+	// page target. Start with an offline blank page so managed window control and
+	// evidence collection always have one deterministic target.
+	args = append(args, "about:blank")
 
 	return domain.LaunchPlan{
 		Executable:     profile.Kernel.Executable,

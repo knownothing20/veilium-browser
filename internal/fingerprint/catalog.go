@@ -162,6 +162,13 @@ func For(provider, version string) (Capabilities, error) {
 	if err != nil {
 		return Capabilities{}, err
 	}
+	return CapabilitiesForDefinition(definition, version)
+}
+
+func CapabilitiesForDefinition(definition ProviderDefinition, version string) (Capabilities, error) {
+	if err := ValidateDefinition(definition); err != nil {
+		return Capabilities{}, err
+	}
 	major, err := majorVersion(version)
 	if err != nil {
 		return Capabilities{}, err

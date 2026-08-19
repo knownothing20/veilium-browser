@@ -1,6 +1,7 @@
 package desktop
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/domain"
 	"github.com/knownothing20/veilium-browser/internal/fingerprint"
 	"github.com/knownothing20/veilium-browser/internal/lifecycle"
+	"github.com/knownothing20/veilium-browser/internal/proxy"
 )
 
 type HealthCheckStatus string
@@ -243,7 +245,18 @@ func (s *Service) evaluateProfileHealth(item domain.Profile, state lifecycle.Sta
 	if err := s.validateProxy(resolved); err != nil {
 		checks = append(checks, newHealthCheck("route", HealthCheckFail))
 	} else {
-		checks = append(checks, newHealthCheck("route", HealthCheckPass))
+		route, _ := proxy.Resolve(resolved.Proxy.URL, resolved.Proxy.CredentialRef)
+		checkContext, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		reachableErr := proxy.CheckReachable(checkContext, route)
+		cancel()
+		if reachableErr != nil {
+			checks = append(checks, ProfileHealthCheck{
+				ID: "route", Status: HealthCheckFail,
+				Message: "The configured proxy endpoint is unreachable: " + reachableErr.Error(),
+			})
+		} else {
+			checks = append(checks, newHealthCheck("route", HealthCheckPass))
+		}
 	}
 	if _, err := fingerprint.Validate(withValidationSeed(resolved)); err != nil {
 		checks = append(checks, newHealthCheck("fingerprint", HealthCheckFail))

@@ -14,6 +14,7 @@ import (
 	"github.com/knownothing20/veilium-browser/internal/kernel"
 	"github.com/knownothing20/veilium-browser/internal/kernelinstaller"
 	"github.com/knownothing20/veilium-browser/internal/supervisor"
+	"github.com/knownothing20/veilium-browser/internal/systemproxy"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -34,6 +35,9 @@ func (a *DesktopApp) ListAdapters() []adapter.Record     { return a.service.List
 func (a *DesktopApp) ListSessions() []supervisor.Session { return a.service.ListSessions() }
 func (a *DesktopApp) ListCredentials() []credential.Record {
 	return a.service.ListCredentials()
+}
+func (a *DesktopApp) GetSystemProxy() (systemproxy.Result, error) {
+	return a.service.GetSystemProxy()
 }
 func (a *DesktopApp) Capabilities(provider, version string) (fingerprint.Capabilities, error) {
 	return a.service.Capabilities(provider, version)

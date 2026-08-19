@@ -1,7 +1,6 @@
 package desktop
 
 import (
-	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -23,10 +22,7 @@ func TestProfileConsistencyDerivesDegradedCustomHealth(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	source := filepath.Join(root, "chrome-test")
-	if err := os.WriteFile(source, []byte("consistency-browser"), 0o700); err != nil {
-		t.Fatal(err)
-	}
+	source := testKernelExecutable(t)
 	record, err := service.ImportKernel(kernel.ImportRequest{
 		Name: "Consistency Chromium", Provider: fingerprint.ProviderCustom,
 		Version: "148.0.0", SourcePath: source,

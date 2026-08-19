@@ -87,6 +87,13 @@ func kernelRequirementMatches(requirement KernelRequirement, record kernel.Recor
 	if err != nil {
 		return false
 	}
+	providerRevision := record.ProviderRevision
+	if providerRevision == 0 {
+		providerRevision = capabilities.Revision
+	}
+	if requirement.ProviderRevision > 0 && providerRevision != requirement.ProviderRevision {
+		return false
+	}
 	if requirement.TrustRequirement == "reviewed" && !capabilities.IsReviewed() {
 		return false
 	}

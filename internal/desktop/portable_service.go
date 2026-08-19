@@ -182,7 +182,7 @@ func (s *Service) buildPortableArtifactForOperation(profileID string, mode porta
 		ApplicationVersion: AppVersion,
 		Profile:            item,
 		Kernel: portableprofile.KernelRequirement{
-			Provider: kernelRecord.Provider, Version: kernelRecord.Version, SHA256: kernelRecord.SHA256, SizeBytes: kernelRecord.SizeBytes,
+			Provider: kernelRecord.Provider, ProviderRevision: kernelRecord.ProviderRevision, Version: kernelRecord.Version, SHA256: kernelRecord.SHA256, SizeBytes: kernelRecord.SizeBytes,
 		},
 		Adapter:            adapterRequirement,
 		CredentialRequired: strings.TrimSpace(item.Proxy.CredentialRef) != "",
@@ -311,7 +311,7 @@ func (s *Service) matchingAdapters(requirement portableprofile.AdapterRequiremen
 }
 
 func kernelMatches(record kernel.Record, requirement portableprofile.KernelRequirement) bool {
-	return record.Status == kernel.StatusVerified && record.Provider == requirement.Provider && record.Version == requirement.Version && strings.EqualFold(record.SHA256, requirement.SHA256) && record.SizeBytes == requirement.SizeBytes
+	return record.Status == kernel.StatusVerified && record.Provider == requirement.Provider && (requirement.ProviderRevision == 0 || record.ProviderRevision == requirement.ProviderRevision) && record.Version == requirement.Version && strings.EqualFold(record.SHA256, requirement.SHA256) && record.SizeBytes == requirement.SizeBytes
 }
 
 func adapterMatches(record adapter.Record, requirement portableprofile.AdapterRequirement) bool {

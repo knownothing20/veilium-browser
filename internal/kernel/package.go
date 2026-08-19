@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -22,6 +23,7 @@ const maxManagedPackageFiles = 5000
 type PackageImportRequest struct {
 	Name             string `json:"name"`
 	Provider         string `json:"provider"`
+	ProviderRevision int    `json:"providerRevision,omitempty"`
 	Version          string `json:"version"`
 	SourceRoot       string `json:"sourceRoot"`
 	ExecutablePath   string `json:"executablePath"`
@@ -57,7 +59,14 @@ func (s *Store) ImportPackage(request PackageImportRequest) (Record, error) {
 	if !capabilities.IsReviewed() {
 		return Record{}, fmt.Errorf("package imports are reserved for reviewed kernel providers")
 	}
-	release, ok := kernelrelease.Find(provider, version, "windows", "amd64")
+	providerRevision := request.ProviderRevision
+	if providerRevision == 0 {
+		providerRevision = capabilities.Revision
+	}
+	if providerRevision != capabilities.Revision {
+		return Record{}, fmt.Errorf("kernel package Provider revision does not match the reviewed contract")
+	}
+	release, ok := kernelrelease.FindRevision(provider, providerRevision, version, runtime.GOOS, runtime.GOARCH)
 	if !ok {
 		return Record{}, fmt.Errorf("no exact reviewed package release exists for %s %s", provider, version)
 	}
@@ -114,13 +123,16 @@ func (s *Store) ImportPackage(request PackageImportRequest) (Record, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, existing := range s.items {
-		if existing.Provider == provider && existing.Version == version && existing.SHA256 == digest && existing.PackageTreeSHA256 == tree.SHA256 {
+		if existing.Provider == provider && existing.ProviderRevision == providerRevision && existing.Version == version && existing.SHA256 == digest && existing.PackageTreeSHA256 == tree.SHA256 {
 			verified, verifyErr := verifyPackageRecord(existing, s.root)
 			if verifyErr != nil {
 				return Record{}, verifyErr
 			}
 			if verified != StatusVerified {
 				return Record{}, fmt.Errorf("existing reviewed kernel package %q is %s; remove or repair it before reinstalling", existing.Name, verified)
+			}
+			if err := s.ensureLaunchableLocked(existing); err != nil {
+				return Record{}, err
 			}
 			return existing, nil
 		}
@@ -137,7 +149,7 @@ func (s *Store) ImportPackage(request PackageImportRequest) (Record, error) {
 	packageRoot := filepath.Join(destinationDir, "package")
 	now := time.Now().UTC()
 	record := Record{
-		ID: id, Name: name, Provider: provider, Version: version,
+		ID: id, Name: name, Provider: provider, ProviderRevision: release.ProviderRevision, Version: version,
 		Executable: filepath.Join(packageRoot, filepath.FromSlash(executablePath)),
 		SHA256:     digest, SizeBytes: size, Status: StatusVerified,
 		ImportedAt: now, VerifiedAt: now,
@@ -145,9 +157,22 @@ func (s *Store) ImportPackage(request PackageImportRequest) (Record, error) {
 		PackageFileCount: tree.FileCount, PackageSizeBytes: tree.SizeBytes,
 		SnapshotRevision: release.SnapshotRevision, ArchiveSHA256: release.ArchiveSHA256,
 	}
+	if err := prepareManagedPackageRuntimeAccess(record.PackageRoot); err != nil {
+		_ = releaseManagedPackageRuntimeAccess(record.PackageRoot)
+		_ = os.RemoveAll(destinationDir)
+		return Record{}, fmt.Errorf("prepare reviewed kernel package runtime access: %w", err)
+	}
+	if err := probeManagedExecutable(record.Executable); err != nil {
+		_ = releaseManagedPackageRuntimeAccess(record.PackageRoot)
+		_ = os.RemoveAll(destinationDir)
+		return Record{}, fmt.Errorf("reviewed kernel package is not launchable: %w", err)
+	}
 	s.items[id] = record
+	s.launchable[id] = launchProbeToken(record)
 	if err := s.persistLocked(); err != nil {
 		delete(s.items, id)
+		delete(s.launchable, id)
+		_ = releaseManagedPackageRuntimeAccess(record.PackageRoot)
 		_ = os.RemoveAll(destinationDir)
 		return Record{}, err
 	}
@@ -268,7 +293,10 @@ func verifyPackageRecord(record Record, managedRoot string) (string, error) {
 	if tree.SHA256 != record.PackageTreeSHA256 || tree.FileCount != record.PackageFileCount || tree.SizeBytes != record.PackageSizeBytes {
 		return StatusModified, nil
 	}
-	release, ok := kernelrelease.MatchPackage(record.Provider, record.Version, record.SHA256, record.SizeBytes, tree.SHA256, tree.FileCount, tree.SizeBytes)
+	release, ok := kernelrelease.MatchPackageExact(kernelrelease.Identity{
+		ProviderID: record.Provider, ProviderRevision: record.ProviderRevision, BrowserVersion: record.Version,
+		Platform: runtime.GOOS, Arch: runtime.GOARCH,
+	}, record.SHA256, record.SizeBytes, tree.SHA256, tree.FileCount, tree.SizeBytes)
 	if !ok || record.SnapshotRevision != release.SnapshotRevision || record.ArchiveSHA256 != release.ArchiveSHA256 {
 		return StatusModified, nil
 	}
