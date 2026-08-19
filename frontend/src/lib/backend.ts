@@ -17,6 +17,7 @@ import type {
   ProviderDescriptor,
   ProxyDiagnosticReport,
   RuntimeSession,
+  SystemProxyResult,
 } from "../types";
 import type {
   LifecycleReconciliationReport,
@@ -35,6 +36,7 @@ type WailsDesktopApp = {
   DeleteProfile: (id: string) => Promise<void>;
   SaveCredential: (request: CredentialSaveRequest) => Promise<CredentialRecord>;
   DeleteCredential: (id: string) => Promise<void>;
+  GetSystemProxy: () => Promise<SystemProxyResult>;
   BuildLaunchPlan: (request: {
     profileId: string;
     remoteDebuggingPort: number;
@@ -310,6 +312,18 @@ export const backend = {
         "The operating-system credential vault is available only in the Wails desktop application",
       );
     return api.DeleteCredential(id);
+  },
+
+  async getSystemProxy(): Promise<SystemProxyResult> {
+    const api = native();
+    if (!api) {
+      return {
+        available: false,
+        source: "browser-preview",
+        reason: "unsupported-platform",
+      };
+    }
+    return api.GetSystemProxy();
   },
 
   async buildLaunchPlan(

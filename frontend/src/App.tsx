@@ -408,7 +408,7 @@ export default function App() {
         {!loading && view === 'credentials' && credentials()}
       </div>
     </main>
-    <ProfileEditor open={editorOpen && !isRuntimeActive(activeEditingSession)} profile={editing} providers={data.providers} kernels={data.kernels} adapters={data.adapters} credentials={data.credentials} onClose={() => setEditorOpen(false)} onSave={saveProfile} />
+    <ProfileEditor open={editorOpen && !isRuntimeActive(activeEditingSession)} profile={editing} providers={data.providers} kernels={data.kernels} adapters={data.adapters} credentials={data.credentials} systemProxyEnabled={backend.isNative()} onGetSystemProxy={() => backend.getSystemProxy()} onClose={() => setEditorOpen(false)} onSave={saveProfile} />
     <PlanDrawer profile={planProfile} plan={plan} error={planError} onClose={() => { setPlanProfile(undefined); setPlan(undefined) }} />
   </div>
 }

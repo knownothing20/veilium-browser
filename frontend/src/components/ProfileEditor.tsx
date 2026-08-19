@@ -8,6 +8,7 @@ import {
   providerTrust,
 } from '../lib/model'
 import { ui } from '../i18n'
+import { applyExplicitSystemProxy, requiredAdapterKind, validateProfileEditorDraft, type ProfileEditorValidationCode } from '../lib/profile-editor-validation'
 import type {
   AdapterRecord,
   CapabilityID,
@@ -15,14 +16,8 @@ import type {
   KernelRecord,
   Profile,
   ProviderDescriptor,
+  SystemProxyResult,
 } from '../types'
-
-function requiredAdapterKind(raw?: string): AdapterRecord['kind'] | undefined {
-  const scheme = (raw || '').split(':', 1)[0].trim().toLowerCase()
-  if (['vmess', 'vless', 'trojan', 'ss', 'shadowsocks'].includes(scheme)) return 'xray'
-  if (['hysteria2', 'tuic', 'anytls'].includes(scheme)) return 'sing-box'
-  return undefined
-}
 
 function preferredProvider(providers: ProviderDescriptor[]): ProviderDescriptor | undefined {
   return providers.find((item) => item.id === 'custom-chromium')
@@ -37,6 +32,8 @@ export function ProfileEditor({
   kernels,
   adapters,
   credentials,
+  systemProxyEnabled,
+  onGetSystemProxy,
   onClose,
   onSave,
 }: {
@@ -46,6 +43,8 @@ export function ProfileEditor({
   kernels: KernelRecord[]
   adapters: AdapterRecord[]
   credentials: CredentialRecord[]
+  systemProxyEnabled: boolean
+  onGetSystemProxy: () => Promise<SystemProxyResult>
   onClose: () => void
   onSave: (profile: Profile) => Promise<void>
 }) {
@@ -53,14 +52,21 @@ export function ProfileEditor({
   const [draft, setDraft] = useState<Profile>(() => profile ? structuredClone(profile) : defaultProfile(initialProvider))
   const [tags, setTags] = useState('')
   const [saving, setSaving] = useState(false)
+  const [systemProxyLoading, setSystemProxyLoading] = useState(false)
+  const [proxyNotice, setProxyNotice] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const next = profile ? structuredClone(profile) : defaultProfile(preferredProvider(providers))
+    let next = profile ? structuredClone(profile) : defaultProfile(preferredProvider(providers))
+    if (!profile && !next.kernel.id) {
+      const firstVerifiedKernel = kernels.find((item) => item.status === 'verified')
+      if (firstVerifiedKernel) next = applyKernel(next, firstVerifiedKernel)
+    }
     setDraft(next)
     setTags((next.tags || []).join(', '))
+    setProxyNotice('')
     setError('')
-  }, [profile, providers, open])
+  }, [profile, providers, kernels, open])
 
   const selectedProvider = providers.find((item) => item.id === draft.kernel.provider) || preferredProvider(providers)
   const providerCapabilities = useMemo(
@@ -98,6 +104,11 @@ export function ProfileEditor({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault()
+    const validationError = validateProfileEditorDraft(draft)
+    if (validationError) {
+      setError(profileEditorValidationMessage(validationError))
+      return
+    }
     if (providerBlocked) {
       setError(ui.editor.blockedError(draft.kernel.provider, trust))
       return
@@ -117,6 +128,25 @@ export function ProfileEditor({
     }
   }
 
+  async function useSystemProxy() {
+    setSystemProxyLoading(true)
+    setProxyNotice('')
+    setError('')
+    try {
+      const result = await onGetSystemProxy()
+      if (!result.available || !result.proxyUrl) {
+        setError(systemProxyReasonMessage(result.reason))
+        return
+      }
+      setDraft((current) => applyExplicitSystemProxy(current, result.proxyUrl || ''))
+      setProxyNotice(ui.editor.systemProxyApplied)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason))
+    } finally {
+      setSystemProxyLoading(false)
+    }
+  }
+
   const trustDetail = trust === 'reviewed'
     ? ui.editor.reviewedTrust
     : trust === 'custom'
@@ -127,7 +157,7 @@ export function ProfileEditor({
 
   return (
     <div className="overlay" onMouseDown={onClose}>
-      <form className="editor-panel guided-editor" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}>
+      <form className="editor-panel guided-editor" noValidate onSubmit={submit} onMouseDown={(event) => event.stopPropagation()}>
         <header className="editor-header">
           <div>
             <span className="eyebrow">{ui.editor.eyebrow}</span>
@@ -193,7 +223,7 @@ export function ProfileEditor({
                     </select>
                   </label>
                 </div>
-                <label>{ui.editor.executablePath}<input required readOnly={Boolean(draft.kernel.id)} value={draft.kernel.executable} onChange={(event) => updateKernel('executable', event.target.value)} /></label>
+                <label>{ui.editor.executablePath}<input readOnly={Boolean(draft.kernel.id)} value={draft.kernel.executable} onChange={(event) => updateKernel('executable', event.target.value)} /></label>
                 <div className="capability-strip">
                   {([
                     ['surface-seed', '稳定种子'],
@@ -225,7 +255,11 @@ export function ProfileEditor({
           </FormSection>
 
           <FormSection index="04" title={ui.editor.network} detail={ui.editor.networkDetail}>
-            <label>{ui.editor.proxyUrl}<input value={draft.proxy.url || ''} onChange={(event) => updateProxy('url', event.target.value)} placeholder="direct://、http://proxy.example:8080 或 vless://…" /></label>
+            <div className="proxy-field-row">
+              <label>{ui.editor.proxyUrl}<input value={draft.proxy.url || ''} onChange={(event) => { updateProxy('url', event.target.value); setProxyNotice('') }} placeholder="direct://、http://proxy.example:8080 或 vless://…" /></label>
+              <button type="button" className="button secondary" disabled={!systemProxyEnabled || systemProxyLoading} onClick={() => void useSystemProxy()}>{systemProxyLoading ? ui.editor.readingSystemProxy : ui.editor.useSystemProxy}</button>
+            </div>
+            {proxyNotice && <div className="proxy-import-note" role="status">{proxyNotice}</div>}
             <label>
               {ui.editor.credential}
               <select value={draft.proxy.credentialRef || ''} onChange={(event) => updateProxy('credentialRef', event.target.value)}>
@@ -235,7 +269,7 @@ export function ProfileEditor({
             </label>
             {adapterKind && <label>
               {ui.editor.managedAdapter}（{adapterKind}）
-              <select required value={draft.proxy.adapterRef || ''} onChange={(event) => updateProxy('adapterRef', event.target.value)}>
+              <select value={draft.proxy.adapterRef || ''} onChange={(event) => updateProxy('adapterRef', event.target.value)}>
                 <option value="">{ui.editor.selectVerifiedAdapter}</option>
                 {compatibleAdapters.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.version}</option>)}
               </select>
@@ -258,7 +292,7 @@ export function ProfileEditor({
           </FormSection>
         </div>
 
-        {error && <div className="form-error">{error}</div>}
+        {error && <div className="form-error" role="alert">{error}</div>}
         <footer className="editor-footer">
           <button type="button" className="button secondary" onClick={onClose}>{ui.common.cancel}</button>
           <button className="button primary" disabled={saving || providerBlocked}>{saving ? ui.common.saving : profile ? ui.editor.saveChanges : ui.editor.create}</button>
@@ -266,6 +300,20 @@ export function ProfileEditor({
       </form>
     </div>
   )
+}
+
+function profileEditorValidationMessage(code: ProfileEditorValidationCode): string {
+  if (code === 'name-required') return ui.editor.nameRequired
+  if (code === 'kernel-required') return ui.editor.kernelRequired
+  if (code === 'proxy-required') return ui.editor.proxyRequired
+  return ui.editor.adapterRequired
+}
+
+function systemProxyReasonMessage(reason?: string): string {
+  if (reason === 'disabled') return ui.editor.systemProxyDisabled
+  if (reason === 'pac-only') return ui.editor.systemProxyPACOnly
+  if (reason === 'unsupported-platform') return ui.editor.systemProxyUnsupported
+  return ui.editor.systemProxyUnavailable
 }
 
 function FormSection({ index, title, detail, children }: { index: string; title: string; detail: string; children: React.ReactNode }) {

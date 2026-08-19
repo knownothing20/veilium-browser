@@ -9,6 +9,7 @@ export interface KernelRecord {
   id: string
   name: string
   provider: string
+  providerRevision?: number
   version: string
   executable: string
   sha256: string
@@ -40,6 +41,7 @@ export interface KernelReleasePin {
   arch: string
   archiveName: string
   archiveUrl: string
+  allowedDownloadHosts: string[]
   archiveSizeBytes: number
   archiveSha256: string
   archiveEntryCount: number
@@ -55,6 +57,7 @@ export interface KernelReleasePin {
 
 export interface KernelInstallRequest {
   providerId: string
+  providerRevision?: number
   version: string
   licenseAccepted: boolean
 }
@@ -231,6 +234,13 @@ export interface ProxyConfig {
   url?: string
   credentialRef?: string
   adapterRef?: string
+}
+
+export interface SystemProxyResult {
+  available: boolean
+  proxyUrl?: string
+  source: string
+  reason?: 'disabled' | 'pac-only' | 'unsupported-platform' | string
 }
 
 export interface Profile {

@@ -158,6 +158,10 @@ button { cursor: pointer; }
 .form-grid { display: grid; gap: 12px; }
 .form-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .form-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.proxy-field-row { display: flex; align-items: flex-end; gap: 9px; margin-bottom: 12px; }
+.proxy-field-row label { flex: 1; min-width: 0; margin-bottom: 0; }
+.proxy-field-row .button { height: 37px; white-space: nowrap; }
+.proxy-import-note { margin: -4px 0 12px; color: #196f51; font-size: 9px; }
 label { display: block; margin-bottom: 12px; color: #505a6d; font-size: 9px; font-weight: 800; letter-spacing: .2px; }
 label input, label select, label textarea { width: 100%; margin-top: 6px; border: 1px solid #dde2e9; border-radius: 9px; outline: 0; color: #252d3d; background: #fff; font-size: 11px; font-weight: 500; transition: border .15s, box-shadow .15s; }
 label input, label select { height: 37px; padding: 0 10px; }

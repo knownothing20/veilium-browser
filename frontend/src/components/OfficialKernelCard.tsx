@@ -28,6 +28,7 @@ export function OfficialKernelCard({
 
   const installed = records.some((item) =>
     item.provider === pin.providerId
+    && (item.providerRevision === undefined || item.providerRevision === pin.providerRevision)
     && item.version === pin.browserVersion
     && item.snapshotRevision === pin.snapshotRevision
     && item.packageTreeSha256 === pin.packageTreeSha256
@@ -73,7 +74,7 @@ export function OfficialKernelCard({
       <button
         className="button primary"
         disabled={disabled}
-        onClick={() => onInstall({ providerId: pin.providerId, version: pin.browserVersion, licenseAccepted: accepted })}
+        onClick={() => onInstall({ providerId: pin.providerId, providerRevision: pin.providerRevision, version: pin.browserVersion, licenseAccepted: accepted })}
       >
         {busy ? '正在下载并验证…' : installed ? '已安装并通过验证' : available ? '下载、验证并安装' : '仅支持 Windows x64'}
       </button>
