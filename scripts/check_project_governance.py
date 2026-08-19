@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the small set of current Veilium project sources of truth."""
+"""Validate Veilium's single current development source of truth."""
 
 from __future__ import annotations
 
@@ -11,14 +11,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_FILES = (
+    "README.md",
     "AGENTS.md",
-    "docs/README.md",
-    "docs/PRODUCT.md",
-    "docs/ARCHITECTURE.md",
-    "docs/ROADMAP.md",
-    "docs/STATUS.md",
-    "docs/DEVELOPMENT_PROCESS.md",
-    "docs/PRISM_COMPARISON_OPTIMIZATION_PLAN.md",
+    "docs/DEVELOPMENT.md",
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/ISSUE_TEMPLATE/work_item.md",
 )
@@ -84,16 +79,10 @@ def main() -> int:
     for path in REQUIRED_FILES:
         read_text(path, errors)
 
-    status = read_text("docs/STATUS.md", errors)
-    current_state = field(status, "Current state", "docs/STATUS.md", errors)
-    current_plan = field(status, "Current plan", "docs/STATUS.md", errors)
-    current_task = field(status, "Current task", "docs/STATUS.md", errors)
+    development = read_text("docs/DEVELOPMENT.md", errors)
+    current_state = field(development, "Current state", "docs/DEVELOPMENT.md", errors)
+    current_task = field(development, "Current task", "docs/DEVELOPMENT.md", errors)
 
-    if current_plan:
-        if not current_plan.startswith("docs/"):
-            errors.append("Current plan must point to a docs/ path")
-        elif not (ROOT / current_plan).is_file():
-            errors.append(f"Current plan does not exist: {current_plan}")
     if not current_state:
         errors.append("Current state must not be empty")
     if not current_task:
@@ -102,8 +91,10 @@ def main() -> int:
     if args.base:
         changed = changed_files(args.base, errors)
         product_changes = sorted(path for path in changed if is_product_code(path))
-        if product_changes and "docs/STATUS.md" not in changed:
-            errors.append("product-code changes require docs/STATUS.md in the same pull request")
+        if product_changes and "docs/DEVELOPMENT.md" not in changed:
+            errors.append(
+                "product-code changes require docs/DEVELOPMENT.md in the same pull request"
+            )
 
     if errors:
         print("Project governance check failed:", file=sys.stderr)

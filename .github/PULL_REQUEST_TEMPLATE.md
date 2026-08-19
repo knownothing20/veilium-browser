@@ -2,9 +2,7 @@
 
 Closes #
 
-- Phase:
-- Milestone:
-- Current task from `docs/STATUS.md`:
+- Current task in `docs/DEVELOPMENT.md`:
 
 ## Problem
 
@@ -41,8 +39,7 @@ Summarize the chosen approach and important tradeoffs.
 - [ ] Unit tests
 - [ ] Integration tests
 - [ ] Real runtime or browser evidence, when applicable
-- [ ] Windows validation, when applicable
-- [ ] Linux validation, when applicable
+- [ ] Platform validation, when applicable
 - [ ] Failure, cancellation, cleanup, migration, or rollback tests, when applicable
 
 Commands and results:
@@ -51,16 +48,13 @@ Commands and results:
 
 ```
 
-## Governance checklist
+## Current-truth checklist
 
-- [ ] The change belongs to the active phase and milestone.
+- [ ] The change follows `docs/DEVELOPMENT.md` or explicitly updates it when the plan changes.
 - [ ] The diff contains no unrelated feature or refactor work.
-- [ ] Acceptance criteria from the linked issue are met.
-- [ ] `docs/STATUS.md` is updated for product-code changes.
-- [ ] Relevant module and architecture documents describe the resulting behavior.
-- [ ] New fingerprint claims have provider/version contracts and real-runtime evidence.
-- [ ] Persisted-data changes include compatibility and migration analysis.
-- [ ] The exact next task is recorded in `docs/STATUS.md`.
+- [ ] `docs/DEVELOPMENT.md` is updated for product-code changes with actual validation results, remaining limitations, and the exact next task.
+- [ ] New fingerprint claims have Provider/version contracts and real-runtime Evidence.
+- [ ] Persisted-data changes include compatibility, migration, failure, and rollback analysis.
 
 ## Handoff
 

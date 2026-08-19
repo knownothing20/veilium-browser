@@ -1,6 +1,6 @@
 ---
 name: Planned work item
-about: Define a scoped task aligned with the active phase
+about: Define a scoped task aligned with the current development plan
 labels: ''
 assignees: ''
 ---
@@ -9,11 +9,10 @@ assignees: ''
 
 What user or engineering problem needs to be solved?
 
-## Phase and milestone
+## Relationship to `docs/DEVELOPMENT.md`
 
-- Phase:
-- Milestone:
-- Relationship to `docs/STATUS.md` current task:
+- Current priority/task:
+- Why this work belongs now:
 
 ## Desired outcome
 
@@ -29,11 +28,11 @@ Describe the observable result, not only the implementation method.
 
 ## Dependencies
 
-List earlier milestones, decisions, providers, platforms, or contracts required first.
+List earlier decisions, Providers, platforms, or contracts required first.
 
 ## Contract and data impact
 
-Describe API, schema, persistence, provider, runtime, UI, compatibility, and migration impact.
+Describe API, schema, persistence, Provider, runtime, UI, compatibility, and migration impact.
 
 ## Security, privacy, and licensing
 
@@ -52,13 +51,6 @@ Describe secrets, local/remote boundaries, downloads, third-party sources, licen
 - Platform coverage:
 - Failure, recovery, or rollback tests:
 
-## Documentation updates
+## Documentation update
 
-- [ ] `docs/STATUS.md`
-- [ ] Active phase document, if scope changes
-- [ ] Relevant module documents
-- [ ] User-facing documentation, if applicable
-
-## Handoff expectation
-
-What exact next task becomes available when this issue is complete?
+- [ ] Update `docs/DEVELOPMENT.md` with actual result, validation truth, remaining limitations, and next task.

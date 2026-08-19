@@ -6,36 +6,17 @@ Veilium is a local-first, multi-profile privacy browser workspace built with Go,
 
 ## Current baseline
 
-The consolidated `main` branch includes:
+`main` includes isolated browser Profiles, reviewed/custom Chromium Provider contracts, exact package integrity, OS-backed credentials, HTTP/HTTPS/SOCKS5 proxy bridges, supervised Xray/sing-box subsets, browser runtime supervision, identity and Network Evidence, recoverable lifecycle/snapshot/restore, portable Profiles/templates, bounded multi-Profile operations, and a Simplified Chinese desktop workspace.
 
-- isolated browser Profiles with managed user-data directories;
-- reviewed/custom Chromium Provider contracts and exact package-integrity records;
-- OS-backed credential storage with no plaintext password fallback;
-- HTTP/HTTPS/SOCKS5 proxy bridges plus supervised Xray and sing-box subsets;
-- browser runtime supervision, CDP readiness, process-tree cleanup, and private runtime logs;
-- proxy diagnostics, browser identity Evidence, managed-window consistency, and Network Evidence;
-- lifecycle journal, locks, cancellation, storage inventory, snapshots, restore, archive, recoverable trash, and rollback;
-- portable non-secret Profile definitions, dependency remapping, templates, bounded multi-Profile operations, storage review, and operation-report export;
-- a Simplified Chinese task-oriented desktop workspace for browser environments, network, recovery, batch management, and settings.
-
-The current reviewed Chromium Provider remains an exact Windows amd64 stock Chromium Snapshot. Advanced fingerprint overrides are not claimed for that Provider.
-
-## Current development direction
-
-The next major work is to add a separate, evidence-backed Veilium Fingerprint Chromium Provider without weakening the existing stock Provider, security boundaries, or lifecycle model.
-
-Current sources of truth:
-
-- [`docs/PRODUCT.md`](docs/PRODUCT.md)
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/ROADMAP.md`](docs/ROADMAP.md)
-- [`docs/STATUS.md`](docs/STATUS.md)
-- [`docs/PRISM_COMPARISON_OPTIMIZATION_PLAN.md`](docs/PRISM_COMPARISON_OPTIMIZATION_PLAN.md)
-- [`docs/DEVELOPMENT_PROCESS.md`](docs/DEVELOPMENT_PROCESS.md)
-
-Completed implementation and historical planning documents live under [`docs/archive/`](docs/archive/README.md) and are not active development authority.
+The current reviewed Chromium Provider is an exact Windows amd64 **stock Chromium Snapshot**. Advanced fingerprint overrides are not claimed for that Provider.
 
 ## Development
+
+All current project status, architecture boundaries, priorities, validation debt, and the Fingerprint Chromium plan live in one file:
+
+- [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)
+
+Do not use old commits, merged PR descriptions, or historical issues as current development authority when they conflict with that file.
 
 ```bash
 go run ./cmd/veilium
